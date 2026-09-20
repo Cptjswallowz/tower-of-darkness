@@ -53,6 +53,14 @@ data class TowerPath(
         }
         return copy(nodes = revealedAdj, currentId = id)
     }
+
+    /** Mark the node the player is standing on as cleared (after resolve completes). */
+    fun markCurrentCleared(): TowerPath {
+        val updated = nodes.map {
+            if (it.id == currentId) it.copy(cleared = true, revealed = true) else it
+        }
+        return copy(nodes = updated)
+    }
 }
 
 object RumorPools {
@@ -99,7 +107,10 @@ object RumorPools {
 }
 
 object PathGenerator {
-    /** Fixed one-floor slice: entry → 2–3 branches → merge → Boss. */
+    /**
+     * One-floor slice: entry → 2–3 branches (shared depth 2 or 3) → merge → Boss.
+     * Shared depth prevents empty/skipped tiers when branches previously differed.
+     */
     fun generate(floor: Int = 1, rng: Random = Random.Default): TowerPath {
         val nodes = mutableListOf<PathNode>()
         val edges = mutableListOf<PathEdge>()
@@ -107,21 +118,27 @@ object PathGenerator {
         nodes += start
 
         val branchCount = rng.nextInt(2, 4)
-        val midTypes = mutableListOf(
+        val depth = rng.nextInt(2, 4) // ONE shared depth for all branches (2 or 3)
+        val row1Pool = listOf(NodeType.COMBAT, NodeType.EVENT, NodeType.TREASURE, NodeType.SHOP)
+        val laterPool = listOf(
             NodeType.COMBAT, NodeType.SHOP, NodeType.REST, NodeType.EVENT, NodeType.TREASURE, NodeType.COMBAT
-        ).shuffled(rng)
+        )
 
         val branchEnds = mutableListOf<String>()
         for (b in 0 until branchCount) {
-            val depth = rng.nextInt(2, 4)
             var prev = start.id
             for (d in 1..depth) {
                 val id = "b${b}_r$d"
-                val type = midTypes[(b * 3 + d) % midTypes.size]
+                // No Rest on run start: row 1 (direct from Start) cannot be REST
+                val type = if (d == 1) {
+                    row1Pool[(b + rng.nextInt(row1Pool.size)) % row1Pool.size]
+                } else {
+                    laterPool[(b * 3 + d + rng.nextInt(3)) % laterPool.size]
+                }
                 val node = PathNode(
                     id = id, type = type, row = d, col = b,
                     rumor = RumorPools.forType(type, rng),
-                    revealed = d == 1 // adjacent to start
+                    revealed = d == 1
                 )
                 nodes += node
                 edges += PathEdge(prev, id)
@@ -133,14 +150,14 @@ object PathGenerator {
         val mergeId = "merge"
         val mergeType = listOf(NodeType.COMBAT, NodeType.REST, NodeType.EVENT).random(rng)
         nodes += PathNode(
-            mergeId, mergeType, 4, 1,
-            RumorPools.forType(mergeType, rng)
+            mergeId, mergeType, row = depth + 1, col = 1,
+            rumor = RumorPools.forType(mergeType, rng)
         )
         branchEnds.forEach { edges += PathEdge(it, mergeId) }
 
         val boss = PathNode(
-            "boss", NodeType.BOSS, 5, 1,
-            RumorPools.forType(NodeType.BOSS, rng)
+            "boss", NodeType.BOSS, row = depth + 2, col = 1,
+            rumor = RumorPools.forType(NodeType.BOSS, rng)
         )
         nodes += boss
         edges += PathEdge(mergeId, boss.id)

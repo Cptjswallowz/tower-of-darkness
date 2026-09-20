@@ -105,8 +105,14 @@ fun CombatScreen(gc: GameController) {
         )
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
-            state.log.takeLast(6).forEach {
-                Text(it.message, color = Bone.copy(0.75f), fontSize = 12.sp)
+            // Keep full log; show last 5 lines large enough to read on phone
+            state.log.takeLast(5).forEachIndexed { idx, ev ->
+                val latest = idx == state.log.takeLast(5).lastIndex
+                Text(
+                    ev.message,
+                    color = if (latest) Gold else Bone.copy(0.85f),
+                    fontSize = if (latest) 18.sp else 15.sp
+                )
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

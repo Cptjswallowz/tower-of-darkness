@@ -149,10 +149,6 @@ class GameController(app: Application) : AndroidViewModel(app) {
         tutorialStep = maxOf(tutorialStep, 3)
     }
 
-    fun canSkipTutorial(): Boolean = tutorialStep >= 2 // after rumor (0) and loadout step reached; need rumor+loadout
-        // Spec: Skip after loadout AND rumor. Steps: 0=rumor, 1=path, 2=loadout, 3=combat
-        // So skip after completing loadout step (step >= 3) OR after visiting loadout (step>=2 and loadout set)
-        && loadout.isNotEmpty() && tutorialStep >= 2
 
     fun skipTutorial() {
         if (!skipAllowed()) return
@@ -266,14 +262,20 @@ class GameController(app: Application) : AndroidViewModel(app) {
         combatJob = viewModelScope.launch {
             var s = combatState ?: return@launch
             while (!s.finished) {
-                delay(900)
+                // Pacing: common ~1700ms; charge/legendary ~2300ms (phone-readable)
+                val preDelay = if (s.lastFiredCard?.rarity?.name == "RARE" ||
+                    s.lastFiredCard?.rarity?.name == "LEGENDARY"
+                ) 1100L else 900L
+                delay(preDelay)
                 s = engine.step(s)
                 s.log.lastOrNull()?.sound?.let { sound.play(it) }
                 combatState = s
-                if (s.animStyleLastLegendary()) delay(700)
+                val postDelay = if (s.animStyleLastLegendary()) 2300L else 1700L
+                delay(postDelay)
             }
             playerHp = s.playerHp
-            delay(600)
+            // Hold final log/result so notes are readable before Path
+            delay(1800)
             onCombatEnd(s)
         }
     }
@@ -288,20 +290,28 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    private fun returnToPathAfterResolve() {
+        path = path?.markCurrentCleared()
+        nodesCleared++
+        nav = NavState.Path
+    }
+
     private fun onCombatEnd(s: CombatState) {
         val boss = s.enemy.isBoss
         if (s.playerWon) {
             var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
             if (boss && "boss_bonus_2" in unlockedCards) gain += 2
             runWallet += gain
-            nodesCleared++
             if (boss) {
+                path = path?.markCurrentCleared()
                 finishRun(won = true)
             } else {
-                nav = NavState.Path
+                returnToPathAfterResolve()
             }
         } else {
             runWallet += if (boss) Balance.BOSS_LOSS_REMNANTS else Balance.COMBAT_LOSS_REMNANTS
+            path = path?.markCurrentCleared()
             finishRun(won = false)
         }
     }
@@ -360,7 +370,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         loadout = loadout.dropLast(1) + inn
     }
 
-    fun leaveShop() { nodesCleared++; nav = NavState.Path }
+    fun leaveShop() { returnToPathAfterResolve() }
 
     // --- Rest ---
     fun restHealAmount(): Int {
@@ -371,20 +381,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
     fun restHeal() {
         val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
         playerHp = (playerHp + restHealAmount()).coerceAtMost(maxHp)
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     fun restScout() {
         scoutAdjacent()
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     /** Leave Rest without Heal/Scout. */
     fun leaveRest() {
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     /** Path free scout from scout_charge — spends one charge when a fogged adjacent exists. */
@@ -441,15 +448,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
                 weightHitchCardId = loadout.random(rng).id
             }
         }
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     // --- Treasure ---
     fun treasureRemnants() {
         runWallet += Balance.TREASURE_REMNANTS
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     fun treasureCardSwap() {
@@ -460,8 +465,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch { meta.unlockCard(rare.id) }
         }
         autoSwap()
-        nodesCleared++
-        nav = NavState.Path
+        returnToPathAfterResolve()
     }
 
     // --- Summary / Hub ---
