@@ -6,9 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.nav.NavState
 import com.towerofdarkness.app.ui.components.GlossaryDialog
@@ -32,10 +34,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             TowerTheme {
+                // Background fills edge-to-edge; content respects status/nav/cutout insets
                 Surface(Modifier.fillMaxSize(), color = VoidBg) {
-                    TowerRoot(gc)
+                    Surface(
+                        Modifier
+                            .fillMaxSize()
+                            .safeDrawingPadding(),
+                        color = VoidBg
+                    ) {
+                        TowerRoot(gc)
+                    }
                 }
             }
         }

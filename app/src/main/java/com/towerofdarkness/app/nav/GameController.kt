@@ -331,17 +331,34 @@ class GameController(app: Application) : AndroidViewModel(app) {
             ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus")
         )
         val picked = mutableListOf<ShopOffer>()
-        repeat(4) {
+        val usedKinds = mutableSetOf<String>()
+        var attempts = 0
+        while (picked.size < 4 && attempts < 40) {
+            attempts++
             val tier = r.nextFloat()
             val pool = when {
                 tier < 0.50f -> catalog.filter { it.price in 5..8 }
                 tier < 0.85f -> catalog.filter { it.price in 9..12 }
                 else -> catalog.filter { it.price in 13..15 }
-            }
-            picked += pool.random(r).copy(id = pool.random(r).id + "_$it")
+            }.filter { it.kind !in usedKinds }
+            val choice = pool.ifEmpty {
+                catalog.filter { it.kind !in usedKinds }
+            }.ifEmpty { emptyList() }.randomOrNull(r) ?: break
+            usedKinds += choice.kind
+            picked += choice.copy(id = "${choice.kind}_${picked.size}")
         }
+        // Anti-stall: ensure at least one cheap (≤8) offer; replace last if needed without duplicating kind
         if (picked.none { it.price <= 8 }) {
-            picked[0] = catalog.first { it.id == "heal_small" }.copy(id = "heal_small_forced")
+            val cheap = catalog.filter { it.price <= 8 && it.kind !in usedKinds.minus(picked.lastOrNull()?.kind) }
+                .ifEmpty { catalog.filter { it.price <= 8 } }
+                .first()
+            if (picked.isNotEmpty()) {
+                usedKinds.remove(picked.last().kind)
+                picked[picked.lastIndex] = cheap.copy(id = "${cheap.kind}_forced")
+                usedKinds += cheap.kind
+            } else {
+                picked += cheap.copy(id = "${cheap.kind}_forced")
+            }
         }
         shopOffers = picked
         nav = NavState.Shop
