@@ -1,0 +1,23 @@
+# Android / Gradle
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+*.iml
+.idea/
+*.hprof
+
+# OS / editor
+.DS_Store
+*.swp
+*~
+
+# Optional local mirrors
+app/build/

@@ -1,0 +1,521 @@
+package com.towerofdarkness.app.nav
+
+import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.towerofdarkness.app.data.MetaStore
+import com.towerofdarkness.app.domain.Balance
+import com.towerofdarkness.app.domain.cards.Card
+import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.combat.CombatEngine
+import com.towerofdarkness.app.domain.combat.CombatState
+import com.towerofdarkness.app.domain.combat.Enemy
+import com.towerofdarkness.app.domain.path.NodeType
+import com.towerofdarkness.app.domain.path.PathGenerator
+import com.towerofdarkness.app.domain.path.TowerPath
+import com.towerofdarkness.app.domain.sound.AssetSoundBus
+import com.towerofdarkness.app.domain.sound.SoundBus
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlin.random.Random
+
+data class ShopOffer(
+    val id: String,
+    val title: String,
+    val price: Int,
+    val kind: String, // heal_small, heal_mid, heal_full, rumor_peek, card_swap
+    val sold: Boolean = false
+)
+
+data class RunSummaryData(
+    val won: Boolean,
+    val nodesCleared: Int,
+    val remnantsEarned: Int,
+    val floorReached: Int,
+    val nearMiss: Boolean
+)
+
+class GameController(app: Application) : AndroidViewModel(app) {
+    val meta = MetaStore(app)
+    val sound: SoundBus = AssetSoundBus(app)
+
+    var nav by mutableStateOf<NavState>(NavState.MainMenu)
+        private set
+
+    var tutorialSeen by mutableStateOf(false)
+        private set
+    var remnantsBank by mutableStateOf(0)
+        private set
+    var unlockedCards by mutableStateOf(CardCatalog.starterUnlockedIds())
+        private set
+    var metaHpBonus by mutableStateOf(0)
+        private set
+
+    // Run state
+    var path by mutableStateOf<TowerPath?>(null)
+        private set
+    var loadout by mutableStateOf<List<Card>>(emptyList())
+        private set
+    var loadoutLocked by mutableStateOf(false)
+        private set
+    var pendingNodeId by mutableStateOf<String?>(null)
+        private set
+    var runWallet by mutableStateOf(0)
+        private set
+    var playerHp by mutableStateOf(Balance.PLAYER_MAX_HP)
+        private set
+    var nodesCleared by mutableStateOf(0)
+        private set
+    var combatState by mutableStateOf<CombatState?>(null)
+        private set
+    var shopOffers by mutableStateOf<List<ShopOffer>>(emptyList())
+        private set
+    var summary by mutableStateOf<RunSummaryData?>(null)
+        private set
+    var glossaryTerm by mutableStateOf<String?>(null)
+        private set
+    var weightHitchCardId by mutableStateOf<String?>(null)
+        private set
+    var freeScoutCharges by mutableStateOf(0)
+        private set
+    var rumorRerolls by mutableStateOf(0)
+        private set
+
+    // Tutorial progress
+    var tutorialStep by mutableStateOf(0) // 0 rumor, 1 path, 2 loadout, 3 combat
+        private set
+
+    private val engine = CombatEngine()
+    private var combatJob: Job? = null
+    private val rng = Random.Default
+
+    init {
+        viewModelScope.launch {
+            tutorialSeen = meta.tutorialSeen.first()
+            remnantsBank = meta.remnantsBank.first()
+            unlockedCards = meta.unlockedCards.first()
+            metaHpBonus = meta.metaHpBonus.first()
+        }
+        viewModelScope.launch { meta.tutorialSeen.collect { tutorialSeen = it } }
+        viewModelScope.launch { meta.remnantsBank.collect { remnantsBank = it } }
+        viewModelScope.launch { meta.unlockedCards.collect { unlockedCards = it } }
+        viewModelScope.launch { meta.metaHpBonus.collect { metaHpBonus = it } }
+    }
+
+    fun showGlossary(term: String?) { glossaryTerm = term }
+
+    fun goMenu() { nav = NavState.MainMenu }
+    fun goHub() { nav = NavState.MetaHub }
+
+    fun climb() {
+        if (!tutorialSeen) {
+            tutorialStep = 0
+            nav = NavState.Tutorial
+        } else {
+            startNewRun()
+        }
+    }
+
+    fun startNewRun() {
+        path = PathGenerator.generate(1, rng)
+        loadout = emptyList()
+        loadoutLocked = false
+        pendingNodeId = null
+        runWallet = 0
+        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        nodesCleared = 0
+        weightHitchCardId = null
+        // scout_charge: +1 free Scout usable from Path (or Rest) each climb — observable
+        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
+        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        summary = null
+        combatState = null
+        // slice-screens: Path first; Loadout via Edit or first resolve tap
+        nav = NavState.Path
+    }
+
+    // --- Tutorial ---
+    fun tutorialNext() {
+        if (tutorialStep < 3) tutorialStep++
+    }
+
+    fun tutorialOnLoadoutConfirmed(selected: List<Card>) {
+        loadout = selected
+        tutorialStep = maxOf(tutorialStep, 3)
+    }
+
+    fun canSkipTutorial(): Boolean = tutorialStep >= 2 // after rumor (0) and loadout step reached; need rumor+loadout
+        // Spec: Skip after loadout AND rumor. Steps: 0=rumor, 1=path, 2=loadout, 3=combat
+        // So skip after completing loadout step (step >= 3) OR after visiting loadout (step>=2 and loadout set)
+        && loadout.isNotEmpty() && tutorialStep >= 2
+
+    fun skipTutorial() {
+        if (!skipAllowed()) return
+        // Docs: Skip ALWAYS forces default cards 1–5 (Hostflint…Dust Veil)
+        loadout = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
+        viewModelScope.launch { meta.setTutorialSeen(true) }
+        path = PathGenerator.generate(1, rng)
+        loadoutLocked = false
+        pendingNodeId = null
+        runWallet = 0
+        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        nodesCleared = 0
+        weightHitchCardId = null
+        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
+        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        combatState = null
+        nav = NavState.Path
+    }
+
+    fun completeTutorial() {
+        if (loadout.isEmpty()) {
+            loadout = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
+        }
+        viewModelScope.launch { meta.setTutorialSeen(true) }
+        path = PathGenerator.generate(1, rng)
+        loadoutLocked = false
+        pendingNodeId = null
+        runWallet = 0
+        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        nodesCleared = 0
+        weightHitchCardId = null
+        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
+        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        combatState = null
+        nav = NavState.Path
+    }
+
+    // Fix canSkip: rumor seen (step>=1) AND loadout done
+    /** Skip after rumor + loadout beats seen (step>=2). Skip forces default 5 regardless of current picks. */
+    fun skipAllowed(): Boolean = tutorialStep >= 2
+
+    // --- Loadout ---
+    fun openLoadout() {
+        if (!loadoutLocked) nav = NavState.Loadout
+    }
+
+    fun confirmLoadout(selected: List<Card>) {
+        if (selected.size !in Balance.LOADOUT_MIN..Balance.LOADOUT_MAX) return
+        loadout = selected
+        sound.play("ui")
+        if (nav == NavState.Tutorial || tutorialStep == 2) {
+            tutorialStep = 3
+            // stay in tutorial until complete/skip
+            if (nav == NavState.Tutorial) return
+        }
+        val pending = pendingNodeId
+        if (pending != null && path != null) {
+            enterNode(pending)
+        } else {
+            nav = NavState.Path
+        }
+    }
+
+    // --- Path ---
+    fun selectPathNode(nodeId: String) {
+        val p = path ?: return
+        val choices = p.choices().map { it.id }
+        if (nodeId !in choices && p.currentId != nodeId) {
+            // allow only adjacent choices
+            if (nodeId !in p.edges.filter { it.from == p.currentId }.map { it.to }) return
+        }
+        if (!loadoutLocked && loadout.size !in Balance.LOADOUT_MIN..Balance.LOADOUT_MAX) {
+            pendingNodeId = nodeId
+            nav = NavState.Loadout
+            return
+        }
+        if (!loadoutLocked && loadout.isNotEmpty()) {
+            // first leave into resolve → will lock inside enterNode
+        }
+        enterNode(nodeId)
+    }
+
+    private fun enterNode(nodeId: String) {
+        val p = path ?: return
+        val node = p.node(nodeId)
+        path = p.moveTo(nodeId)
+        pendingNodeId = null
+        if (!loadoutLocked && node.type != NodeType.START) {
+            loadoutLocked = true // CoS: lock on first leave Path into resolve
+        }
+        when (node.type) {
+            NodeType.COMBAT, NodeType.BOSS -> startCombat(node.type == NodeType.BOSS)
+            NodeType.SHOP -> openShop(nodeId)
+            NodeType.REST -> nav = NavState.Rest
+            NodeType.EVENT -> nav = NavState.Event
+            NodeType.TREASURE -> nav = NavState.Treasure
+            NodeType.START -> nav = NavState.Path
+        }
+    }
+
+    // --- Combat ---
+    private fun startCombat(boss: Boolean) {
+        val enemy = if (boss) Enemy.boss() else Enemy.forFloorCombat(nodesCleared)
+        val cards = effectiveLoadout()
+        combatState = engine.start(cards, enemy, Balance.PLAYER_MAX_HP + metaHpBonus).copy(
+            playerHp = playerHp.coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
+        )
+        nav = NavState.Combat
+        sound.play("dice")
+        combatJob?.cancel()
+        combatJob = viewModelScope.launch {
+            var s = combatState ?: return@launch
+            while (!s.finished) {
+                delay(900)
+                s = engine.step(s)
+                s.log.lastOrNull()?.sound?.let { sound.play(it) }
+                combatState = s
+                if (s.animStyleLastLegendary()) delay(700)
+            }
+            playerHp = s.playerHp
+            delay(600)
+            onCombatEnd(s)
+        }
+    }
+
+    private fun CombatState.animStyleLastLegendary(): Boolean =
+        log.lastOrNull()?.animStyle?.name == "CHARGE_SHAKE_SLOWMO"
+
+    private fun effectiveLoadout(): List<Card> {
+        val hitch = weightHitchCardId
+        return loadout.map { c ->
+            if (c.id == hitch) c.copy(weight = (c.weight - 1).coerceAtLeast(1)) else c
+        }
+    }
+
+    private fun onCombatEnd(s: CombatState) {
+        val boss = s.enemy.isBoss
+        if (s.playerWon) {
+            var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
+            if (boss && "boss_bonus_2" in unlockedCards) gain += 2
+            runWallet += gain
+            nodesCleared++
+            if (boss) {
+                finishRun(won = true)
+            } else {
+                nav = NavState.Path
+            }
+        } else {
+            runWallet += if (boss) Balance.BOSS_LOSS_REMNANTS else Balance.COMBAT_LOSS_REMNANTS
+            finishRun(won = false)
+        }
+    }
+
+    fun fleeGrayed(): Boolean = true // CoS: Flee grayed
+
+    // --- Shop ---
+    private fun openShop(nodeId: String) {
+        val seed = (path?.floor ?: 1) * 31 + nodeId.hashCode()
+        val r = Random(seed)
+        val catalog = listOf(
+            ShopOffer("heal_small", "Small Heal (+8)", 5, "heal_small"),
+            ShopOffer("rumor_peek", "Rumor Peek", 6, "rumor_peek"),
+            ShopOffer("heal_mid", "Mid Heal (+15)", 10, "heal_mid"),
+            ShopOffer("card_swap", "Card Swap", 12, "card_swap"),
+            ShopOffer("heal_full", "Full Heal", 15, "heal_full"),
+            ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus")
+        )
+        val picked = mutableListOf<ShopOffer>()
+        repeat(4) {
+            val tier = r.nextFloat()
+            val pool = when {
+                tier < 0.50f -> catalog.filter { it.price in 5..8 }
+                tier < 0.85f -> catalog.filter { it.price in 9..12 }
+                else -> catalog.filter { it.price in 13..15 }
+            }
+            picked += pool.random(r).copy(id = pool.random(r).id + "_$it")
+        }
+        if (picked.none { it.price <= 8 }) {
+            picked[0] = catalog.first { it.id == "heal_small" }.copy(id = "heal_small_forced")
+        }
+        shopOffers = picked
+        nav = NavState.Shop
+    }
+
+    fun buyOffer(offer: ShopOffer) {
+        if (offer.sold || runWallet < offer.price) return
+        runWallet -= offer.price
+        shopOffers = shopOffers.map { if (it.id == offer.id) it.copy(sold = true) else it }
+        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        when (offer.kind) {
+            "heal_small" -> playerHp = (playerHp + 8).coerceAtMost(maxHp)
+            "heal_mid" -> playerHp = (playerHp + 15).coerceAtMost(maxHp)
+            "heal_full" -> playerHp = maxHp
+            "rumor_peek" -> scoutAdjacent()
+            "card_swap", "card_swap_plus" -> { /* UI handles swap sheet simply: auto-swap last */ autoSwap() }
+        }
+        sound.play("ui")
+    }
+
+    private fun autoSwap() {
+        val pool = CardCatalog.poolForRun(unlockedCards).filter { c -> loadout.none { it.id == c.id } }
+        if (pool.isEmpty() || loadout.isEmpty()) return
+        val out = loadout.last()
+        val inn = pool.random(rng)
+        loadout = loadout.dropLast(1) + inn
+    }
+
+    fun leaveShop() { nodesCleared++; nav = NavState.Path }
+
+    // --- Rest ---
+    fun restHealAmount(): Int {
+        val bonus = if ("rest_heal_plus" in unlockedCards) 4 else 0
+        return Balance.REST_HEAL_AMOUNT + bonus
+    }
+
+    fun restHeal() {
+        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        playerHp = (playerHp + restHealAmount()).coerceAtMost(maxHp)
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    fun restScout() {
+        scoutAdjacent()
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    /** Leave Rest without Heal/Scout. */
+    fun leaveRest() {
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    /** Path free scout from scout_charge — spends one charge when a fogged adjacent exists. */
+    fun useFreeScout(): Boolean {
+        if (freeScoutCharges <= 0) return false
+        val p = path ?: return false
+        val fogged = p.edges.filter { it.from == p.currentId }
+            .map { p.node(it.to) }
+            .filter { !it.revealed && !it.scoutedTypeOnly }
+        val target = fogged.firstOrNull() ?: return false
+        path = p.withReveal(target.id, typeOnly = true)
+        freeScoutCharges--
+        sound.play("ui")
+        return true
+    }
+
+    private fun scoutAdjacent() {
+        val p = path ?: return
+        val fogged = p.edges.filter { it.from == p.currentId }
+            .map { p.node(it.to) }
+            .filter { !it.revealed && !it.scoutedTypeOnly }
+        val target = fogged.firstOrNull() ?: return
+        // CoS: Scout reveals node type only
+        path = p.withReveal(target.id, typeOnly = true)
+    }
+
+    /** rumor_clarity: re-roll rumor text on one fogged node (once per climb). */
+    fun rerollRumor(nodeId: String): Boolean {
+        if (rumorRerolls <= 0) return false
+        val p = path ?: return false
+        val node = p.nodes.find { it.id == nodeId } ?: return false
+        if (node.revealed || node.type == com.towerofdarkness.app.domain.path.NodeType.START) return false
+        val newRumor = com.towerofdarkness.app.domain.path.RumorPools.forType(node.type, rng)
+        path = p.copy(nodes = p.nodes.map {
+            if (it.id == nodeId) it.copy(rumor = newRumor) else it
+        })
+        rumorRerolls--
+        sound.play("ui")
+        return true
+    }
+
+    fun hasLoadoutFlex(): Boolean = "loadout_flex" in unlockedCards
+    fun hasPerk(id: String): Boolean = id in unlockedCards
+
+    // --- Event ---
+    fun eventChoice(remnants: Boolean) {
+        if (remnants) {
+            runWallet += Balance.EVENT_REMNANTS
+        } else {
+            // mild hitch or heal
+            if (rng.nextBoolean()) {
+                playerHp = (playerHp + 4).coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
+            } else if (loadout.isNotEmpty()) {
+                weightHitchCardId = loadout.random(rng).id
+            }
+        }
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    // --- Treasure ---
+    fun treasureRemnants() {
+        runWallet += Balance.TREASURE_REMNANTS
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    fun treasureCardSwap() {
+        // Offer rare if not owned — CoS: rares from Treasure and Hub
+        val rares = CardCatalog.all.filter { it.rarity.name == "RARE" && it.id !in unlockedCards }
+        if (rares.isNotEmpty()) {
+            val rare = rares.random(rng)
+            viewModelScope.launch { meta.unlockCard(rare.id) }
+        }
+        autoSwap()
+        nodesCleared++
+        nav = NavState.Path
+    }
+
+    // --- Summary / Hub ---
+    private fun finishRun(won: Boolean) {
+        val earned = runWallet
+        val near = !won && playerHp == 0 && nodesCleared >= 2
+        summary = RunSummaryData(won, nodesCleared, earned, path?.floor ?: 1, near)
+        viewModelScope.launch { meta.addRemnants(earned) }
+        runWallet = 0
+        nav = NavState.RunSummary
+    }
+
+    fun hubUnlock(cardId: String) {
+        val card = CardCatalog.byId(cardId) ?: return
+        val cost = card.unlockCost.coerceAtLeast(Balance.CHEAPEST_CARD_UNLOCK)
+        viewModelScope.launch {
+            if (meta.spendRemnants(cost)) {
+                meta.unlockCard(cardId)
+                sound.play("ui")
+            }
+        }
+    }
+
+    fun hubUnlockMetaHp() {
+        viewModelScope.launch {
+            if (metaHpBonus == 0 && meta.spendRemnants(15)) {
+                meta.setMetaHpBonus(2)
+                sound.play("ui")
+            }
+        }
+    }
+
+    /** Persist scout_charge perk in unlockedCards set (id "scout_charge"). */
+    fun hubUnlockScoutCharge() {
+        viewModelScope.launch {
+            if ("scout_charge" !in unlockedCards && meta.spendRemnants(20)) {
+                meta.unlockCard("scout_charge")
+                sound.play("ui")
+            }
+        }
+    }
+
+    fun hubUnlockPerk(perkId: String, cost: Int) {
+        viewModelScope.launch {
+            if (perkId !in unlockedCards && meta.spendRemnants(cost)) {
+                meta.unlockCard(perkId)
+                sound.play("ui")
+            }
+        }
+    }
+
+    override fun onCleared() {
+        combatJob?.cancel()
+        sound.release()
+        super.onCleared()
+    }
+}
