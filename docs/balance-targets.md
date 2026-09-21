@@ -12,7 +12,7 @@ These are **not** measured playtest or sim results. Do not cite them as proven.
 | Enemy HP (normal) | **20** | Per normal combat node. |
 | Enemy counter (normal) | **7–11** | After Brace. |
 | Boss HP | **28** | *CoS temporary lock* (Elliott may override). |
-| Boss counter | **8–12** | *CoS temporary lock* (distinct from normals). |
+| Boss counter | **6–9** | *CoS temporary lock* (distinct from normals). |
 | Player damage (successful hit effect) | **4–8** | Per card design in `cards-v0.md`. |
 | Shop prices | **5–15** remnants | Per offer. |
 | Cheapest Hub unlock | **15** remnants | Meta & Ops floor. |
@@ -23,7 +23,7 @@ These are **not** measured playtest or sim results. Do not cite them as proven.
 
 Elliott may still override later. Until then, Engineer/QA treat as slice law:
 
-1. Boss **28 HP**, counter **8–12** (normals stay 20 / 7–11).
+1. Boss **28 HP**, counter **6–9** (normals stay 20 / 7–11).
 2. ~84% / ~3.6 apply to **tutorial-default loadout climbs** for QA baseline (not all Hub unlocks).
 
 ## How Engineer should use this
