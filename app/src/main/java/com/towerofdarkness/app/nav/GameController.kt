@@ -91,6 +91,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var rumorRerolls by mutableStateOf(0)
         private set
+    /** Treasure swap preview: lose loadout card id / gain card id */
+    var treasureSwapLoseId by mutableStateOf<String?>(null)
+        private set
+    var treasureSwapGainId by mutableStateOf<String?>(null)
+        private set
 
     // Tutorial progress
     var tutorialStep by mutableStateOf(0) // 0 rumor, 1 path, 2 loadout, 3 combat
@@ -311,7 +316,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
             }
 
             if (s.finished) break
-            if (s.enemy.hp <= 0) break
+            if (s.enemy.hp <= 0) {
+                if (!s.finished) {
+                    // Ensure win flags so weapon XP applies (Spinner → Warden Lv2)
+                    s = s.copy(
+                        finished = true,
+                        playerWon = true,
+                        beat = com.towerofdarkness.app.domain.combat.CombatBeat.AWAITING_CONTINUE
+                    )
+                    combatState = s
+                }
+                break
+            }
 
             // F — enemy counter
             s = engine.resolveEnemy(s)
@@ -330,14 +346,39 @@ class GameController(app: Application) : AndroidViewModel(app) {
         // Wait for Continue — do not auto-nav
     }
 
+    /**
+     * Same-run weapon XP: FULL Wake this fight + win → +1 level (cap 3) before next node.
+     * Uses combat win signal OR enemy dead with player alive (guards unfinished-break bug).
+     */
     private fun applyWeaponLevelUp(s: com.towerofdarkness.app.domain.combat.CombatState) {
-        if (!s.playerWon) return
-        val w = s.weapon
-        val shouldLevel = s.fullProcKilled || s.fullProcThisCombat
-        if (shouldLevel && w.level < 3) {
-            equippedWeapon = w.copy(level = w.level + 1, charge = 0)
-        } else {
-            equippedWeapon = w.copy(charge = 0)
+        val won = s.playerWon || (s.enemy.hp <= 0 && s.playerHp > 0)
+        if (!won) {
+            // Still clear charge carry into next fight presentation
+            equippedWeapon = equippedWeapon.copy(charge = 0)
+            return
+        }
+        val from = maxOf(equippedWeapon.level, s.weapon.level).coerceIn(1, 3)
+        val shouldLevel = s.fullProcThisCombat || s.fullProcKilled
+        val newLevel = if (shouldLevel) (from + 1).coerceAtMost(3) else from
+        equippedWeapon = WeaponRuntime(
+            def = s.weapon.def,
+            level = newLevel,
+            charge = 0
+        )
+    }
+
+    /** Pure helper for unit tests — same rules as [applyWeaponLevelUp]. */
+    companion object {
+        fun nextWeaponLevelAfterFight(
+            startLevel: Int,
+            fullProcThisCombat: Boolean,
+            fullProcKilled: Boolean,
+            playerWon: Boolean
+        ): Int {
+            if (!playerWon) return startLevel.coerceIn(1, 3)
+            val from = startLevel.coerceIn(1, 3)
+            val should = fullProcThisCombat || fullProcKilled
+            return if (should) (from + 1).coerceAtMost(3) else from
         }
     }
 
@@ -538,15 +579,52 @@ class GameController(app: Application) : AndroidViewModel(app) {
         returnToPathAfterResolve()
     }
 
-    fun treasureCardSwap() {
-        // Offer rare if not owned — CoS: rares from Treasure and Hub
-        val rares = CardCatalog.all.filter { it.rarity.name == "RARE" && it.id !in unlockedCards }
-        if (rares.isNotEmpty()) {
-            val rare = rares.random(rng)
-            viewModelScope.launch { meta.unlockCard(rare.id) }
+    fun treasureBeginSwap(loseCardId: String? = null) {
+        if (loadout.isEmpty()) return
+        val lose = loseCardId?.let { id -> loadout.find { it.id == id } } ?: loadout.random(rng)
+        val pool = CardCatalog.poolForRun(unlockedCards).filter { c -> loadout.none { it.id == c.id } }
+        // Prefer offering an unlocked rare not in bar; else any unused pool card
+        val rares = CardCatalog.all.filter {
+            it.rarity.name == "RARE" && (it.id in unlockedCards || it.unlockCost == 0) &&
+                loadout.none { l -> l.id == it.id }
         }
-        autoSwap()
+        val gain = when {
+            rares.isNotEmpty() -> rares.random(rng)
+            pool.isNotEmpty() -> pool.random(rng)
+            else -> return
+        }
+        treasureSwapLoseId = lose.id
+        treasureSwapGainId = gain.id
+    }
+
+    fun treasureConfirmSwap() {
+        val loseId = treasureSwapLoseId ?: return
+        val gainId = treasureSwapGainId ?: return
+        val gain = CardCatalog.byId(gainId) ?: return
+        if (loadout.none { it.id == loseId }) {
+            treasureCancelSwap()
+            return
+        }
+        // Unlock rare if offered from locked set
+        if (gain.unlockCost > 0 && gain.id !in unlockedCards) {
+            viewModelScope.launch { meta.unlockCard(gain.id) }
+        }
+        loadout = loadout.map { if (it.id == loseId) gain else it }
+        treasureSwapLoseId = null
+        treasureSwapGainId = null
+        sound.play("ui")
         returnToPathAfterResolve()
+    }
+
+    fun treasureCancelSwap() {
+        treasureSwapLoseId = null
+        treasureSwapGainId = null
+    }
+
+    @Deprecated("Use treasureBeginSwap / treasureConfirmSwap")
+    fun treasureCardSwap() {
+        treasureBeginSwap()
+        if (treasureSwapGainId != null) treasureConfirmSwap()
     }
 
     // --- Summary / Hub ---

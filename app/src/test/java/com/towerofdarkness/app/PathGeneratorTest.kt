@@ -81,4 +81,26 @@ class PathGeneratorTest {
             deeper.forEach { /* ok */ }
         }
     }
+
+
+    @Test
+    fun atLeastOneCombat_beforeBoss() {
+        for (seed in 0..120) {
+            val path = PathGenerator.generate(floor = 1, rng = Random(seed))
+            val beforeBoss = path.nodes.filter { it.type != NodeType.START && it.type != NodeType.BOSS }
+            assertTrue(
+                "seed $seed must have ≥1 COMBAT before boss: ${beforeBoss.map { it.type }}",
+                beforeBoss.any { it.type == NodeType.COMBAT }
+            )
+        }
+    }
+
+    @Test
+    fun eventsCappedAtOnePerFloor() {
+        for (seed in 0..120) {
+            val path = PathGenerator.generate(floor = 1, rng = Random(seed))
+            val events = path.nodes.count { it.type == NodeType.EVENT }
+            assertTrue("seed $seed events=$events (max 1)", events <= 1)
+        }
+    }
 }

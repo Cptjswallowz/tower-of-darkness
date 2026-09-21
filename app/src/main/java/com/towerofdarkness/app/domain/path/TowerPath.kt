@@ -162,6 +162,51 @@ object PathGenerator {
         nodes += boss
         edges += PathEdge(mergeId, boss.id)
 
-        return TowerPath(floor, nodes, edges, start.id)
+        return enforceFloorRules(TowerPath(floor, nodes, edges, start.id), rng)
+    }
+
+    /**
+     * v0.1.5-path locks:
+     * - ≥1 COMBAT node before boss (mid + merge)
+     * - at most 1 EVENT per floor
+     */
+    internal fun enforceFloorRules(path: TowerPath, rng: Random): TowerPath {
+        var nodes = path.nodes.toMutableList()
+        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
+        fun replaceType(at: Int, type: NodeType) {
+            val n = nodes[at]
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+        }
+
+        val midIds = nodes.filter {
+            it.type != NodeType.START && it.type != NodeType.BOSS
+        }.map { it.id }
+
+        // Cap events at 1 — convert extras to non-event
+        val eventIdxs = midIds.map { idx(it) }.filter { nodes[it].type == NodeType.EVENT }
+        if (eventIdxs.size > 1) {
+            val keep = eventIdxs.first()
+            for (i in eventIdxs.drop(1)) {
+                val row = nodes[i].row
+                val replacements = if (row == 1) {
+                    listOf(NodeType.COMBAT, NodeType.SHOP, NodeType.TREASURE) // no REST on row 1
+                } else {
+                    listOf(NodeType.COMBAT, NodeType.SHOP, NodeType.TREASURE, NodeType.REST)
+                }
+                replaceType(i, replacements.random(rng))
+            }
+            if (nodes[keep].type != NodeType.EVENT) replaceType(keep, NodeType.EVENT)
+        }
+
+        // Ensure ≥1 COMBAT before boss
+        val hasCombat = midIds.any { nodes[idx(it)].type == NodeType.COMBAT }
+        if (!hasCombat) {
+            // Prefer merge; else first mid node. Combat requirement wins over keeping an Event.
+            val mergeI = idx("merge")
+            val candidate = if (mergeI >= 0) mergeI else midIds.map { idx(it) }.first()
+            replaceType(candidate, NodeType.COMBAT)
+        }
+
+        return path.copy(nodes = nodes)
     }
 }

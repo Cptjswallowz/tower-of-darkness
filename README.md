@@ -4,17 +4,19 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.4-wake)
+## Status (v0.1.5-path)
 
+- Path: **≥1 COMBAT** node before boss; **events ≤1** per floor
+- Treasure: Lose / Gain **preview** before commit; Cancel keeps current card; remnants option unchanged
+- Weapon XP: full Wake + combat win → **+1 Ashbrand level** before next node (same-run fix)
 - 5-skill exhaust bar + Ashbrand (CHAIN full Wake + quiet SPARK)
 - **FULL Wake** legendary beat: gold `ASHBRAND — WAKE N`, float WAKE, pin in log, ~2300ms
 - Lv1 Wake threshold **3** (dmg still 4/6/8)
 - Trash counters **7–9**; boss counter **6–9**, Boss HP **28**
-- Phone UI / soft-lock passes from earlier builds
 - Placeholders for art/SFX; **no mid-run save**
 - Debug APK only — not shippable
 
-### Measured n=2000 (default 5 + Ashbrand lv1)
+### Measured n=2000 from v0.1.4-wake (default 5 + Ashbrand lv1)
 | Cohort | WR | Mean skill beats |
 |--------|-----|------------------|
 | Ash Wretch | 97.95% | 4.41 |
@@ -23,12 +25,10 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 | Stone Hunger | 97.95% | 4.41 |
 | Seal-Warden | 23.45% | 5.32 |
 
-Trash WR still high after 5–8 → 6–9 → 7–9 steps; boss left in band.
-
 ## Debug APK
 
-[Release v0.1.4-wake](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.4-wake)  
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.4-wake/tower-of-darkness-debug.apk)
+[Release v0.1.5-path](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.5-path)  
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.5-path/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -38,4 +38,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/wake-v014.md`, `docs/qa-sim-v014-trash79-2026-09-20.md`.
+Docs: `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`.
