@@ -10,7 +10,7 @@ These are **not** measured playtest or sim results. Do not cite them as proven.
 |-----------|--------|--------|
 | Player max / start HP | **30** | Cap for heals. |
 | Enemy HP (normal / trash) | **20** | Per normal combat node. |
-| Enemy counter (normal / trash) | **5–8** | *v0.1.4 lock* — After Brace. |
+| Enemy counter (normal / trash) | **7–9** | *v0.1.4 lock* — After Brace. |
 | Boss HP | **28** | *CoS temporary lock* (Elliott PICK C — locked). |
 | Boss counter | **6–9** | *CoS temporary lock* (Elliott PICK C — locked). |
 | Player damage (successful hit effect) | **4–8** | Per card design in `cards-v0.md`. |
@@ -23,7 +23,7 @@ These are **not** measured playtest or sim results. Do not cite them as proven.
 
 Elliott may still override later. Until then, Engineer/QA treat as slice law:
 
-1. Boss **28 HP**, counter **6–9** (Elliott PICK C — locked). Trash/normal counter **5–8** (v0.1.4). Trash HP **20** (no trash retune).
+1. Boss **28 HP**, counter **6–9** (Elliott PICK C — locked). Trash/normal counter **7–9** (v0.1.4). Trash HP **20** (no trash retune).
 2. ~84% / ~3.6 apply to **tutorial-default loadout climbs** for QA baseline (not all Hub unlocks).
 3. Ashbrand Wake presentation: see `wake-v014.md` (FULL legendary + gold pin; SPARK quiet; Lv1 thresh **3**).
 
