@@ -4,23 +4,31 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.3-combatbar)
+## Status (v0.1.4-wake)
 
-- 5-skill loadout (exact) + Ashbrand weapon slot (CHAIN + SPARK)
-- Exhaust bar: dice weighted among live slots; grey until cycle reset
-- Combat beats: dice → skill → read hold → weapon → enemy; Continue after end
-- Soft-lock / phone UI passes from earlier builds
+- 5-skill exhaust bar + Ashbrand (CHAIN full Wake + quiet SPARK)
+- **FULL Wake** legendary beat: gold `ASHBRAND — WAKE N`, float WAKE, pin in log, ~2300ms
+- Lv1 Wake threshold **3** (dmg still 4/6/8)
+- Trash counters **7–9**; boss counter **6–9**, Boss HP **28**
+- Phone UI / soft-lock passes from earlier builds
 - Placeholders for art/SFX; **no mid-run save**
 - Debug APK only — not shippable
 
-### Balance notes (measured n=2000)
-- Ash Wretch: ~50.7% WR (default 5 + Ashbrand lv1)
-- Seal-Warden: **23.45%** WR, mean skill beats ~5.3 — boss counter **6–9**, Boss HP **28**
+### Measured n=2000 (default 5 + Ashbrand lv1)
+| Cohort | WR | Mean skill beats |
+|--------|-----|------------------|
+| Ash Wretch | 97.95% | 4.41 |
+| Ruin Brute | 97.95% | 4.41 |
+| Seal Spinner | 97.95% | 4.41 |
+| Stone Hunger | 97.95% | 4.41 |
+| Seal-Warden | 23.45% | 5.32 |
+
+Trash WR still high after 5–8 → 6–9 → 7–9 steps; boss left in band.
 
 ## Debug APK
 
-[Release v0.1.3-combatbar](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.3-combatbar)  
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.3-combatbar/tower-of-darkness-debug.apk)
+[Release v0.1.4-wake](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.4-wake)  
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.4-wake/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -30,4 +38,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs under `docs/` (see `combat-bar-v013.md`, `qa-sim-v013-boss69-2026-09-20.md`).
+Docs: `docs/wake-v014.md`, `docs/qa-sim-v014-trash79-2026-09-20.md`.

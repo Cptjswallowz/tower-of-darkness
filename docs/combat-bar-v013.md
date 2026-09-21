@@ -2,7 +2,8 @@
 
 Status: **design lock** for Engineer (aligned to Elliott work order).  
 Fog / rumor rules: **unchanged** (see `rumors.md`).  
-Floor generator + rumor visibility: **not changed this pass**.
+Floor generator + rumor visibility: **not changed this pass**.  
+**v0.1.4 Wake overlay:** `wake-v014.md` (FULL legendary beat + gold pin; SPARK quiet; Lv1 thresh **3**; trash counter **5–8**).
 
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.
 
@@ -52,7 +53,7 @@ Timings are **design targets for pacing**, not measured playtest.
 | Skill | **~1700–2300 ms** | Weight-pick among unspent; fire; grey exhaust; apply effect |
 | Read hold | **~1800 ms** | Hold so player can read outcome |
 | Weapon | **~1500 ms** | Ashbrand CHAIN threshold check and/or SPARK roll → Wake if any |
-| Enemy | **~1500 ms** | Enemy counter (normal 7–11 / boss 8–12 per `balance-targets.md`) |
+| Enemy | **~1500 ms** | Enemy counter (trash **5–8** / boss **6–9** per `balance-targets.md`) |
 | Cycle reset | Immediate when 5th skill spends (before next skill beat) | All 5 → Ready; 1x stub flash OK |
 | End gate | On player or enemy HP ≤ 0 | Stop beats; show result; **Continue** required |
 
@@ -78,9 +79,13 @@ Track: `charge` (integer) and `level` (1 / 2 / 3). Slice default **level = 1** u
 
 | Level | CHAIN threshold | Full Wake damage |
 |-------|-----------------|------------------|
-| 1 | **4** | **4** |
+| 1 | **3** | **4** |
 | 2 | **3** | **6** |
 | 3 | **2** | **8** |
+
+### FULL Wake presentation (v0.1.4)
+
+See `wake-v014.md`: FULL Wake uses a **legendary beat**, gold combat log `ASHBRAND — WAKE N`, and **pin**. SPARK half Wake stays **quiet** (no gold pin).
 
 ### SPARK (per player round — half Wake, no charge reset)
 
@@ -132,7 +137,9 @@ Flee remains **grayed** (CoS temporary lock).
 
 - [ ] `LOADOUT_MIN = LOADOUT_MAX = 5`
 - [ ] Weight pick among **unspent only**; grey exhaust; reset when all 5 spent
-- [ ] Ashbrand: CHAIN thresholds 4/3/2 → full Wake 4/6/8; SPARK 8%+4%×lv → half Wake 2/3/4 without charge reset
+- [ ] Ashbrand: CHAIN thresholds **3**/3/2 → full Wake 4/6/8; SPARK 8%+4%×lv → half Wake 2/3/4 without charge reset
+- [ ] v0.1.4: FULL Wake legendary + gold `ASHBRAND — WAKE N` pin; SPARK quiet (`wake-v014.md`)
+- [ ] Trash counter **5–8**; boss **6–9** / HP **28**
 - [ ] Beat stubs: ~800 / ~1700–2300 / ~1800 / ~1500 / ~1500 (order preserved)
 - [ ] Continue CTA on end
 - [ ] 1x shared stub only

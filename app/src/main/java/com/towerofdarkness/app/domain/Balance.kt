@@ -16,7 +16,7 @@ object Balance {
     const val PLAYER_DMG_MIN = 4
     const val PLAYER_DMG_MAX = 8
     const val ENEMY_COUNTER_MIN = 7
-    const val ENEMY_COUNTER_MAX = 11
+    const val ENEMY_COUNTER_MAX = 9
     const val BOSS_COUNTER_MIN = 6
     const val BOSS_COUNTER_MAX = 9
 
@@ -42,5 +42,7 @@ object Balance {
     const val SKILL_RARE_MS = 2300L
     const val READ_HOLD_MS = 1800L
     const val WEAPON_HOLD_MS = 1500L
+    /** FULL Wake only — legendary hold */
+    const val WEAPON_FULL_HOLD_MS = 2300L
     const val ENEMY_HOLD_MS = 1500L
 }

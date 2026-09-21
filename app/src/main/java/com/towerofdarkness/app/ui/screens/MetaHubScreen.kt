@@ -51,7 +51,7 @@ fun MetaHubScreen(gc: GameController) {
 
         Text("Cards", color = Gold, fontSize = 14.sp)
         if (cardUnlocks.isEmpty()) {
-            Text("Shadow Latch & Relic Shard owned (or none left).", color = Bone.copy(0.7f), fontSize = 12.sp)
+            Text("All rare cards unlocked.", color = Bone.copy(0.7f), fontSize = 12.sp)
         } else {
             cardUnlocks.forEach { card ->
                 val cost = card.unlockCost.coerceAtLeast(Balance.CHEAPEST_CARD_UNLOCK)

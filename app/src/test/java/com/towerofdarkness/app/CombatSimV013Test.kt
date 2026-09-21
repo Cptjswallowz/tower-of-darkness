@@ -111,8 +111,8 @@ class CombatSimV013Test {
             // Count wake/spark from new log lines
             for (ev in s.log.drop(logBeforeSkill)) {
                 val m = ev.message
-                if (m.contains("Wake!")) fullWake++
-                if (m.contains(" spark (")) spark++
+                if (m.startsWith("ASHBRAND — WAKE") || m.contains("Wake!")) fullWake++
+                if (m.contains("spark (", ignoreCase = true)) spark++
             }
 
             if (s.finished) break
@@ -216,7 +216,7 @@ class CombatSimV013Test {
         assertEquals("ashbrand", w.def.id)
         assertEquals(1, w.level)
         assertEquals(0, w.charge)
-        assertEquals(4, w.threshold)
+        assertEquals(3, w.threshold)
 
         // Sanity enemies
         val wretch = Enemy.normal(EnemyKind.GOBLIN)

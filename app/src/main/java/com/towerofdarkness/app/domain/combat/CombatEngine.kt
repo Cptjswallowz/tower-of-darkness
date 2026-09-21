@@ -26,7 +26,8 @@ data class CombatEvent(
     val floating: FloatingText? = null,
     val animStyle: CombatAnimStyle = CombatAnimStyle.QUICK,
     val sound: String = "hit",
-    val glossaryHints: List<String> = emptyList()
+    val glossaryHints: List<String> = emptyList(),
+    val goldLog: Boolean = false
 )
 
 data class CombatState(
@@ -52,7 +53,9 @@ data class CombatState(
     val awaitingWeapon: Boolean = false,
     /** Queued independently — both may fire same beat. */
     val pendingFullWake: Boolean = false,
-    val pendingSpark: Boolean = false
+    val pendingSpark: Boolean = false,
+    /** Sticky FULL Wake line for UI last-5 pin during Wake hold. */
+    val pinnedWakeLine: String? = null
 )
 
 class CombatEngine(private val rng: Random = Random.Default) {
@@ -89,7 +92,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
             lastFiredCard = card,
             log = state.log + events,
             beat = CombatBeat.AFTER_DICE,
-            weaponFlashed = false
+            weaponFlashed = false,
+            pinnedWakeLine = null
         )
     }
 
@@ -147,15 +151,20 @@ class CombatEngine(private val rng: Random = Random.Default) {
         val doFull = state.pendingFullWake || w.charge >= w.threshold
         val doSpark = state.pendingSpark
 
+        var pinned: String? = s.pinnedWakeLine
         if (doFull) {
             val dmg = w.def.fullDmg(w.level)
             val enemy = s.enemy.copy(hp = (s.enemy.hp - dmg).coerceAtLeast(0))
+            // Exact CHAIN FULL Wake payoff line (gold + WAKE float + legendary anim)
+            val wakeLine = "ASHBRAND — WAKE $dmg"
             events += CombatEvent(
-                "${w.def.title} ${w.def.abilityTitle}! ($dmg)",
-                FloatingText("-$dmg", true, true),
-                CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
-                "legendary"
+                message = wakeLine,
+                floating = FloatingText("WAKE", true, true),
+                animStyle = CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
+                sound = "legendary",
+                goldLog = true
             )
+            pinned = wakeLine
             fullProc = true
             if (enemy.hp <= 0) fullKill = true
             w = w.copy(charge = 0)
@@ -165,21 +174,24 @@ class CombatEngine(private val rng: Random = Random.Default) {
         if (doSpark) {
             val dmg = w.def.sparkDmg(w.level)
             val enemy = s.enemy.copy(hp = (s.enemy.hp - dmg).coerceAtLeast(0))
+            // Spark: plain log only — no anim, no gold, no WAKE float
             events += CombatEvent(
-                "${w.def.title} spark ($dmg)",
-                FloatingText("-$dmg", true),
-                sound = "card_fire"
+                message = "Ashbrand spark ($dmg)",
+                floating = null,
+                animStyle = CombatAnimStyle.QUICK,
+                sound = "card_fire",
+                goldLog = false
             )
-            // SPARK does not reset or restore charge
             s = s.copy(enemy = enemy, weapon = w)
         }
 
         s = s.copy(
-            weaponFlashed = doFull || doSpark,
+            weaponFlashed = doFull, // gold slam only on FULL Wake
             log = s.log + events,
             awaitingWeapon = false,
             pendingFullWake = false,
             pendingSpark = false,
+            pinnedWakeLine = pinned,
             beat = CombatBeat.AFTER_WEAPON
         )
         if (s.enemy.hp <= 0) return finishVictory(s)
@@ -194,7 +206,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
         val (cMin, cMax) = if (state.enemy.isBoss)
             Balance.BOSS_COUNTER_MIN to Balance.BOSS_COUNTER_MAX
         else
-            Balance.ENEMY_COUNTER_MIN to Balance.ENEMY_COUNTER_MAX
+            state.enemy.kind.trashCounterMin to state.enemy.kind.trashCounterMax
         var dmg = rng.nextInt(cMin, cMax + 1) - state.counterPenalty
         dmg = dmg.coerceAtLeast(1)
         var brace = state.brace

@@ -135,9 +135,18 @@ private fun PathNodeChip(
         val rumorOrType = when {
             showType && node.revealed -> node.type.name.lowercase()
             node.scoutedTypeOnly -> node.type.name.lowercase() + " (scout)"
-            else -> node.rumor.take(28) + if (node.rumor.length > 28) "…" else ""
+            else -> node.rumor  // wrap in UI (2 lines), do not hard-clip mid-word
         }
-        Text(rumorOrType, color = Bone.copy(0.65f), fontSize = 9.sp, modifier = Modifier.padding(top = 2.dp))
+        Text(
+            rumorOrType,
+            color = Bone.copy(0.65f),
+            fontSize = 9.sp,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+            modifier = Modifier
+                .padding(top = 2.dp)
+                .fillMaxWidth(0.28f)
+        )
         if (canReroll && selectable) {
             Text(
                 "↻ rumor",

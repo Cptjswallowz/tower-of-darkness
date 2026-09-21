@@ -3,9 +3,10 @@ package com.towerofdarkness.app
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.CardCatalog
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.CombatAnimStyle
+import com.towerofdarkness.app.domain.combat.EnemyKind
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.Enemy
-import com.towerofdarkness.app.domain.combat.EnemyKind
 import com.towerofdarkness.app.domain.combat.WeaponCatalog
 import com.towerofdarkness.app.domain.combat.WeaponRuntime
 import org.junit.Assert.assertEquals
@@ -169,7 +170,7 @@ class CombatEngineTest {
         val msgs = s.log.map { it.message }
         assertTrue(
             "expected full Wake in log: $msgs",
-            msgs.any { it.contains("Wake") && !it.contains("spark") }
+            msgs.any { it.startsWith("ASHBRAND — WAKE") }
         )
         assertTrue(
             "expected SPARK in same beat log: $msgs",
@@ -196,11 +197,11 @@ class CombatEngineTest {
         var s = engine.start(
             cards,
             tank(),
-            WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 3),
+            WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 2),
             maxHp = 99,
             playerHp = 99
         )
-        // Force an attack skill highlight
+        // Force an attack skill highlight — +1 charge reaches Lv1 threshold 3
         val attack = cards.first { it.id == "hostflint" || it.title == "Hostflint" }
         s = s.copy(lastFiredCard = attack, highlightedId = attack.id, beat = CombatBeat.AFTER_DICE)
         s = engine.resolveSkill(s)
@@ -209,8 +210,67 @@ class CombatEngineTest {
         assertTrue("spark must roll independent of full", s.pendingSpark)
         s = engine.resolveWeapon(s)
         val msgs = s.log.map { it.message }
-        assertTrue(msgs.any { it.contains("Wake") })
+        assertTrue(msgs.any { it.startsWith("ASHBRAND — WAKE") })
         assertTrue(msgs.any { it.contains("spark", ignoreCase = true) })
         assertEquals(0, s.weapon.charge)
+    }
+
+
+    @Test
+    fun wake_lv1FullAtCharge3() {
+        assertEquals(3, WeaponCatalog.ashbrand.threshold(1))
+        assertEquals(2, WeaponCatalog.ashbrand.threshold(2))
+        assertEquals(2, WeaponCatalog.ashbrand.threshold(3))
+        val engine = CombatEngine(Random(0))
+        var s = engine.start(
+            fiveCards(),
+            tank(),
+            WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 3),
+            99, 99
+        )
+        s = s.copy(awaitingWeapon = true, pendingFullWake = true, pendingSpark = false)
+        s = engine.resolveWeapon(s)
+        assertEquals(0, s.weapon.charge)
+        assertTrue(s.fullProcThisCombat)
+        val wake = s.log.map { it.message }.first { it.startsWith("ASHBRAND — WAKE") }
+        assertEquals("ASHBRAND — WAKE 4", wake) // Lv1 full dmg
+    }
+
+    @Test
+    fun wake_exactLogLine_andSparkNoGoldAnim() {
+        val engine = CombatEngine(Random(0))
+        var s = engine.start(
+            fiveCards(),
+            tank(),
+            WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 3),
+            99, 99
+        )
+        s = s.copy(awaitingWeapon = true, pendingFullWake = true, pendingSpark = true)
+        s = engine.resolveWeapon(s)
+        val wakeEv = s.log.first { it.message.startsWith("ASHBRAND — WAKE") }
+        assertEquals("ASHBRAND — WAKE 4", wakeEv.message)
+        assertTrue(wakeEv.goldLog)
+        assertEquals("WAKE", wakeEv.floating?.text)
+        assertEquals(CombatAnimStyle.CHARGE_SHAKE_SLOWMO, wakeEv.animStyle)
+
+        val sparkEv = s.log.first { it.message.contains("spark", ignoreCase = true) }
+        assertEquals("Ashbrand spark (2)", sparkEv.message)
+        assertFalse(sparkEv.goldLog)
+        assertEquals(null, sparkEv.floating)
+        assertEquals(CombatAnimStyle.QUICK, sparkEv.animStyle)
+    }
+
+    @Test
+    fun trashCounter_notEleven() {
+        assertEquals(7, Balance.ENEMY_COUNTER_MIN)
+        assertEquals(9, Balance.ENEMY_COUNTER_MAX)
+        EnemyKind.entries.filter { it != EnemyKind.DRAGON }.forEach { k ->
+            assertEquals("goblin/orc/spider/troll min", 7, k.trashCounterMin)
+            assertEquals("goblin/orc/spider/troll max", 9, k.trashCounterMax)
+            assertTrue("${k} max!=11", k.trashCounterMax != 11)
+        }
+        assertEquals(6, Balance.BOSS_COUNTER_MIN)
+        assertEquals(9, Balance.BOSS_COUNTER_MAX)
+        assertEquals(28, Balance.BOSS_HP)
     }
 }

@@ -23,18 +23,18 @@ Status: **measured** headless sims (CoS GREENLIGHT).
 
 | Metric | Value |
 |--------|-------|
-| Wins | 1014 / 2000 |
+| Wins | 1959 / 2000 |
 | Hangs (round cap) | 0 |
-| Winrate | 0.5070 |
-| Sum skill beats | 8614 |
-| Mean skill beats | 4.3070 |
-| Mean final `state.round` | 4.8000 |
-| Full Wake events | 1005 |
-| Full Wake / fight (avg procs) | 0.5025 |
-| Fights with ≥1 Full Wake | 1005 / 2000 (0.5025) |
-| SPARK events | 1046 |
-| SPARK / fight | 0.5230 |
-| Fights with ≥1 SPARK | 848 / 2000 (0.4240) |
+| Winrate | 0.9795 |
+| Sum skill beats | 8827 |
+| Mean skill beats | 4.4135 |
+| Mean final `state.round` | 4.4340 |
+| Full Wake events | 2000 |
+| Full Wake / fight (avg procs) | 1.0000 |
+| Fights with ≥1 Full Wake | 2000 / 2000 (1.0000) |
+| SPARK events | 1062 |
+| SPARK / fight | 0.5310 |
+| Fights with ≥1 SPARK | 913 / 2000 (0.4565) |
 | Grey violations | 0 |
 
 ## Seal-Warden (`Enemy.boss()`, HP=28)
@@ -47,9 +47,9 @@ Status: **measured** headless sims (CoS GREENLIGHT).
 | Sum skill beats | 10648 |
 | Mean skill beats | 5.3240 |
 | Mean final `state.round` | 6.0895 |
-| Full Wake events | 1984 |
-| Full Wake / fight (avg procs) | 0.9920 |
-| Fights with ≥1 Full Wake | 1984 / 2000 (0.9920) |
+| Full Wake events | 2002 |
+| Full Wake / fight (avg procs) | 1.0010 |
+| Fights with ≥1 Full Wake | 2000 / 2000 (1.0000) |
 | SPARK events | 1270 |
 | SPARK / fight | 0.6350 |
 | Fights with ≥1 SPARK | 970 / 2000 (0.4850) |
@@ -58,7 +58,7 @@ Status: **measured** headless sims (CoS GREENLIGHT).
 ## SIM_REPORT_JSON
 
 ```
-SIM_REPORT_JSON={"fights":2000,"base_seed":1000,"round_cap":200,"ash_wretch":{"wins":1014,"hangs":0,"winrate":0.5070,"sum_skill_beats":8614,"mean_skill_beats":4.3070,"mean_final_round":4.8000,"full_wake_events":1005,"full_wake_per_fight":0.5025,"fights_with_full_wake":1005,"full_wake_fight_rate":0.5025,"spark_events":1046,"spark_per_fight":0.5230,"fights_with_spark":848,"spark_fight_rate":0.4240,"grey_violations":0},"seal_warden":{"wins":469,"hangs":0,"winrate":0.2345,"sum_skill_beats":10648,"mean_skill_beats":5.3240,"mean_final_round":6.0895,"full_wake_events":1984,"full_wake_per_fight":0.9920,"fights_with_full_wake":1984,"full_wake_fight_rate":0.9920,"spark_events":1270,"spark_per_fight":0.6350,"fights_with_spark":970,"spark_fight_rate":0.4850,"grey_violations":0},"assert_grey_zero":true,"assert_confirm_4_6_rejected":true,"assert_skip_default_5_ashbrand":true}
+SIM_REPORT_JSON={"fights":2000,"base_seed":1000,"round_cap":200,"ash_wretch":{"wins":1959,"hangs":0,"winrate":0.9795,"sum_skill_beats":8827,"mean_skill_beats":4.4135,"mean_final_round":4.4340,"full_wake_events":2000,"full_wake_per_fight":1.0000,"fights_with_full_wake":2000,"full_wake_fight_rate":1.0000,"spark_events":1062,"spark_per_fight":0.5310,"fights_with_spark":913,"spark_fight_rate":0.4565,"grey_violations":0},"seal_warden":{"wins":469,"hangs":0,"winrate":0.2345,"sum_skill_beats":10648,"mean_skill_beats":5.3240,"mean_final_round":6.0895,"full_wake_events":2002,"full_wake_per_fight":1.0010,"fights_with_full_wake":2000,"full_wake_fight_rate":1.0000,"spark_events":1270,"spark_per_fight":0.6350,"fights_with_spark":970,"spark_fight_rate":0.4850,"grey_violations":0},"assert_grey_zero":true,"assert_confirm_4_6_rejected":true,"assert_skip_default_5_ashbrand":true}
 ```
 
 ## Anomalies / engine vs design
@@ -74,7 +74,7 @@ Prior report values: Ash SPARK events = **912**, Seal-Warden SPARK events = **89
 
 | Cohort | Prior SPARK events | New SPARK events | Delta SPARK events | Prior winrate | New winrate | Delta winrate |
 |--------|-------------------:|-----------------:|-------------------:|--------------:|------------:|--------------:|
-| Ash Wretch | 912 | 1046 | 134 | 0.5070 | 0.5070 | 0.0000 |
+| Ash Wretch | 912 | 1062 | 150 | 0.5070 | 0.9795 | 0.4725 |
 | Seal-Warden | 898 | 1270 | 372 | 0.0005 | 0.2345 | 0.2340 |
 
 ## Method

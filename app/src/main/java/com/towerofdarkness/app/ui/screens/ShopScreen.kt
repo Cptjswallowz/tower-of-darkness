@@ -23,6 +23,7 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 @Composable
 fun ShopScreen(gc: GameController) {
     val maxHp = Balance.PLAYER_MAX_HP + gc.metaHpBonus
+    val broke = gc.runWallet <= 0
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Shop", color = Gold, fontSize = 22.sp)
         Text(
@@ -31,19 +32,24 @@ fun ShopScreen(gc: GameController) {
             fontSize = 14.sp
         )
         Spacer(Modifier.height(12.dp))
-        gc.shopOffers.forEach { offer ->
-            Button(
-                onClick = { gc.buyOffer(offer) },
-                enabled = !offer.sold && gc.runWallet >= offer.price,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-            ) {
-                Text(
-                    if (offer.sold) "${offer.title} — SOLD"
-                    else "${offer.title} · ${offer.price} rem"
-                )
+        if (broke) {
+            Text("Nothing you can buy", color = Bone.copy(0.75f), fontSize = 15.sp)
+            Spacer(Modifier.height(12.dp))
+        } else {
+            gc.shopOffers.forEach { offer ->
+                Button(
+                    onClick = { gc.buyOffer(offer) },
+                    enabled = !offer.sold && gc.runWallet >= offer.price,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        if (offer.sold) "${offer.title} — SOLD"
+                        else "${offer.title} · ${offer.price} rem"
+                    )
+                }
             }
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = { gc.leaveShop() }, modifier = Modifier.fillMaxWidth()) {
             Text("Leave")
         }

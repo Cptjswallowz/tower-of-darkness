@@ -2,12 +2,17 @@ package com.towerofdarkness.app.domain.combat
 
 import com.towerofdarkness.app.domain.Balance
 
-enum class EnemyKind(val displayName: String, val asset: String) {
-    GOBLIN("Ash Wretch", "enemies/enemy_goblin.png"),
-    ORC("Ruin Brute", "enemies/enemy_orc.png"),
-    TROLL("Stone Hunger", "enemies/enemy_troll.png"),
-    SPIDER("Seal Spinner", "enemies/enemy_spider.png"),
-    DRAGON("Seal-Warden", "enemies/enemy_dragon.png")
+enum class EnemyKind(
+    val displayName: String,
+    val asset: String,
+    val trashCounterMin: Int,
+    val trashCounterMax: Int
+) {
+    GOBLIN("Ash Wretch", "enemies/enemy_goblin.png", 7, 9),
+    ORC("Ruin Brute", "enemies/enemy_orc.png", 7, 9),
+    TROLL("Stone Hunger", "enemies/enemy_troll.png", 7, 9),
+    SPIDER("Seal Spinner", "enemies/enemy_spider.png", 7, 9),
+    DRAGON("Seal-Warden", "enemies/enemy_dragon.png", 6, 9) // boss uses Balance.BOSS_COUNTER_*
 }
 
 data class Enemy(

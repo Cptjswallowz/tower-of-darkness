@@ -4,7 +4,8 @@ enum class WeaponTag { Ember, Notch, Guard }
 
 /**
  * Weapon is the 6th loadout slot — NOT in the skill dice pool.
- * Level is this-run only (1..3). Threshold: Lv1=4, Lv2=3, Lv3=2.
+ * Level is this-run only (1..3). Threshold v0.1.4: Lv1=3, Lv2=2, Lv3=2.
+ * Wake damage stays 4/6/8 — do not raise.
  */
 data class Weapon(
     val id: String,
@@ -12,14 +13,12 @@ data class Weapon(
     val statusTag: WeaponTag,
     val abilityTitle: String,
     val abilityText: String,
-    /** Full-proc damage by level index 0..2 */
     val fullDamage: IntArray,
-    /** Spark (half-power) damage by level index 0..2 */
     val sparkDamage: IntArray
 ) {
     fun threshold(level: Int): Int = when (level.coerceIn(1, 3)) {
-        1 -> 4
-        2 -> 3
+        1 -> 3
+        2 -> 2
         else -> 2
     }
 

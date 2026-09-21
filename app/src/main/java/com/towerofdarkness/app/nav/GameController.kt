@@ -301,12 +301,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // D — read hold
             delay(Balance.READ_HOLD_MS)
 
-            // E — weapon AFTER skill, BEFORE enemy; still play queued weapon if skill killed
-            if (s.awaitingWeapon) {
+            // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms
+            if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
+                val fullWake = s.pendingFullWake
                 s = engine.resolveWeapon(s)
                 combatState = s
                 s.log.lastOrNull()?.sound?.let { sound.play(it) }
-                delay(Balance.WEAPON_HOLD_MS)
+                delay(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
             }
 
             if (s.finished) break
@@ -551,7 +552,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
     // --- Summary / Hub ---
     private fun finishRun(won: Boolean) {
         val earned = runWallet
-        val near = !won && playerHp == 0 && nodesCleared >= 2
+        // Near-miss only if boss reached AND boss HP remaining ≤ 8
+        val bossFight = combatState?.enemy?.isBoss == true
+        val bossHpLeft = combatState?.enemy?.hp ?: 999
+        val near = !won && bossFight && bossHpLeft <= 8
         summary = RunSummaryData(won, nodesCleared, earned, path?.floor ?: 1, near)
         viewModelScope.launch { meta.addRemnants(earned) }
         runWallet = 0

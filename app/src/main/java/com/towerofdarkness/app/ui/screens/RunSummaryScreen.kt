@@ -31,7 +31,13 @@ fun RunSummaryScreen(gc: GameController) {
             Text("Floor: ${s.floorReached}", color = Bone)
             Text("Remnants earned: ${s.remnantsEarned}", color = Bone)
             Text("Banked total: ${gc.remnantsBank}", color = Bone)
-            if (s.nearMiss) Text("Near-miss — so close.", color = Gold)
+            if (!s.won) {
+                Text(
+                    if (s.nearMiss) "Near-miss — so close." else "The climb ends.",
+                    color = Gold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
         Spacer(Modifier.height(24.dp))
         Button(onClick = { gc.goHub() }, modifier = Modifier.fillMaxWidth()) { Text("Hub") }

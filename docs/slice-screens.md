@@ -5,7 +5,7 @@ Status: design lock for Android Engineer implementation. One floor. Placeholders
 **Fantasy (tone):** Ashen Host climbing the Tower of Darkness in a fallen kingdom. Dice auto-combat + rumor fog are first-class. Compose locks live in `balance-targets.md`.
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.
 
-**Combat:** v0.1.3 bar lock in `combat-bar-v013.md`. Fog/rumor + floor generator unchanged that pass.
+**Combat:** v0.1.3 bar + v0.1.4 Wake in `combat-bar-v013.md` / `wake-v014.md`. Fog/rumor + floor generator unchanged.
 
 ## Flow (happy path)
 
@@ -59,9 +59,9 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ### 5. Combat (bar v0.1.3 — see `combat-bar-v013.md`)
 - Player HP start: **30** (see `balance-targets.md`).
-- Enemy HP start: **20** (normal). Boss: **28 HP**, counter **8–12** (*CoS temporary lock*; see `balance-targets.md`).
+- Enemy HP start: **20** (normal). Boss: **28 HP**, counter **6–9** (*CoS temporary lock*; see `balance-targets.md`).
 - **5-cap exhaust:** weight-pick among unspent, grey exhaust, reset at 5 spent; Ashbrand CHAIN (full Wake) + SPARK (half Wake) on weapon beat.
-- Player skill damage band target **4–8**; normal enemy counter **7–11** (targets, not measured).
+- Player skill damage band target **4–8**; trash enemy counter **5–8**; boss counter **6–9** (locks / targets, not measured WRs).
 - No player input mid-fight. **Flee: grayed**. End gate requires **Continue**.
 - Continue → Path (non-boss win) or Run Summary (boss win / loss).
 - Floor generator + rumor visibility: **unchanged** this pass.
@@ -87,7 +87,7 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ### 10. Boss
 - Same combat screen; boss presentation (nameplate / art slot).
-- Stats: **28 HP**, counter **8–12** (*CoS temporary lock*).
+- Stats: **28 HP**, counter **6–9** (*CoS temporary lock*).
 - Win → Run Summary (victory). Loss → Run Summary (defeat).
 
 ### 11. Run Summary
@@ -130,7 +130,7 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ## CoS temporary locks (2026-09-20; Elliott skipped fork widget — locks stand; may still override later)
 
-1. **Boss:** HP **28**, counter **8–12** (normals 20 / 7–11).
+1. **Boss:** HP **28**, counter **6–9** (trash 20 HP / counter **5–8** — v0.1.4).
 2. **Flee:** grayed (stub only); loss via death → summary.
 3. **Loadout re-edit:** Path-start lock only (unchanged).
 4. **Hub unlock:** any pool card and/or meta perk — not a unique signature system. (`loadout_flex` deferred in v0.1.3.)

@@ -144,14 +144,27 @@ fun CombatScreen(gc: GameController) {
 
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
-            state.log.takeLast(5).forEachIndexed { idx, ev ->
-                val latest = idx == state.log.takeLast(5).lastIndex
+            // Pin FULL Wake line so it stays visible for the Wake hold beat
+            val recent = state.log.takeLast(5).toMutableList()
+            state.pinnedWakeLine?.let { pin ->
+                if (recent.none { it.message == pin }) {
+                    recent.add(0, com.towerofdarkness.app.domain.combat.CombatEvent(pin, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            recent.forEachIndexed { idx, ev ->
+                val latest = idx == recent.lastIndex
+                val color = when {
+                    ev.goldLog || ev.message.startsWith("ASHBRAND — WAKE") -> Gold
+                    latest -> Gold
+                    else -> Bone.copy(0.85f)
+                }
                 GlossaryText(
                     text = ev.message,
                     highlights = (ev.glossaryHints + listOf("brace", "stun", "freeze")).distinct(),
                     onTerm = { gc.showGlossary(it) },
-                    color = if (latest) Gold else Bone.copy(0.85f),
-                    fontSizeSp = if (latest) 17 else 14
+                    color = color,
+                    fontSizeSp = if (ev.goldLog || latest) 17 else 14
                 )
             }
         }
