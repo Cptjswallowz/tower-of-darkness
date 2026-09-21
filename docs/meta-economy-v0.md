@@ -110,20 +110,30 @@ Do **not** Hub-sell cards #1–9 (would duplicate the open pool). Future pool-ex
 
 Permanent unlocks. All costs **≥15**. Hub always shows the **lowest-cost unowned** unlock as primary CTA (plus list of next ones). If bank &lt; cheapest remaining, show it grayed with deficit and surface **Climb** as the useful action.
 
-| # | unlock_id | Cost | Effect |
-|---|-----------|------|--------|
-| 1 | `unlock_shadow_latch` | **15** | Add **Shadow Latch** to unlocked pool — **cheapest card unlock** (master prompt) |
-| 2 | `meta_hp_2` | **15** | Permanent +2 max HP (slice base 30 → 32) — parallel perk CTA |
-| 3 | `scout_charge` | **20** | +1 free Scout at first Rest each run |
-| 4 | `unlock_relic_shard` | **20** | Add **Relic Shard** to unlocked pool |
-| 5 | `rest_heal_plus` | **25** | Rest Heal restores +4 more HP (cap still applies) |
-| 6 | `boss_bonus_2` | **25** | +2 remnants on boss win |
-| 7 | `loadout_flex` | **30** | Prefer 6-card loadout default in UI (still 5–6 legal) |
-| 8 | `rumor_clarity` | **35** | One free rumor re-roll per climb (Path fog) |
+### Title map (v0.1.3 Hub copy — costs unchanged)
 
-Card ids: **Shadow Latch** @15 (cheapest card), **Relic Shard** @20. Rows 2–3 and 5–8 are non-card meta perks. Hub may show both 15-cost CTAs (card + perk) so spend is never empty.
+Hub UI shows **human title — short effect**, never raw `unlock_id`. Ids remain stable for save/Engineer.
 
-If Treasure already granted a rare, Hub row for that card shows **owned** / skipped.
+| # | Title | unlock_id | Cost | Hub UI effect line | Notes |
+|---|-------|-----------|------|--------------------|-------|
+| 1 | **Shadow Latch** | `shadow_latch` / card id | **15** | Unlock Shadow Latch — rare MoveEffect | Cheapest **card** unlock |
+| 2 | **Iron Blood** | `meta_hp_2` | **15** | +2 max HP | Parallel perk CTA |
+| 3 | **Pathseer** | `scout_charge` | **20** | +1 free Scout each climb | |
+| 4 | **Relic Shard** | `relic_shard` / card id | **20** | Unlock Relic Shard — rare Equipment | |
+| 5 | **Deep Rest** | `rest_heal_plus` | **25** | Rest Heal +4 HP | |
+| 6 | **Warden's Tithe** | `boss_bonus_2` | **25** | +2 remnants on boss win | |
+| 7 | **Sixth Oath** | `loadout_flex` | **30** | Prefer 6-card loadout default | **Hidden / disabled** until later order — do not show buy CTA |
+| 8 | **Fogbreak** | `rumor_clarity` | **35** | 1 rumor re-roll per climb | |
+
+### Weapons (data-only / locked — not remnant buys in v0.1.3)
+
+| Title | Role | Hub |
+|-------|------|-----|
+| **Ashbrand** | Starter weapon | **Not** a Hub buy — owned at start |
+| **Notch Pike** | Future weapon | Data-only row; **locked** / disabled in Hub |
+| **Vow Edge** | Future weapon | Data-only row; **locked** / disabled in Hub |
+
+If Treasure already granted a rare card, Hub card row shows **owned** / skipped.
 
 **Stock rotation at Hub:** none — fixed ladder order. No shop-tier (5–14) permanent unlocks.
 
@@ -164,7 +174,7 @@ run_v0 {
   }
   loadout: {
     locked: bool
-    card_ids: string[]       // 5–6
+    card_ids: string[]       // exactly 5 (v0.1.3)
   }
   combat: {
     player_hp: int
@@ -230,3 +240,4 @@ Flag to CoS before shipping if anyone proposes:
 | 2026-09-20 | v0 initial — Meta & Ops from CoS task |
 | 2026-09-20 | CoS temporary lock; Hub unlocks-only; ladder → meta perks + Shadow Latch / Relic Shard |
 | 2026-09-20 | Override: Shadow Latch @15 (cheapest card); Relic Shard @20; meta_hp_2 @15 parallel; stand by |
+| 2026-09-20 | v0.1.3 Hub copy: human titles; hide loadout_flex; weapon rows Ashbrand/Notch Pike/Vow Edge notes |

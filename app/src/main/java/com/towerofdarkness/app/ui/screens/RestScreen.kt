@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.theme.Bone
@@ -23,9 +24,11 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 @Composable
 fun RestScreen(gc: GameController) {
     val healAmt = gc.restHealAmount()
+    val maxHp = Balance.PLAYER_MAX_HP + gc.metaHpBonus
+    val full = gc.playerHp >= maxHp
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Rest", color = Gold, fontSize = 22.sp)
-        Text("HP ${gc.playerHp}", color = Bone)
+        Text("HP ${gc.playerHp} / $maxHp", color = Bone)
         Spacer(Modifier.height(8.dp))
         GlossaryText(
             "Choose Heal or Scout, or Leave. Scout reveals an adjacent node's type only.",
@@ -33,8 +36,12 @@ fun RestScreen(gc: GameController) {
             onTerm = { gc.showGlossary(it) }
         )
         Spacer(Modifier.height(16.dp))
-        Button(onClick = { gc.restHeal() }, modifier = Modifier.fillMaxWidth()) {
-            Text("Heal (+$healAmt)")
+        Button(
+            onClick = { gc.restHeal() },
+            enabled = !full,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (full) "Heal (already full)" else "Heal (+$healAmt)")
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = { gc.restScout() }, modifier = Modifier.fillMaxWidth()) {

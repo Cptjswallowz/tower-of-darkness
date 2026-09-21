@@ -5,6 +5,8 @@ Status: design lock for Android Engineer implementation. One floor. Placeholders
 **Fantasy (tone):** Ashen Host climbing the Tower of Darkness in a fallen kingdom. Dice auto-combat + rumor fog are first-class. Compose locks live in `balance-targets.md`.
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.
 
+**Combat:** v0.1.3 bar lock in `combat-bar-v013.md`. Fog/rumor + floor generator unchanged that pass.
+
 ## Flow (happy path)
 
 ```
@@ -35,8 +37,8 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 - Beats (in order, short copy OK):
   1. Rumor fog intro (show one sample rumor card; no exact stats).
   2. Path nodes explained (icons: fight / shop / rest / event / treasure / boss).
-  3. Loadout: pick **5–6** cards from the starter pool.
-  4. Dice auto-combat one-liner: cards fire by weight when dice roll; you watch, you don’t tap mid-fight.
+  3. Loadout: pick **exactly 5** cards from the starter pool.
+  4. Combat bar one-liner: 5 skills, weight among unspent, exhaust grey, Ashbrand CHAIN+SPARK; you watch, you don’t tap mid-fight (`combat-bar-v013.md`).
 - **Skip rules:** Skip is available only **after** the player has completed the loadout step **and** seen the rumor beat. Skip jumps to **Path** with a default 5-card loadout (first 5 by table order in `cards-v0.md`).
 - Completing or skipping marks tutorial done for this install (local flag).
 
@@ -50,17 +52,19 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ### 4. Loadout
 - Pool: **10–12** starter cards (`cards-v0.md`).
-- Select **5 or 6** cards. Confirm disabled until count in range.
+- Select **exactly 5** cards. Confirm disabled until count == 5. **No sixth skill.**
 - Show rarity + short effect line; no live DPS math in UI for slice.
 - Confirm → return to Path (or into the pending node if entered from a node tap).
+- `loadout_flex` Hub perk: **deferred** (v0.1.3).
 
-### 5. Combat (dice auto-battler)
+### 5. Combat (bar v0.1.3 — see `combat-bar-v013.md`)
 - Player HP start: **30** (see `balance-targets.md`).
 - Enemy HP start: **20** (normal). Boss: **28 HP**, counter **8–12** (*CoS temporary lock*; see `balance-targets.md`).
-- Each round: dice rolls; loadout cards fire by **weight**; apply `MoveEffect` / `SkillEffect` / `Equipment` as tagged.
-- Player damage band target **4–8** per successful hit effect; normal enemy counter **7–11** (targets, not measured).
-- No player input mid-round. **Flee: grayed** in slice (stub UI only). Loss via death → Run Summary.
-- Win → Path (node cleared) or Boss win → Run Summary. Loss → Run Summary.
+- **5-cap exhaust:** weight-pick among unspent, grey exhaust, reset at 5 spent; Ashbrand CHAIN (full Wake) + SPARK (half Wake) on weapon beat.
+- Player skill damage band target **4–8**; normal enemy counter **7–11** (targets, not measured).
+- No player input mid-fight. **Flee: grayed**. End gate requires **Continue**.
+- Continue → Path (non-boss win) or Run Summary (boss win / loss).
+- Floor generator + rumor visibility: **unchanged** this pass.
 
 ### 6. Shop
 - Currency: **remnants**.
@@ -77,7 +81,7 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 - Leave → Path.
 
 ### 9. Treasure
-- One reward: remnants **or** offer to swap one loadout card with one unused pool card (still within 5–6 size).
+- One reward: remnants **or** offer to swap one loadout card with one unused pool card (still size **5**).
 - Rares may appear here (*CoS temporary lock*: Treasure **and** Hub both allow rares).
 - Leave → Path.
 
@@ -129,7 +133,7 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 1. **Boss:** HP **28**, counter **8–12** (normals 20 / 7–11).
 2. **Flee:** grayed (stub only); loss via death → summary.
 3. **Loadout re-edit:** Path-start lock only (unchanged).
-4. **Hub unlock:** any pool card and/or meta perk — not a unique signature system.
+4. **Hub unlock:** any pool card and/or meta perk — not a unique signature system. (`loadout_flex` deferred in v0.1.3.)
 5. **Rares:** Treasure drops and Hub both allowed.
 6. **Scout:** type only (no second rumor line).
 7. **84% / 3.6:** tutorial-default loadout climbs for QA baseline.

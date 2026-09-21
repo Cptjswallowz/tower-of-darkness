@@ -1,6 +1,6 @@
 # Cards v0 — starter pool (vertical slice)
 
-Status: design lock for Android Engineer implementation. **11 cards.** Loadout picks **5–6**.
+Status: design lock for Android Engineer implementation. **11 cards.** Loadout picks **exactly 5** (v0.1.3 combat bar). See `combat-bar-v013.md`.
 
 Fantasy frame: player is **Ashen Host** — last loyal blade of a fallen kingdom — climbing the **Tower of Darkness**. Names evoke ash, oath, and ruin.
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.
@@ -10,7 +10,7 @@ Effect classes (Engineer enums):
 - `SkillEffect` — active strike or combat verb when dice fire.
 - `Equipment` — passive or triggered gear; usually modifies a hit or grants brace/heal shard.
 
-**Weight:** relative chance the card is selected when the auto-battler rolls the loadout. Higher = more often. Normalize at runtime (sum weights on bar).
+**Weight:** used in combat v0.1.3 — each skill beat picks among **UNSPENT** skills only (normalize weights over the live pool). Exhausted skills are greyed out of the pool until cycle reset (`combat-bar-v013.md`).
 
 Damage numbers below are **design targets** aligned to player dmg **4–8** (`balance-targets.md`). Compose locks only. Not playtested.
 
@@ -34,21 +34,24 @@ Rarity: `Common` | `Uncommon` | `Rare` (slice economy only; no craft).
 
 Cards **1–5**: Hostflint, Cinder Step, Iron Mantle, Emberbrand, Dust Veil.
 
-## Bar rules
+## Bar rules (v0.1.3)
 
-- Size: **5 or 6** cards from this pool only (slice).
+- Size: **exactly 5** cards from this pool (no sixth skill).
 - Duplicates: **not allowed** on the bar.
-- Evolution: **out of scope** for v0 (no evolve UI). Flag for later Architect pass.
-- Shop/Treasure may offer a **swap** with an unused pool card; still no duplicates, still 5–6 size.
+- Exhaust cycle + weighted pick among unspent + Ashbrand CHAIN/SPARK: `combat-bar-v013.md`.
+- Evolution: **out of scope** for v0 (no evolve UI).
+- Shop/Treasure may offer a **swap** with an unused pool card; still no duplicates, still size **5**.
+- Hub perk `loadout_flex`: **deferred** (do not enable 6-card loadout).
 
 ## Implementation notes
 
-- Dice fire: pick one loadout card weighted by `Weight`, apply effect, resolve Brace → HP, then enemy counter if player still alive.
-- `Equipment` that only grants Brace/Heal still consumes the “fire” slot that round (it is the rolled card).
+- v0.1.3: weight-pick among Ready/unspent each skill beat; exhaust (grey); reset when all 5 spent. Then Ashbrand weapon beat (CHAIN full Wake and/or SPARK half Wake); then enemy. See `combat-bar-v013.md`.
+- `Equipment` that only grants Brace/Heal still consumes its bar slot (exhausts) when fired.
 - Do not show exact enemy HP/damage in rumor fog; combat UI may show live HP once fight starts.
+- Floor generator + rumor visibility: **unchanged** this pass.
 
-## CoS temporary locks
+## CoS temporary locks / v0.1.3
 
-- Bar 6th card: **any unlocked pool card** (no unique signature system).
-- Rares (**Shadow Latch**, **Relic Shard**): unlockable via **Treasure and Hub** both.
-- Exact rare drop/offer rates: still provisional — Meta & Ops may set tables; do not treat as measured.
+- Loadout: **exactly 5**; no sixth skill; `loadout_flex` deferred.
+- Hub unlocks still: any pool card and/or meta perk (no signature system) — rarer cards via Treasure **and** Hub.
+- Exact rare drop/offer rates: provisional — not measured.

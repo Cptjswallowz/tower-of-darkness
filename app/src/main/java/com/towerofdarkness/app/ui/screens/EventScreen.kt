@@ -24,7 +24,7 @@ fun EventScreen(gc: GameController) {
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Event", color = Gold, fontSize = 22.sp)
         Text(
-            "A chalk question on the wall: take the ash-purse, or bind your wounds and risk a hitch?",
+            "A chalk question on the wall: take the ash-purse, or risk the niche?",
             color = Bone, modifier = Modifier.padding(vertical = 12.dp)
         )
         Button(onClick = { gc.eventChoice(remnants = true) }, modifier = Modifier.fillMaxWidth()) {
@@ -32,7 +32,7 @@ fun EventScreen(gc: GameController) {
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = { gc.eventChoice(remnants = false) }, modifier = Modifier.fillMaxWidth()) {
-            Text("B — Heal or mild hitch")
+            Text("B — Heal 8, or take 4 damage")
         }
     }
 }

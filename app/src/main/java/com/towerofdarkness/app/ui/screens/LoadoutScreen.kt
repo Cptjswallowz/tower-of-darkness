@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,9 +28,12 @@ import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.combat.WeaponCatalog
 import com.towerofdarkness.app.nav.GameController
+import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Bone
+import com.towerofdarkness.app.ui.theme.Ember
 import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.GlowRare
 import com.towerofdarkness.app.ui.theme.GlowUncommon
@@ -42,22 +46,16 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
     val selected = remember {
         mutableStateListOf<String>().also { list ->
             gc.loadout.forEach { list.add(it.id) }
-            if (list.isEmpty()) {
-                if (tutorialMode) {
-                    CardCatalog.defaultLoadoutIds.forEach { list.add(it) }
-                } else if (gc.hasLoadoutFlex()) {
-                    // Prefer 6-card default: cards 1–5 + next unlocked pool card
-                    CardCatalog.defaultLoadoutIds.forEach { list.add(it) }
-                    val sixth = CardCatalog.poolForRun(gc.unlockedCards)
-                        .map { it.id }
-                        .firstOrNull { it !in list }
-                    if (sixth != null) list.add(sixth)
-                }
+            if (list.isEmpty() && tutorialMode) {
+                CardCatalog.defaultLoadoutIds.forEach { list.add(it) }
             }
         }
     }
+    val weaponId = remember {
+        mutableStateOf(gc.equippedWeapon.def.id.ifBlank { WeaponCatalog.ashbrand.id })
+    }
     val count = selected.size
-    val ok = count in Balance.LOADOUT_MIN..Balance.LOADOUT_MAX
+    val ok = count == Balance.LOADOUT_MAX && weaponId.value.isNotBlank()
 
     Column(
         Modifier
@@ -66,37 +64,64 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
     ) {
         if (!tutorialMode) {
             Text("Loadout", color = Gold, fontSize = 22.sp)
-            Text("Select ${Balance.LOADOUT_MIN}–${Balance.LOADOUT_MAX} · $count selected", color = Bone.copy(0.7f))
+            Text("Select 5 · $count selected", color = Bone.copy(0.7f))
+            GlossaryText(
+                "Weight (w) = how often a skill is picked while it is still live",
+                listOf("loadout"),
+                onTerm = { gc.showGlossary(it) },
+                fontSizeSp = 12
+            )
             Spacer(Modifier.height(8.dp))
+        } else {
+            Text("Select 5 · $count selected", color = Bone.copy(0.7f), fontSize = 13.sp)
         }
         LazyColumn(
-            modifier = if (tutorialMode) Modifier.height(320.dp).fillMaxWidth()
+            modifier = if (tutorialMode) Modifier.height(260.dp).fillMaxWidth()
             else Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(pool, key = { it.id }) { card ->
                 val on = card.id in selected
-                CardRow(card, on) {
+                CardRow(card, on, onGlossary = { gc.showGlossary(it) }) {
                     if (on) selected.remove(card.id)
                     else if (selected.size < Balance.LOADOUT_MAX) selected.add(card.id)
                 }
             }
         }
+        Spacer(Modifier.height(8.dp))
+        Text("Weapon (1)", color = Gold, fontSize = 14.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(WeaponCatalog.ashbrand).forEach { w ->
+                val on = weaponId.value == w.id
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .background(Panel, RoundedCornerShape(8.dp))
+                        .border(2.dp, if (on) Ember else Bone.copy(0.3f), RoundedCornerShape(8.dp))
+                        .clickable { weaponId.value = w.id }
+                        .padding(10.dp)
+                ) {
+                    Text(w.title, color = Bone, fontSize = 13.sp)
+                    Text("${w.statusTag} · ${w.abilityTitle}", color = Ember, fontSize = 11.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
         Button(
             onClick = {
                 val cards = selected.mapNotNull { CardCatalog.byId(it) }
                 if (tutorialMode) gc.tutorialOnLoadoutConfirmed(cards)
-                gc.confirmLoadout(cards)
+                gc.confirmLoadout(cards, weaponId.value)
             },
             enabled = ok,
             modifier = Modifier.fillMaxWidth()
-        ) { Text(if (ok) "Confirm" else "Pick ${Balance.LOADOUT_MIN}–${Balance.LOADOUT_MAX}") }
+        ) { Text(if (ok) "Confirm" else "Pick 5 skills + weapon") }
     }
 }
 
 @Composable
-private fun CardRow(card: Card, selected: Boolean, onClick: () -> Unit) {
+private fun CardRow(card: Card, selected: Boolean, onGlossary: (String) -> Unit, onClick: () -> Unit) {
     val border = when (card.rarity) {
         Rarity.RARE -> GlowRare
         Rarity.UNCOMMON -> GlowUncommon
@@ -112,7 +137,7 @@ private fun CardRow(card: Card, selected: Boolean, onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text("${card.title}  ·  ${card.rarity.displayName}  w${card.weight}", color = Bone, fontSize = 14.sp)
-            Text(card.effect.description, color = Bone.copy(0.65f), fontSize = 12.sp)
+            GlossaryText(card.effect.description, onTerm = onGlossary, fontSizeSp = 12)
         }
         Text(if (selected) "✓" else "+", color = Gold)
     }

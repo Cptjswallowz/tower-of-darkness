@@ -11,6 +11,10 @@ import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
 import com.towerofdarkness.app.domain.combat.CombatEngine
+import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.WeaponCatalog
+import com.towerofdarkness.app.domain.combat.WeaponRuntime
+import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.combat.CombatState
 import com.towerofdarkness.app.domain.combat.Enemy
 import com.towerofdarkness.app.domain.path.NodeType
@@ -60,6 +64,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
     var path by mutableStateOf<TowerPath?>(null)
         private set
     var loadout by mutableStateOf<List<Card>>(emptyList())
+        private set
+    var equippedWeapon by mutableStateOf(WeaponRuntime(WeaponCatalog.default()))
         private set
     var loadoutLocked by mutableStateOf(false)
         private set
@@ -124,6 +130,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
     fun startNewRun() {
         path = PathGenerator.generate(1, rng)
         loadout = emptyList()
+        // this-run weapon level resets; keep Ashbrand (or last selected def) at Lv1
+        equippedWeapon = WeaponRuntime(equippedWeapon.def, level = 1, charge = 0)
         loadoutLocked = false
         pendingNodeId = null
         runWallet = 0
@@ -152,8 +160,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     fun skipTutorial() {
         if (!skipAllowed()) return
-        // Docs: Skip ALWAYS forces default cards 1–5 (Hostflint…Dust Veil)
+        // Docs: Skip ALWAYS forces default cards 1–5 + Ashbrand
         loadout = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
+        equippedWeapon = WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 0)
         viewModelScope.launch { meta.setTutorialSeen(true) }
         path = PathGenerator.generate(1, rng)
         loadoutLocked = false
@@ -172,6 +181,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         if (loadout.isEmpty()) {
             loadout = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
         }
+        equippedWeapon = WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 0)
         viewModelScope.launch { meta.setTutorialSeen(true) }
         path = PathGenerator.generate(1, rng)
         loadoutLocked = false
@@ -195,9 +205,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
         if (!loadoutLocked) nav = NavState.Loadout
     }
 
-    fun confirmLoadout(selected: List<Card>) {
-        if (selected.size !in Balance.LOADOUT_MIN..Balance.LOADOUT_MAX) return
+    fun confirmLoadout(selected: List<Card>, weaponId: String? = null) {
+        if (selected.size != Balance.LOADOUT_MAX) return
+        val w = weaponId?.let { WeaponCatalog.byId(it) } ?: equippedWeapon.def
         loadout = selected
+        equippedWeapon = WeaponRuntime(w, level = equippedWeapon.level.coerceIn(1, 3), charge = 0)
         sound.play("ui")
         if (nav == NavState.Tutorial || tutorialStep == 2) {
             tutorialStep = 3
@@ -220,7 +232,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // allow only adjacent choices
             if (nodeId !in p.edges.filter { it.from == p.currentId }.map { it.to }) return
         }
-        if (!loadoutLocked && loadout.size !in Balance.LOADOUT_MIN..Balance.LOADOUT_MAX) {
+        if (!loadoutLocked && (loadout.size != Balance.LOADOUT_MAX)) {
             pendingNodeId = nodeId
             nav = NavState.Loadout
             return
@@ -253,35 +265,86 @@ class GameController(app: Application) : AndroidViewModel(app) {
     private fun startCombat(boss: Boolean) {
         val enemy = if (boss) Enemy.boss() else Enemy.forFloorCombat(nodesCleared)
         val cards = effectiveLoadout()
-        combatState = engine.start(cards, enemy, Balance.PLAYER_MAX_HP + metaHpBonus).copy(
-            playerHp = playerHp.coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
+        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        combatState = engine.start(
+            activeCards = cards,
+            enemy = enemy,
+            weapon = equippedWeapon.copy(charge = 0),
+            maxHp = maxHp,
+            playerHp = playerHp.coerceAtMost(maxHp)
         )
         nav = NavState.Combat
         sound.play("dice")
         combatJob?.cancel()
-        combatJob = viewModelScope.launch {
-            var s = combatState ?: return@launch
-            while (!s.finished) {
-                // Pacing: common ~1700ms; charge/legendary ~2300ms (phone-readable)
-                val preDelay = if (s.lastFiredCard?.rarity?.name == "RARE" ||
-                    s.lastFiredCard?.rarity?.name == "LEGENDARY"
-                ) 1100L else 900L
-                delay(preDelay)
-                s = engine.step(s)
-                s.log.lastOrNull()?.sound?.let { sound.play(it) }
+        combatJob = viewModelScope.launch { runCombatBeats() }
+    }
+
+    private suspend fun runCombatBeats() {
+        var s = combatState ?: return
+        while (!s.finished) {
+            // A — dice tumble
+            s = engine.diceTumble(s)
+            combatState = s
+            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            delay(Balance.DICE_MS)
+            // B — slot already highlighted
+
+            // C — skill
+            s = engine.resolveSkill(s)
+            combatState = s
+            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            val skillMs = if (s.lastFiredCard?.rarity == Rarity.RARE ||
+                s.lastFiredCard?.rarity == Rarity.LEGENDARY
+            ) Balance.SKILL_RARE_MS else Balance.SKILL_COMMON_MS
+            delay(skillMs)
+
+            // D — read hold
+            delay(Balance.READ_HOLD_MS)
+
+            // E — weapon AFTER skill, BEFORE enemy; still play queued weapon if skill killed
+            if (s.awaitingWeapon) {
+                s = engine.resolveWeapon(s)
                 combatState = s
-                val postDelay = if (s.animStyleLastLegendary()) 2300L else 1700L
-                delay(postDelay)
+                s.log.lastOrNull()?.sound?.let { sound.play(it) }
+                delay(Balance.WEAPON_HOLD_MS)
             }
-            playerHp = s.playerHp
-            // Hold final log/result so notes are readable before Path
-            delay(1800)
-            onCombatEnd(s)
+
+            if (s.finished) break
+            if (s.enemy.hp <= 0) break
+
+            // F — enemy counter
+            s = engine.resolveEnemy(s)
+            combatState = s
+            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            delay(Balance.ENEMY_HOLD_MS)
+
+            if (s.finished) break
+            s = engine.readyNext(s)
+            combatState = s
+        }
+        playerHp = s.playerHp
+        // Apply this-run weapon level-up rules before Continue
+        applyWeaponLevelUp(s)
+        combatState = s.copy(beat = CombatBeat.AWAITING_CONTINUE)
+        // Wait for Continue — do not auto-nav
+    }
+
+    private fun applyWeaponLevelUp(s: com.towerofdarkness.app.domain.combat.CombatState) {
+        if (!s.playerWon) return
+        val w = s.weapon
+        val shouldLevel = s.fullProcKilled || s.fullProcThisCombat
+        if (shouldLevel && w.level < 3) {
+            equippedWeapon = w.copy(level = w.level + 1, charge = 0)
+        } else {
+            equippedWeapon = w.copy(charge = 0)
         }
     }
 
-    private fun CombatState.animStyleLastLegendary(): Boolean =
-        log.lastOrNull()?.animStyle?.name == "CHARGE_SHAKE_SLOWMO"
+    fun continueAfterCombat() {
+        val s = combatState ?: return
+        if (!s.finished) return
+        onCombatEnd(s)
+    }
 
     private fun effectiveLoadout(): List<Card> {
         val hitch = weightHitchCardId
@@ -450,7 +513,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    fun hasLoadoutFlex(): Boolean = "loadout_flex" in unlockedCards
+    fun hasLoadoutFlex(): Boolean = false // v0.1.3: skill cap 5; perk hidden
     fun hasPerk(id: String): Boolean = id in unlockedCards
 
     // --- Event ---
@@ -458,11 +521,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
         if (remnants) {
             runWallet += Balance.EVENT_REMNANTS
         } else {
-            // mild hitch or heal
+            // B — Heal 8, or take 4 damage (never hitch-only)
             if (rng.nextBoolean()) {
-                playerHp = (playerHp + 4).coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
-            } else if (loadout.isNotEmpty()) {
-                weightHitchCardId = loadout.random(rng).id
+                playerHp = (playerHp + 8).coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
+            } else {
+                playerHp = (playerHp - 4).coerceAtLeast(1)
             }
         }
         returnToPathAfterResolve()

@@ -28,13 +28,13 @@ private data class HubPerk(val id: String, val cost: Int, val title: String, val
 @Composable
 fun MetaHubScreen(gc: GameController) {
     val cardUnlocks = CardCatalog.hubUnlockables(gc.unlockedCards)
+    // loadout_flex hidden — skill cap is 5
     val perks = listOf(
-        HubPerk("meta_hp_2", 15, "meta_hp_2 · +2 max HP") { it.metaHpBonus > 0 },
-        HubPerk("scout_charge", 20, "scout_charge · +1 free Scout / climb") { "scout_charge" in it.unlockedCards },
-        HubPerk("rest_heal_plus", 25, "rest_heal_plus · Rest Heal +4") { "rest_heal_plus" in it.unlockedCards },
-        HubPerk("boss_bonus_2", 25, "boss_bonus_2 · +2 rem on boss win") { "boss_bonus_2" in it.unlockedCards },
-        HubPerk("loadout_flex", 30, "loadout_flex · prefer 6-card default") { "loadout_flex" in it.unlockedCards },
-        HubPerk("rumor_clarity", 35, "rumor_clarity · 1 rumor re-roll / climb") { "rumor_clarity" in it.unlockedCards },
+        HubPerk("meta_hp_2", 15, "Iron Blood — +2 max HP") { it.metaHpBonus > 0 },
+        HubPerk("scout_charge", 20, "Keen Eye — +1 free Scout / climb") { "scout_charge" in it.unlockedCards },
+        HubPerk("rest_heal_plus", 25, "Deep Breath — Rest Heal +4") { "rest_heal_plus" in it.unlockedCards },
+        HubPerk("boss_bonus_2", 25, "Seal Bounty — +2 rem on boss win") { "boss_bonus_2" in it.unlockedCards },
+        HubPerk("rumor_clarity", 35, "Clear Fog — 1 rumor re-roll / climb") { "rumor_clarity" in it.unlockedCards },
     )
 
     Column(
@@ -73,7 +73,7 @@ fun MetaHubScreen(gc: GameController) {
         Text("Perks", color = Gold, fontSize = 14.sp)
         perks.forEach { perk ->
             if (perk.ownedCheck(gc)) {
-                Text("${perk.id} · owned", color = Bone.copy(0.7f), fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp))
+                Text("${perk.title} · owned", color = Bone.copy(0.7f), fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp))
             } else if (perk.id == "meta_hp_2") {
                 val can = gc.remnantsBank >= perk.cost
                 Button(

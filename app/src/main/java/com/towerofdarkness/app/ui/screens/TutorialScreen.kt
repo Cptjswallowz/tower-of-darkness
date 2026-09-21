@@ -44,7 +44,7 @@ fun TutorialScreen(gc: GameController) {
                 Button(onClick = { gc.tutorialNext() }) { Text("Next — Loadout") }
             }
             2 -> {
-                Text("Loadout: pick ${Balance.LOADOUT_MIN}–${Balance.LOADOUT_MAX}", color = Bone, fontSize = 18.sp)
+                Text("Loadout: pick 5 skills + Ashbrand", color = Bone, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
                 LoadoutScreen(gc, tutorialMode = true)
             }
@@ -62,7 +62,7 @@ fun TutorialScreen(gc: GameController) {
         Spacer(Modifier.height(16.dp))
         if (gc.skipAllowed()) {
             OutlinedButton(onClick = { gc.skipTutorial() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Skip (default 5-card loadout)")
+                Text("Skip (default 5 + Ashbrand)")
             }
         } else {
             Text("Skip unlocks after rumor + loadout.", color = Bone.copy(0.5f), fontSize = 12.sp)
