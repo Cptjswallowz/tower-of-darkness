@@ -372,8 +372,106 @@ class GameController(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    /** Pure helpers for unit tests — weapon XP + treasure visit Gain lock. */
+    /** Pure helpers for unit tests — weapon XP, treasure Gain lock, shop wallet. */
     companion object {
+        fun isHealOfferKind(kind: String): Boolean =
+            kind == "heal_small" || kind == "heal_mid" || kind == "heal_full"
+
+        /** Wallet 0–2: hide grey stock; show empty copy + Leave only. */
+        fun shopShowsEmptyState(wallet: Int): Boolean =
+            wallet < Balance.SHOP_PRICE_MIN
+
+        fun canBuyShopOffer(
+            offer: ShopOffer,
+            wallet: Int,
+            playerHp: Int,
+            maxHp: Int
+        ): Boolean {
+            if (offer.sold || wallet < offer.price) return false
+            if (isHealOfferKind(offer.kind) && playerHp >= maxHp) return false
+            return true
+        }
+
+        /**
+         * Apply a successful shop purchase to wallet/HP (effects that need path/loadout
+         * are applied by [buyOffer] after this gate). Returns null if rejected.
+         */
+        fun applyShopBuyWalletHp(
+            offer: ShopOffer,
+            wallet: Int,
+            playerHp: Int,
+            maxHp: Int
+        ): Pair<Int, Int>? {
+            if (!canBuyShopOffer(offer, wallet, playerHp, maxHp)) return null
+            val newWallet = wallet - offer.price
+            val newHp = when (offer.kind) {
+                "heal_small" -> (playerHp + 8).coerceAtMost(maxHp)
+                "heal_mid" -> (playerHp + 15).coerceAtMost(maxHp)
+                "heal_full" -> maxHp
+                else -> playerHp
+            }
+            return newWallet to newHp
+        }
+
+        fun shopCatalog(): List<ShopOffer> = listOf(
+            ShopOffer("heal_small", "Small Heal (+8)", 3, "heal_small"),
+            ShopOffer("rumor_peek", "Rumor Peek", 6, "rumor_peek"),
+            ShopOffer("heal_mid", "Mid Heal (+15)", 10, "heal_mid"),
+            ShopOffer("card_swap", "Card Swap", 12, "card_swap"),
+            ShopOffer("heal_full", "Full Heal", 15, "heal_full"),
+            ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus")
+        )
+
+        /**
+         * Roll 4 shop offers. If [wallet] ≥ 3, guarantee ≥1 offer priced ≤ wallet
+         * (prefer Small Heal @ 3).
+         */
+        fun generateShopOffers(wallet: Int, seed: Int): List<ShopOffer> {
+            val r = Random(seed)
+            val catalog = shopCatalog()
+            val picked = mutableListOf<ShopOffer>()
+            val usedKinds = mutableSetOf<String>()
+            var attempts = 0
+            while (picked.size < 4 && attempts < 40) {
+                attempts++
+                val tier = r.nextFloat()
+                val pool = when {
+                    tier < 0.50f -> catalog.filter { it.price in 3..8 }
+                    tier < 0.85f -> catalog.filter { it.price in 9..12 }
+                    else -> catalog.filter { it.price in 13..15 }
+                }.filter { it.kind !in usedKinds }
+                val choice = pool.ifEmpty {
+                    catalog.filter { it.kind !in usedKinds }
+                }.ifEmpty { emptyList() }.randomOrNull(r) ?: break
+                usedKinds += choice.kind
+                picked += choice.copy(id = "${choice.kind}_${picked.size}")
+            }
+            // Anti-stall: ensure at least one cheap (≤8) offer
+            if (picked.none { it.price <= 8 }) {
+                val cheap = catalog.filter { it.price <= 8 && it.kind !in usedKinds.minus(picked.lastOrNull()?.kind) }
+                    .ifEmpty { catalog.filter { it.price <= 8 } }
+                    .first()
+                if (picked.isNotEmpty()) {
+                    usedKinds.remove(picked.last().kind)
+                    picked[picked.lastIndex] = cheap.copy(id = "${cheap.kind}_forced")
+                    usedKinds += cheap.kind
+                } else {
+                    picked += cheap.copy(id = "${cheap.kind}_forced")
+                }
+            }
+            // Wallet affordability: if wallet ≥ 3, ensure ≥1 offer priced ≤ wallet
+            if (wallet >= Balance.SHOP_PRICE_MIN && picked.none { it.price <= wallet }) {
+                val healSmall = catalog.first { it.kind == "heal_small" }
+                if (picked.isNotEmpty()) {
+                    usedKinds.remove(picked.last().kind)
+                    picked[picked.lastIndex] = healSmall.copy(id = "heal_small_wallet")
+                } else {
+                    picked += healSmall.copy(id = "heal_small_wallet")
+                }
+            }
+            return picked
+        }
+
         fun nextWeaponLevelAfterFight(
             startLevel: Int,
             fullProcThisCombat: Boolean,
@@ -475,54 +573,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
     // --- Shop ---
     private fun openShop(nodeId: String) {
         val seed = (path?.floor ?: 1) * 31 + nodeId.hashCode()
-        val r = Random(seed)
-        val catalog = listOf(
-            ShopOffer("heal_small", "Small Heal (+8)", 5, "heal_small"),
-            ShopOffer("rumor_peek", "Rumor Peek", 6, "rumor_peek"),
-            ShopOffer("heal_mid", "Mid Heal (+15)", 10, "heal_mid"),
-            ShopOffer("card_swap", "Card Swap", 12, "card_swap"),
-            ShopOffer("heal_full", "Full Heal", 15, "heal_full"),
-            ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus")
-        )
-        val picked = mutableListOf<ShopOffer>()
-        val usedKinds = mutableSetOf<String>()
-        var attempts = 0
-        while (picked.size < 4 && attempts < 40) {
-            attempts++
-            val tier = r.nextFloat()
-            val pool = when {
-                tier < 0.50f -> catalog.filter { it.price in 5..8 }
-                tier < 0.85f -> catalog.filter { it.price in 9..12 }
-                else -> catalog.filter { it.price in 13..15 }
-            }.filter { it.kind !in usedKinds }
-            val choice = pool.ifEmpty {
-                catalog.filter { it.kind !in usedKinds }
-            }.ifEmpty { emptyList() }.randomOrNull(r) ?: break
-            usedKinds += choice.kind
-            picked += choice.copy(id = "${choice.kind}_${picked.size}")
-        }
-        // Anti-stall: ensure at least one cheap (≤8) offer; replace last if needed without duplicating kind
-        if (picked.none { it.price <= 8 }) {
-            val cheap = catalog.filter { it.price <= 8 && it.kind !in usedKinds.minus(picked.lastOrNull()?.kind) }
-                .ifEmpty { catalog.filter { it.price <= 8 } }
-                .first()
-            if (picked.isNotEmpty()) {
-                usedKinds.remove(picked.last().kind)
-                picked[picked.lastIndex] = cheap.copy(id = "${cheap.kind}_forced")
-                usedKinds += cheap.kind
-            } else {
-                picked += cheap.copy(id = "${cheap.kind}_forced")
-            }
-        }
-        shopOffers = picked
+        shopOffers = generateShopOffers(runWallet, seed)
         nav = NavState.Shop
     }
 
     fun buyOffer(offer: ShopOffer) {
-        if (offer.sold || runWallet < offer.price) return
+        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        if (!canBuyShopOffer(offer, runWallet, playerHp, maxHp)) return
         runWallet -= offer.price
         shopOffers = shopOffers.map { if (it.id == offer.id) it.copy(sold = true) else it }
-        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
         when (offer.kind) {
             "heal_small" -> playerHp = (playerHp + 8).coerceAtMost(maxHp)
             "heal_mid" -> playerHp = (playerHp + 15).coerceAtMost(maxHp)

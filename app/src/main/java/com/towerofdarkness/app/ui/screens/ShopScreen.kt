@@ -23,7 +23,8 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 @Composable
 fun ShopScreen(gc: GameController) {
     val maxHp = Balance.PLAYER_MAX_HP + gc.metaHpBonus
-    val broke = gc.runWallet <= 0
+    val hpFull = gc.playerHp >= maxHp
+    val emptyWallet = GameController.shopShowsEmptyState(gc.runWallet)
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Shop", color = Gold, fontSize = 22.sp)
         Text(
@@ -32,19 +33,26 @@ fun ShopScreen(gc: GameController) {
             fontSize = 14.sp
         )
         Spacer(Modifier.height(12.dp))
-        if (broke) {
-            Text("Nothing you can buy", color = Bone.copy(0.75f), fontSize = 15.sp)
+        if (emptyWallet) {
+            Text("Nothing you can buy.", color = Bone.copy(0.75f), fontSize = 15.sp)
             Spacer(Modifier.height(12.dp))
         } else {
             gc.shopOffers.forEach { offer ->
+                val healBlocked = GameController.isHealOfferKind(offer.kind) && hpFull
+                val canBuy = GameController.canBuyShopOffer(
+                    offer, gc.runWallet, gc.playerHp, maxHp
+                )
                 Button(
                     onClick = { gc.buyOffer(offer) },
-                    enabled = !offer.sold && gc.runWallet >= offer.price,
+                    enabled = canBuy,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 ) {
                     Text(
-                        if (offer.sold) "${offer.title} — SOLD"
-                        else "${offer.title} · ${offer.price} rem"
+                        when {
+                            offer.sold -> "${offer.title} — SOLD"
+                            healBlocked -> "${offer.title} — already full"
+                            else -> "${offer.title} · ${offer.price} rem"
+                        }
                     )
                 }
             }

@@ -8,7 +8,7 @@ Owner: Meta & Ops. Escalate forks that break locks to Chief of Staff before impl
 
 | Lock | Value |
 |------|--------|
-| Shop stock prices | **5–15** remnants |
+| Shop stock prices | **5–15** remnants (**Elliott exception v0.1.8:** `heal_small` = **3**) |
 | Cheapest permanent unlock | **15** remnants |
 | Hub | **Unlocks only** — no Path-style shop stock on Hub |
 | Path Shop | Rotating stock (section 2) |
@@ -27,7 +27,7 @@ Currency banks at **Run Summary** → Hub. Mid-run spend (Shop) draws from **run
 
 | Source | Remnants | Notes |
 |--------|----------|--------|
-| Combat win (normal) | **5** | Equals cheapest shop price → first fight can fund a shop buy |
+| Combat win (normal) | **5** | Funds shop after first fight (covers `heal_small` @3 and most A-tier) |
 | Combat loss / Flee | **1** | Consolation; avoids total zero runs |
 | Treasure (remnants pick) | **6** | Alt: card-swap pick grants **0** remnants |
 | Event — remnants branch | **3** | Other branches: 0 remnants (heal / hitch) |
@@ -38,14 +38,14 @@ Currency banks at **Run Summary** → Hub. Mid-run spend (Shop) draws from **run
 
 ### Path budget (one-floor slice, illustrative)
 
-| Path sketch | Gross earn | After cheapest shop (5) | Bank if no shop |
+| Path sketch | Gross earn | After `heal_small` (3) | Bank if no shop |
 |-------------|------------|-------------------------|-----------------|
-| 1× combat + boss win | 5+10 = **15** | 10 | 15 → first unlock OK |
-| 2× combat + boss win | 5+5+10 = **20** | 15 | 20 |
-| 2× combat + treasure + boss | 5+5+6+10 = **26** | 21 | 26 |
-| Boss loss after 1 combat | 5+3 = **8** | 3 | 8 — unlock not yet; shop still usable next climb if banked |
+| 1× combat + boss win | 5+10 = **15** | 12 | 15 → first unlock OK |
+| 2× combat + boss win | 5+5+10 = **20** | 17 | 20 |
+| 2× combat + treasure + boss | 5+5+6+10 = **26** | 23 | 26 |
+| Boss loss after 1 combat | 5+3 = **8** | 5 | 8 — unlock not yet; shop still usable next climb if banked |
 
-**Soft-lock guard:** Combat win ≥5 so a Shop node after one fight is never empty of affordable stock. Minimal victory path (1 combat + boss) hits exactly **15** for the cheapest Hub unlock.
+**Soft-lock guard:** Combat win **5** and `heal_small` **3** so a Shop after one fight always has an affordable heal (when not full HP). Minimal victory path (1 combat + boss) hits exactly **15** for the cheapest Hub unlock.
 
 ### Out of scope (slice)
 
@@ -62,11 +62,19 @@ Applies to **Path Shop** nodes (`slice-screens.md`: 3–5 offers). Hub does **no
 | Rule | Value |
 |------|--------|
 | Slot count | **4** (within 3–5) |
-| Price band | Each offer **5–15** inclusive |
+| Price band | **5–15** inclusive, except Elliott WO **v0.1.8-shopwallet:** `heal_small` = **3** |
 | Seed | `hash(run_id, node_id)` — stable for that visit |
 | Re-enter same uncleared shop | Same stock; purchased slots stay sold-out |
 | Refresh mid-visit | **None** in slice |
 | Cross-run | New `run_id` → new roll |
+
+### Shop UX (v0.1.8-shopwallet — Elliott)
+
+| Case | Behavior |
+|------|----------|
+| `runWallet` ≤ 0 (empty wallet) | Show **"Nothing you can buy."** + **Leave** only — **no** greyed stock rows |
+| Heal offers (`heal_small` / `heal_mid` / `heal_full`) at full HP | **Blocked** (same spirit as Rest Heal at cap) — omit or disable; do not sell no-op heals |
+| Path / Wake / swap / counters / HP caps | **Frozen** this WO — no number changes beyond Small Heal price |
 
 ### Rarity / price mix (per shop roll)
 
@@ -74,24 +82,24 @@ Roll 4 offers independently, then **dedupe by offer_id** (reroll collisions once
 
 | Tier | Price band | Weight | Example offer stubs |
 |------|------------|--------|---------------------|
-| A Common | 5–8 | 50% | Small heal; rumor peek |
+| A Common | 3–8 (`heal_small` @3; else 5–8) | 50% | Small heal; rumor peek |
 | B Mid | 9–12 | 35% | One-time card swap; mid heal |
 | C High | 13–15 | 15% | Strong heal to cap; premium swap |
 
-Target mix after 4 rolls (expected): ~2A / ~1–2B / ~0–1C. If zero A after roll, force slot 0 → tier A @ price 5 (anti-stall).
+Target mix after 4 rolls (expected): ~2A / ~1–2B / ~0–1C. If zero A after roll, force slot 0 → `heal_small` @ **3** (anti-stall).
 
-### Offer catalog stubs (ids for Engineer)
+### Offer catalog (ids for Engineer)
 
 | offer_id | Tier | Default price | Effect stub |
 |----------|------|---------------|-------------|
-| `heal_small` | A | 5 | +8 HP (cap 30) |
+| `heal_small` | A | **3** | +8 HP (cap); blocked at full HP |
 | `rumor_peek` | A | 6 | Reveal one adjacent fogged node type |
-| `heal_mid` | B | 10 | +15 HP (cap 30) |
-| `card_swap` | B | 12 | Swap one loadout card ↔ unused pool |
-| `heal_full` | C | 15 | HP → 30 |
-| `card_swap_plus` | C | 14 | Swap + minor weight buff this floor (provisional) |
+| `heal_mid` | B | 10 | +15 HP (cap); blocked at full HP |
+| `card_swap` | B | 12 | Swap one loadout card ↔ unused pool (**frozen** this WO) |
+| `heal_full` | C | 15 | HP → cap; blocked at full HP |
+| `card_swap_plus` | C | 14 | Swap + minor weight buff this floor (provisional; **frozen**) |
 
-Prices stay inside 5–15. Exact effects are stubs — balance TBD with QA.
+Other offers remain in **5–15**. Only `heal_small` may sit at **3** (Elliott). Untested / not QA-measured as balance proof.
 
 ---
 
@@ -208,7 +216,7 @@ run_v0 {
 
 Flag to CoS before shipping if anyone proposes:
 
-1. **Shop price &lt;5 or &gt;15** — breaks shop lock.
+1. **Shop price &lt;5 or &gt;15** — breaks shop lock (**except** Elliott-approved `heal_small` @3).
 2. **Permanent unlock &lt;15** — breaks cheapest-unlock lock.
 3. **Combat win &lt;5** while Shop can appear after first mid-node — early shop soft-lock (hub/path “useful spend” spirit).
 4. **Minimal victory earn (1 combat + boss) &lt;15** — first Hub unlock unreachable → meta stall.
@@ -226,6 +234,7 @@ Flag to CoS before shipping if anyone proposes:
 3. Card ladder: rares **Shadow Latch** / **Relic Shard** only; #1–9 open at start; remaining rows = meta perks.
 4. Cheapest **card** unlock = **Shadow Latch @15**; `meta_hp_2` also @15 as parallel perk; Relic Shard @20.
 5. Stand by — no further economy edits until APK or Elliott changes locks.
+6. **v0.1.8-shopwallet (Elliott):** `heal_small` **3**; empty-wallet copy + Leave (no grey stock); heal offers blocked at full HP; Path/Wake/swap/counters/HP frozen.
 
 ## Open questions
 
@@ -241,3 +250,4 @@ Flag to CoS before shipping if anyone proposes:
 | 2026-09-20 | CoS temporary lock; Hub unlocks-only; ladder → meta perks + Shadow Latch / Relic Shard |
 | 2026-09-20 | Override: Shadow Latch @15 (cheapest card); Relic Shard @20; meta_hp_2 @15 parallel; stand by |
 | 2026-09-20 | v0.1.3 Hub copy: human titles; hide loadout_flex; weapon rows Ashbrand/Notch Pike/Vow Edge notes |
+| 2026-09-22 | v0.1.8-shopwallet: heal_small 3; empty-wallet UX; heal blocked at full HP; note Elliott exception to 5–15 |

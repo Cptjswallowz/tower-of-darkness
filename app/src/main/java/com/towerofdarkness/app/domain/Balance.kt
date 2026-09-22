@@ -21,7 +21,7 @@ object Balance {
     const val BOSS_COUNTER_MAX = 9
 
     const val CHEAPEST_CARD_UNLOCK = 15
-    const val SHOP_PRICE_MIN = 5
+    const val SHOP_PRICE_MIN = 3
     const val SHOP_PRICE_MAX = 15
 
     const val LOADOUT_POOL_SIZE = 11
