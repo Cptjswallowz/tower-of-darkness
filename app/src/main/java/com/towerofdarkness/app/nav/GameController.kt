@@ -42,7 +42,34 @@ data class RunSummaryData(
     val remnantsEarned: Int,
     val floorReached: Int,
     val nearMiss: Boolean
-)
+) {
+    /** Floor 2 clear is the only victory path; title locked for v0.1.9. */
+    val title: String
+        get() = if (won) "Victory — The seal breaks." else "Defeat"
+}
+
+enum class BossWinNav { FLOOR_BREAK, SUMMARY_VICTORY }
+
+/** Snapshot of run state that must survive F1→F2 (no heal / no loadout unlock). */
+data class FloorBreakPersist(
+    val playerHp: Int,
+    val runWallet: Int,
+    val loadoutIds: List<String>,
+    val loadoutLocked: Boolean,
+    val weaponLevel: Int,
+    val weaponCharge: Int,
+    val unlockedThisRun: Set<String>
+) {
+    fun assertSurvives(after: FloorBreakPersist) {
+        require(after.playerHp == playerHp) { "HP must persist across floor break" }
+        require(after.runWallet == runWallet) { "wallet must persist" }
+        require(after.loadoutIds == loadoutIds) { "loadout must persist" }
+        require(after.loadoutLocked) { "loadout must stay locked" }
+        require(after.weaponLevel == weaponLevel) { "Ashbrand level must persist" }
+        require(after.weaponCharge == weaponCharge) { "Ashbrand charge must persist" }
+        require(after.unlockedThisRun == unlockedThisRun) { "unlocks must persist" }
+    }
+}
 
 class GameController(app: Application) : AndroidViewModel(app) {
     val meta = MetaStore(app)
@@ -273,7 +300,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     // --- Combat ---
     private fun startCombat(boss: Boolean) {
-        val enemy = if (boss) Enemy.boss() else Enemy.forFloorCombat(nodesCleared)
+        val floor = path?.floor ?: 1
+        val enemy = if (boss) Enemy.boss(floor) else Enemy.forFloorCombat(nodesCleared, floor)
         val cards = effectiveLoadout()
         val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
         combatState = engine.start(
@@ -372,8 +400,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    /** Pure helpers for unit tests — weapon XP, treasure Gain lock, shop wallet. */
+    /** Pure helpers for unit tests — weapon XP, treasure Gain lock, shop wallet, floor2. */
     companion object {
+        /** Floor 1 boss win → stair beat; Floor 2+ boss win → run summary (no Floor 3). */
+        fun afterBossWinNav(floor: Int): BossWinNav =
+            if (floor < 2) BossWinNav.FLOOR_BREAK else BossWinNav.SUMMARY_VICTORY
+
         fun isHealOfferKind(kind: String): Boolean =
             kind == "heal_small" || kind == "heal_mid" || kind == "heal_full"
 
@@ -551,13 +583,20 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     private fun onCombatEnd(s: CombatState) {
         val boss = s.enemy.isBoss
+        val floor = path?.floor ?: 1
         if (s.playerWon) {
             var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
             if (boss && "boss_bonus_2" in unlockedCards) gain += 2
             runWallet += gain
             if (boss) {
                 path = path?.markCurrentCleared()
-                finishRun(won = true)
+                when (afterBossWinNav(floor)) {
+                    BossWinNav.FLOOR_BREAK -> {
+                        combatState = null
+                        nav = NavState.FloorBreak
+                    }
+                    BossWinNav.SUMMARY_VICTORY -> finishRun(won = true)
+                }
             } else {
                 returnToPathAfterResolve()
             }
@@ -566,6 +605,23 @@ class GameController(app: Application) : AndroidViewModel(app) {
             path = path?.markCurrentCleared()
             finishRun(won = false)
         }
+    }
+
+    /**
+     * Floor 1 Seal-Warden win → short beat then Floor 2 path (same run).
+     * Does not heal, unlock loadout, or reset Ashbrand XP/level/charge.
+     */
+    fun continueAfterFloorBreak() {
+        if (nav != NavState.FloorBreak) return
+        // Persist: playerHp, runWallet, loadout, loadoutLocked, equippedWeapon, unlocked-this-run
+        path = PathGenerator.generate(2, rng)
+        pendingNodeId = null
+        combatState = null
+        treasureSwapLoseId = null
+        treasureSwapGainId = null
+        shopOffers = emptyList()
+        summary = null
+        nav = NavState.Path
     }
 
     fun fleeGrayed(): Boolean = true // CoS: Flee grayed

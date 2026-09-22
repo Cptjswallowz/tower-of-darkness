@@ -11,7 +11,11 @@ object Balance {
 
     const val PLAYER_MAX_HP = 30
     const val ENEMY_BASE_HP = 20
+    /** Floor 2 trash only; Floor 1 stays ENEMY_BASE_HP. */
+    const val ENEMY_FLOOR2_HP = 24
     const val BOSS_HP = 28
+    /** Floor 2 Ash-Warden; Floor 1 Seal-Warden stays BOSS_HP. */
+    const val BOSS_FLOOR2_HP = 32
 
     const val PLAYER_DMG_MIN = 4
     const val PLAYER_DMG_MAX = 8

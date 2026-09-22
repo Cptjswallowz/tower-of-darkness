@@ -1,6 +1,7 @@
 # Vertical slice — screen flow (v0)
 
-Status: design lock for Android Engineer implementation. One floor. Placeholders OK for art/SFX.
+Status: design lock for Android Engineer implementation. Placeholders OK for art/SFX.
+**Climb:** two-floor note in `floor2-v019.md` (v0.1.9). Path/Wake/swap/shop frozen that pass.
 
 **Fantasy (tone):** Ashen Host climbing the Tower of Darkness in a fallen kingdom. Dice auto-combat + rumor fog are first-class. Compose locks live in `balance-targets.md`.
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.
@@ -125,7 +126,7 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ## Out of scope (slice)
 
-- Multi-floor climb, card evolution trees, full remnant economy simulation, online, accounts.
+- Floor 3+, card evolution trees, full remnant economy simulation, online, accounts.
 - Proven win-rate tuning (QA owns measurement after first APK).
 
 ## CoS temporary locks (2026-09-20; Elliott skipped fork widget — locks stand; may still override later)

@@ -264,7 +264,7 @@ class CombatEngineTest {
     fun trashCounter_notEleven() {
         assertEquals(7, Balance.ENEMY_COUNTER_MIN)
         assertEquals(9, Balance.ENEMY_COUNTER_MAX)
-        EnemyKind.entries.filter { it != EnemyKind.DRAGON }.forEach { k ->
+        EnemyKind.entries.filter { it != EnemyKind.DRAGON && it != EnemyKind.ASH_WARDEN }.forEach { k ->
             assertEquals("goblin/orc/spider/troll min", 7, k.trashCounterMin)
             assertEquals("goblin/orc/spider/troll max", 9, k.trashCounterMax)
             assertTrue("${k} max!=11", k.trashCounterMax != 11)

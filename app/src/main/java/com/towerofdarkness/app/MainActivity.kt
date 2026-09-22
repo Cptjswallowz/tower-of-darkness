@@ -16,6 +16,7 @@ import com.towerofdarkness.app.nav.NavState
 import com.towerofdarkness.app.ui.components.GlossaryDialog
 import com.towerofdarkness.app.ui.screens.CombatScreen
 import com.towerofdarkness.app.ui.screens.EventScreen
+import com.towerofdarkness.app.ui.screens.FloorBreakScreen
 import com.towerofdarkness.app.ui.screens.LoadoutScreen
 import com.towerofdarkness.app.ui.screens.MainMenuScreen
 import com.towerofdarkness.app.ui.screens.MetaHubScreen
@@ -65,6 +66,7 @@ fun TowerRoot(gc: GameController) {
         NavState.Rest -> RestScreen(gc)
         NavState.Event -> EventScreen(gc)
         NavState.Treasure -> TreasureScreen(gc)
+        NavState.FloorBreak -> FloorBreakScreen(gc)
         NavState.RunSummary -> RunSummaryScreen(gc)
         NavState.MetaHub -> MetaHubScreen(gc)
     }

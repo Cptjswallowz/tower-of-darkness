@@ -26,7 +26,7 @@ fun RunSummaryScreen(gc: GameController) {
         Text("Run Summary", color = Gold, fontSize = 22.sp)
         Spacer(Modifier.height(12.dp))
         if (s != null) {
-            Text(if (s.won) "Victory" else "Defeat", color = Bone, fontSize = 18.sp)
+            Text(s.title, color = Bone, fontSize = 18.sp)
             Text("Nodes cleared: ${s.nodesCleared}", color = Bone)
             Text("Floor: ${s.floorReached}", color = Bone)
             Text("Remnants earned: ${s.remnantsEarned}", color = Bone)
