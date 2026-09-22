@@ -31,7 +31,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-Previous: [Release v0.1.9-floor2](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.9-floor2) (no v0.1.10 GitHub release/tag this pass — APK at repo root after assemble).
+[Release v0.1.10-routecare](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.10-routecare)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.10-routecare/tower-of-darkness-debug.apk)
 
 ## Build
 
