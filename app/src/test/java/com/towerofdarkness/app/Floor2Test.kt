@@ -57,8 +57,9 @@ class Floor2Test {
     }
 
     @Test
-    fun floor2Path_seeds0to99_everyStartToBossHasCombat_eventsAtMostOne() {
+    fun floor2Path_seeds0to99_everyStartToBossHasCombatAndCare_eventsAtMostOne() {
         var fightless = 0
+        var careless = 0
         var eventsOver = 0
         for (seed in 0..99) {
             val path = PathGenerator.generate(floor = 2, rng = Random(seed.toLong()))
@@ -76,11 +77,18 @@ class Floor2Test {
             assertTrue("seed $seed routes", routes.isNotEmpty())
             for (route in routes) {
                 if (route.none { byId[it]!!.type == NodeType.COMBAT }) fightless++
+                if (route.none {
+                        byId[it]!!.type == NodeType.REST || byId[it]!!.type == NodeType.SHOP
+                    }
+                ) {
+                    careless++
+                }
             }
             val events = path.nodes.count { it.type == NodeType.EVENT }
             if (events > 1) eventsOver++
         }
         assertEquals("0 zero-combat S→B on Floor 2 gens 0–99", 0, fightless)
+        assertEquals("0 zero-CARE S→B on Floor 2 gens 0–99", 0, careless)
         assertEquals("events ≤1 on every Floor 2 gen", 0, eventsOver)
     }
 

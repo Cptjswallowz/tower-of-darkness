@@ -21,6 +21,7 @@ class PathGateV015Test {
         val outliers = mutableListOf<String>()
         var floorsWithZeroCombat = 0
         var floorsWithFightlessRoute = 0
+        var floorsWithCarelessRoute = 0
         val eventHistogram = mutableMapOf<Int, Int>()
         val combatHistogram = mutableMapOf<Int, Int>()
 
@@ -87,6 +88,16 @@ class PathGateV015Test {
                 floorsWithFightlessRoute++
                 outliers += "seed $seed: fightless routes=${fightless.size} e.g. ${fightless.first()} types=${fightless.first().map { byId[it]!!.type }}"
             }
+            // v0.1.10-routecare: every Start→Boss path must have ≥1 CARE (REST|SHOP)
+            val careless = routes.filter { r ->
+                r.none {
+                    byId[it]!!.type == NodeType.REST || byId[it]!!.type == NodeType.SHOP
+                }
+            }
+            if (careless.isNotEmpty()) {
+                floorsWithCarelessRoute++
+                outliers += "seed $seed: careless routes=${careless.size} e.g. ${careless.first()} types=${careless.first().map { byId[it]!!.type }}"
+            }
             if (branchCount !in 4..9) {
                 // depth 2–3 × branches 2–3 → mid nodes 4–9
                 outliers += "seed $seed: unusual mid-branch node count=$branchCount"
@@ -106,6 +117,7 @@ class PathGateV015Test {
         println("--- SUMMARY ---")
         println("floors_with_zero_combat_before_boss=$floorsWithZeroCombat")
         println("floors_with_fightless_start_to_boss_route=$floorsWithFightlessRoute")
+        println("floors_with_careless_start_to_boss_route=$floorsWithCarelessRoute")
         println("combat_before_boss_histogram=$combatHistogram")
         println("event_count_histogram=$eventHistogram")
         println("event_max=${eventCounts.maxOrNull()} event_floors_gt1=${eventCounts.count { it > 1 }}")
@@ -123,6 +135,11 @@ class PathGateV015Test {
             0,
             floorsWithFightlessRoute
         )
+        assertEquals(
+            "CoS v0.1.10: 0 floors with a careless Start→Boss route",
+            0,
+            floorsWithCarelessRoute
+        )
         assertTrue(
             "events must be ≤1 on every floor; histogram=$eventHistogram",
             eventCounts.all { it <= 1 }
@@ -130,7 +147,7 @@ class PathGateV015Test {
         assertTrue(
             "no structural outliers expected; got $outliers",
             outliers.none {
-                it.contains("ZERO combat") || it.contains("fightless routes") || it.contains("events=") ||
+                it.contains("ZERO combat") || it.contains("fightless routes") || it.contains("careless routes") || it.contains("events=") ||
                     it.contains("missing merge") || it.contains("boss_count") ||
                     it.contains("start_count") || it.contains("boss not reachable")
             }
