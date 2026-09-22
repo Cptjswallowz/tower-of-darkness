@@ -8,6 +8,7 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 - Shop: **Small Heal (+8) = 3 rem**; wallet ≥3 always gets ≥1 affordable offer; wallet 0–2 → "Nothing you can buy." + Leave (no grey stock); heal offers blocked/labeled **already full** at cap HP
 - Path / Wake / swap lock / counters / HP / remnant gains: unchanged from v0.1.7
+- No Floor 2.
 - Path: **every Start→Boss path has ≥1 COMBAT**; **event cap 1** per floor
 - Treasure: Gain rolls **once on enter**; Cancel does not reroll (v0.1.6-swaplock)
 - Weapon XP: full Wake + combat win → **+1 Ashbrand level**
@@ -26,8 +27,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 ## Debug APK
 
-[Release v0.1.7-routefight](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.7-routefight)  
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.7-routefight/tower-of-darkness-debug.apk)
+[Release v0.1.8-shopwallet](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.8-shopwallet)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.8-shopwallet/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -37,4 +38,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`.
+Docs: `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`.
