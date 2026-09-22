@@ -4,10 +4,11 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.5-path)
+## Status (v0.1.6-swaplock)
 
 - Path: **≥1 COMBAT** node before boss; **events ≤1** per floor
-- Treasure: Lose / Gain **preview** before commit; Gain rolled **once per visit** (Cancel / re-tap Lose does not reroll); remnants option unchanged
+- Treasure: Gain rolls **once on enter** and stays for the visit; Cancel does not reroll; Lose / Gain **preview** before commit; remnants option unchanged
+- v0.1.6 scope: treasure swap lock only; Path/Wake/counters/HP unchanged
 - Weapon XP: full Wake + combat win → **+1 Ashbrand level** before next node (same-run fix)
 - 5-skill exhaust bar + Ashbrand (CHAIN full Wake + quiet SPARK)
 - **FULL Wake** legendary beat: gold `ASHBRAND — WAKE N`, float WAKE, pin in log, ~2300ms
@@ -27,8 +28,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 ## Debug APK
 
-[Release v0.1.5-path](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.5-path)  
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.5-path/tower-of-darkness-debug.apk)
+[Release v0.1.6-swaplock](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.6-swaplock)  
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.6-swaplock/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -38,4 +39,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`.
+Docs: `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`.
