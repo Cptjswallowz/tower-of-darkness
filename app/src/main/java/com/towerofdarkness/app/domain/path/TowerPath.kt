@@ -166,8 +166,9 @@ object PathGenerator {
     }
 
     /**
-     * v0.1.5-path locks:
-     * - ≥1 COMBAT node before boss (mid + merge)
+     * v0.1.5-path + v0.1.7-routefight locks:
+     * - ≥1 COMBAT node before boss (mid + merge) on the floor
+     * - every Start→Boss path contains ≥1 COMBAT
      * - at most 1 EVENT per floor
      */
     internal fun enforceFloorRules(path: TowerPath, rng: Random): TowerPath {
@@ -198,7 +199,7 @@ object PathGenerator {
             if (nodes[keep].type != NodeType.EVENT) replaceType(keep, NodeType.EVENT)
         }
 
-        // Ensure ≥1 COMBAT before boss
+        // Ensure ≥1 COMBAT before boss (floor-wide)
         val hasCombat = midIds.any { nodes[idx(it)].type == NodeType.COMBAT }
         if (!hasCombat) {
             // Prefer merge; else first mid node. Combat requirement wins over keeping an Event.
@@ -207,6 +208,56 @@ object PathGenerator {
             replaceType(candidate, NodeType.COMBAT)
         }
 
+        // v0.1.7-routefight: every Start→Boss route must include ≥1 COMBAT
+        // (floor-wide combat can sit on an unused branch while the player path is fightless).
+        ensureCombatOnEveryStartToBossPath(nodes, path.edges, rng)
+
         return path.copy(nodes = nodes)
+    }
+
+    /**
+     * If a Start→Boss path has 0 COMBAT, convert its last non-boss node to COMBAT
+     * (prefer merge when present on that path). Event cap remains ≤1 (conversion only
+     * removes events).
+     */
+    private fun ensureCombatOnEveryStartToBossPath(
+        nodes: MutableList<PathNode>,
+        edges: List<PathEdge>,
+        rng: Random
+    ) {
+        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
+        fun replaceType(at: Int, type: NodeType) {
+            val n = nodes[at]
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+        }
+
+        val outs = edges.groupBy({ it.from }, { it.to })
+        val routes = mutableListOf<List<String>>()
+        fun dfs(id: String, acc: MutableList<String>) {
+            acc += id
+            if (nodes[idx(id)].type == NodeType.BOSS || id == "boss") {
+                routes += acc.toList()
+            } else {
+                for (next in outs[id].orEmpty()) dfs(next, acc)
+            }
+            acc.removeAt(acc.lastIndex)
+        }
+        val startId = nodes.firstOrNull { it.type == NodeType.START }?.id ?: return
+        dfs(startId, mutableListOf())
+
+        for (route in routes) {
+            val midOnPath = route.filter { id ->
+                val t = nodes[idx(id)].type
+                t != NodeType.START && t != NodeType.BOSS
+            }
+            if (midOnPath.any { nodes[idx(it)].type == NodeType.COMBAT }) continue
+
+            val candidateId = when {
+                "merge" in midOnPath -> "merge"
+                midOnPath.isNotEmpty() -> midOnPath.last()
+                else -> continue
+            }
+            replaceType(idx(candidateId), NodeType.COMBAT)
+        }
     }
 }

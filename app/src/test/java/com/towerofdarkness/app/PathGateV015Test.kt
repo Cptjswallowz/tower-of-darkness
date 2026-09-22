@@ -20,6 +20,7 @@ class PathGateV015Test {
         val eventCounts = mutableListOf<Int>()
         val outliers = mutableListOf<String>()
         var floorsWithZeroCombat = 0
+        var floorsWithFightlessRoute = 0
         val eventHistogram = mutableMapOf<Int, Int>()
         val combatHistogram = mutableMapOf<Int, Int>()
 
@@ -69,6 +70,23 @@ class PathGateV015Test {
             if (combatCount == 0) {
                 outliers += "seed $seed: ZERO combat before boss types=${beforeBoss.map { "${it.id}:${it.type}" }}"
             }
+
+            // v0.1.7-routefight: every Start→Boss path must have ≥1 COMBAT
+            val byId = path.nodes.associateBy { it.id }
+            val outs = path.edges.groupBy({ it.from }, { it.to })
+            val routes = mutableListOf<List<String>>()
+            fun dfs(id: String, acc: MutableList<String>) {
+                acc += id
+                if (id == "boss") routes += acc.toList()
+                else outs[id].orEmpty().forEach { dfs(it, acc) }
+                acc.removeAt(acc.lastIndex)
+            }
+            dfs("start", mutableListOf())
+            val fightless = routes.filter { r -> r.none { byId[it]!!.type == NodeType.COMBAT } }
+            if (fightless.isNotEmpty()) {
+                floorsWithFightlessRoute++
+                outliers += "seed $seed: fightless routes=${fightless.size} e.g. ${fightless.first()} types=${fightless.first().map { byId[it]!!.type }}"
+            }
             if (branchCount !in 4..9) {
                 // depth 2–3 × branches 2–3 → mid nodes 4–9
                 outliers += "seed $seed: unusual mid-branch node count=$branchCount"
@@ -87,6 +105,7 @@ class PathGateV015Test {
 
         println("--- SUMMARY ---")
         println("floors_with_zero_combat_before_boss=$floorsWithZeroCombat")
+        println("floors_with_fightless_start_to_boss_route=$floorsWithFightlessRoute")
         println("combat_before_boss_histogram=$combatHistogram")
         println("event_count_histogram=$eventHistogram")
         println("event_max=${eventCounts.maxOrNull()} event_floors_gt1=${eventCounts.count { it > 1 }}")
@@ -99,6 +118,11 @@ class PathGateV015Test {
             0,
             floorsWithZeroCombat
         )
+        assertEquals(
+            "CoS v0.1.7: 0 floors with a fightless Start→Boss route",
+            0,
+            floorsWithFightlessRoute
+        )
         assertTrue(
             "events must be ≤1 on every floor; histogram=$eventHistogram",
             eventCounts.all { it <= 1 }
@@ -106,7 +130,7 @@ class PathGateV015Test {
         assertTrue(
             "no structural outliers expected; got $outliers",
             outliers.none {
-                it.contains("ZERO combat") || it.contains("events=") ||
+                it.contains("ZERO combat") || it.contains("fightless routes") || it.contains("events=") ||
                     it.contains("missing merge") || it.contains("boss_count") ||
                     it.contains("start_count") || it.contains("boss not reachable")
             }

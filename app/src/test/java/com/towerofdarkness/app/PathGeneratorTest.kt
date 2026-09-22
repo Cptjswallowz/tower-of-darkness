@@ -1,7 +1,10 @@
 package com.towerofdarkness.app
 
 import com.towerofdarkness.app.domain.path.NodeType
+import com.towerofdarkness.app.domain.path.PathEdge
 import com.towerofdarkness.app.domain.path.PathGenerator
+import com.towerofdarkness.app.domain.path.PathNode
+import com.towerofdarkness.app.domain.path.TowerPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,4 +106,91 @@ class PathGeneratorTest {
             assertTrue("seed $seed events=$events (max 1)", events <= 1)
         }
     }
+
+
+    /** All Start→Boss routes (not merely the floor) must include ≥1 COMBAT. */
+    @Test
+    fun everyStartToBossPath_hasAtLeastOneCombat() {
+        for (seed in 0..200) {
+            val path = PathGenerator.generate(floor = 1, rng = Random(seed.toLong()))
+            val byId = path.nodes.associateBy { it.id }
+            val outs = path.edges.groupBy({ it.from }, { it.to })
+            val routes = mutableListOf<List<String>>()
+            fun dfs(id: String, acc: MutableList<String>) {
+                acc += id
+                if (id == "boss") {
+                    routes += acc.toList()
+                } else {
+                    for (next in outs[id].orEmpty()) dfs(next, acc)
+                }
+                acc.removeAt(acc.lastIndex)
+            }
+            dfs("start", mutableListOf())
+            assertTrue("seed $seed must have Start→Boss routes", routes.isNotEmpty())
+            for (route in routes) {
+                val types = route.map { byId[it]!!.type }
+                assertTrue(
+                    "seed $seed route $route types=$types must include COMBAT",
+                    types.any { it == NodeType.COMBAT }
+                )
+            }
+            // Event cap still holds after routefight conversion
+            assertTrue(
+                "seed $seed events must stay ≤1",
+                path.nodes.count { it.type == NodeType.EVENT } <= 1
+            )
+        }
+    }
+
+    /**
+     * Constructed fightless branch + combat on sibling: enforceFloorRules must put
+     * COMBAT on the fightless Start→Boss path (prefer merge) without raising events.
+     */
+    @Test
+    fun enforceFloorRules_fightlessBranch_getsCombatPreferMerge() {
+        val nodes = listOf(
+            PathNode("start", NodeType.START, 0, 1, "s", revealed = true),
+            PathNode("b0_r1", NodeType.COMBAT, 1, 0, "c"),
+            PathNode("b0_r2", NodeType.SHOP, 2, 0, "sh"),
+            PathNode("b1_r1", NodeType.TREASURE, 1, 1, "t"),
+            PathNode("b1_r2", NodeType.EVENT, 2, 1, "e"),
+            PathNode("merge", NodeType.REST, 3, 1, "r"),
+            PathNode("boss", NodeType.BOSS, 4, 1, "b")
+        )
+        val edges = listOf(
+            PathEdge("start", "b0_r1"),
+            PathEdge("b0_r1", "b0_r2"),
+            PathEdge("b0_r2", "merge"),
+            PathEdge("start", "b1_r1"),
+            PathEdge("b1_r1", "b1_r2"),
+            PathEdge("b1_r2", "merge"),
+            PathEdge("merge", "boss")
+        )
+        val raw = TowerPath(1, nodes, edges, "start")
+        // Floor already has COMBAT on branch 0 — old rule would leave branch 1 fightless.
+        val fixed = PathGenerator.enforceFloorRules(raw, Random(0))
+        val byId = fixed.nodes.associateBy { it.id }
+        assertEquals("event cap", 1, fixed.nodes.count { it.type == NodeType.EVENT })
+        assertEquals(
+            "prefer merge → COMBAT when a path is fightless",
+            NodeType.COMBAT,
+            byId["merge"]!!.type
+        )
+        val outs = fixed.edges.groupBy({ it.from }, { it.to })
+        val routes = mutableListOf<List<String>>()
+        fun dfs(id: String, acc: MutableList<String>) {
+            acc += id
+            if (id == "boss") routes += acc.toList()
+            else outs[id].orEmpty().forEach { dfs(it, acc) }
+            acc.removeAt(acc.lastIndex)
+        }
+        dfs("start", mutableListOf())
+        routes.forEach { route ->
+            assertTrue(
+                "route $route must have COMBAT",
+                route.any { byId[it]!!.type == NodeType.COMBAT }
+            )
+        }
+    }
+
 }

@@ -4,11 +4,11 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.6-swaplock)
+## Status (v0.1.7-routefight WIP)
 
-- Path: **≥1 COMBAT** node before boss; **events ≤1** per floor
-- Treasure: Gain rolls **once on enter** and stays for the visit; Cancel does not reroll; Lose / Gain **preview** before commit; remnants option unchanged
-- v0.1.6 scope: treasure swap lock only; Path/Wake/counters/HP unchanged
+- Path: **every Start→Boss route ≥1 COMBAT** (not only floor-wide); **events ≤1** per floor; fightless branch → convert last non-boss (prefer merge) to COMBAT
+- Treasure: Gain rolls **once on enter** and stays for the visit; Cancel does not reroll; Lose / Gain **preview** before commit; remnants option unchanged (v0.1.6-swaplock unchanged)
+- v0.1.7 scope: route-fight guarantee only; Wake/thresh/counters/HP/shop/swap lock untouched
 - Weapon XP: full Wake + combat win → **+1 Ashbrand level** before next node (same-run fix)
 - 5-skill exhaust bar + Ashbrand (CHAIN full Wake + quiet SPARK)
 - **FULL Wake** legendary beat: gold `ASHBRAND — WAKE N`, float WAKE, pin in log, ~2300ms
