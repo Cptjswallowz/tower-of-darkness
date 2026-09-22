@@ -7,7 +7,7 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 ## Status (v0.1.5-path)
 
 - Path: **≥1 COMBAT** node before boss; **events ≤1** per floor
-- Treasure: Lose / Gain **preview** before commit; Cancel keeps current card; remnants option unchanged
+- Treasure: Lose / Gain **preview** before commit; Gain rolled **once per visit** (Cancel / re-tap Lose does not reroll); remnants option unchanged
 - Weapon XP: full Wake + combat win → **+1 Ashbrand level** before next node (same-run fix)
 - 5-skill exhaust bar + Ashbrand (CHAIN full Wake + quiet SPARK)
 - **FULL Wake** legendary beat: gold `ASHBRAND — WAKE N`, float WAKE, pin in log, ~2300ms

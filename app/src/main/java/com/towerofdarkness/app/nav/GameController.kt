@@ -91,9 +91,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var rumorRerolls by mutableStateOf(0)
         private set
-    /** Treasure swap preview: lose loadout card id / gain card id */
+    /** Treasure preview Lose (tapped card). Cleared on cancel; does not affect Gain. */
     var treasureSwapLoseId by mutableStateOf<String?>(null)
         private set
+    /** Treasure Gain rolled once on node enter; stable for the whole visit. */
     var treasureSwapGainId by mutableStateOf<String?>(null)
         private set
 
@@ -261,7 +262,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
             NodeType.SHOP -> openShop(nodeId)
             NodeType.REST -> nav = NavState.Rest
             NodeType.EVENT -> nav = NavState.Event
-            NodeType.TREASURE -> nav = NavState.Treasure
+            NodeType.TREASURE -> {
+                treasureSwapLoseId = null
+                treasureSwapGainId = pickTreasureGainId(loadout.map { it.id }.toSet(), unlockedCards, rng)
+                nav = NavState.Treasure
+            }
             NodeType.START -> nav = NavState.Path
         }
     }
@@ -367,7 +372,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    /** Pure helper for unit tests — same rules as [applyWeaponLevelUp]. */
+    /** Pure helpers for unit tests — weapon XP + treasure visit Gain lock. */
     companion object {
         fun nextWeaponLevelAfterFight(
             startLevel: Int,
@@ -380,6 +385,50 @@ class GameController(app: Application) : AndroidViewModel(app) {
             val should = fullProcThisCombat || fullProcKilled
             return if (should) (from + 1).coerceAtMost(3) else from
         }
+
+        /**
+         * Roll treasure Gain once for a visit. Prefer unlocked rares not in loadout;
+         * else any unused pool card. Null if nothing available.
+         */
+        fun pickTreasureGainId(
+            loadoutIds: Set<String>,
+            unlockedCards: Set<String>,
+            rng: Random
+        ): String? {
+            val pool = CardCatalog.poolForRun(unlockedCards).filter { it.id !in loadoutIds }
+            val rares = CardCatalog.all.filter {
+                it.rarity.name == "RARE" && (it.id in unlockedCards || it.unlockCost == 0) &&
+                    it.id !in loadoutIds
+            }
+            return when {
+                rares.isNotEmpty() -> rares.random(rng).id
+                pool.isNotEmpty() -> pool.random(rng).id
+                else -> null
+            }
+        }
+
+        /**
+         * Visit-scoped treasure swap state: [gainId] locked at enter;
+         * [loseId] set by preview taps; cancel clears lose only.
+         */
+        data class TreasureVisit(
+            val gainId: String?,
+            val loseId: String? = null
+        ) {
+            fun beginPreview(loseCardId: String?, loadoutIds: List<String>, rng: Random): TreasureVisit {
+                if (loadoutIds.isEmpty() || gainId == null) return this
+                val lose = loseCardId?.takeIf { it in loadoutIds } ?: loadoutIds.random(rng)
+                return copy(loseId = lose)
+            }
+
+            fun cancelPreview(): TreasureVisit = copy(loseId = null)
+        }
+
+        fun treasureVisitEnter(
+            loadoutIds: Set<String>,
+            unlockedCards: Set<String>,
+            rng: Random
+        ): TreasureVisit = TreasureVisit(gainId = pickTreasureGainId(loadoutIds, unlockedCards, rng))
     }
 
     fun continueAfterCombat() {
@@ -574,27 +623,27 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     // --- Treasure ---
+    /** Clears visit-scoped preview + stored Gain (node leave / consume). */
+    private fun clearTreasureVisit() {
+        treasureSwapLoseId = null
+        treasureSwapGainId = null
+    }
+
     fun treasureRemnants() {
+        clearTreasureVisit()
         runWallet += Balance.TREASURE_REMNANTS
         returnToPathAfterResolve()
     }
 
     fun treasureBeginSwap(loseCardId: String? = null) {
         if (loadout.isEmpty()) return
+        // Gain is rolled once on treasure enter; never reroll while visiting.
+        if (treasureSwapGainId == null) {
+            treasureSwapGainId = pickTreasureGainId(loadout.map { it.id }.toSet(), unlockedCards, rng)
+        }
+        if (treasureSwapGainId == null) return
         val lose = loseCardId?.let { id -> loadout.find { it.id == id } } ?: loadout.random(rng)
-        val pool = CardCatalog.poolForRun(unlockedCards).filter { c -> loadout.none { it.id == c.id } }
-        // Prefer offering an unlocked rare not in bar; else any unused pool card
-        val rares = CardCatalog.all.filter {
-            it.rarity.name == "RARE" && (it.id in unlockedCards || it.unlockCost == 0) &&
-                loadout.none { l -> l.id == it.id }
-        }
-        val gain = when {
-            rares.isNotEmpty() -> rares.random(rng)
-            pool.isNotEmpty() -> pool.random(rng)
-            else -> return
-        }
         treasureSwapLoseId = lose.id
-        treasureSwapGainId = gain.id
     }
 
     fun treasureConfirmSwap() {
@@ -602,7 +651,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         val gainId = treasureSwapGainId ?: return
         val gain = CardCatalog.byId(gainId) ?: return
         if (loadout.none { it.id == loseId }) {
-            treasureCancelSwap()
+            treasureSwapLoseId = null
             return
         }
         // Unlock rare if offered from locked set
@@ -610,21 +659,20 @@ class GameController(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch { meta.unlockCard(gain.id) }
         }
         loadout = loadout.map { if (it.id == loseId) gain else it }
-        treasureSwapLoseId = null
-        treasureSwapGainId = null
+        clearTreasureVisit()
         sound.play("ui")
         returnToPathAfterResolve()
     }
 
     fun treasureCancelSwap() {
+        // Keep stored Gain for this visit; only drop Lose preview.
         treasureSwapLoseId = null
-        treasureSwapGainId = null
     }
 
     @Deprecated("Use treasureBeginSwap / treasureConfirmSwap")
     fun treasureCardSwap() {
         treasureBeginSwap()
-        if (treasureSwapGainId != null) treasureConfirmSwap()
+        if (treasureSwapGainId != null && treasureSwapLoseId != null) treasureConfirmSwap()
     }
 
     // --- Summary / Hub ---
