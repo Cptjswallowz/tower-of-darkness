@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.13-statuspips)
+## Status (v0.1.14-bracesync)
 
+- **v0.1.14-bracesync:** Brace hit **draw sync** — pip ticks / absorb float (−N on pip) **before** leftover HP bar; Brace “0” holds one beat then hides. Soften / absorb math unchanged.
 - **v0.1.13-statuspips:** Brace / Soften **status pips** under fighter HP bars (glyph + remaining count); tap → glossary. Mirrors `brace` / `counterPenalty`; hide at 0. No damage retune.
 - **v0.1.12-save:** one mid-run save slot (DataStore). Writes on node resolve / F1 stair Continue / loadout lock; Menu **Continue** resumes the run. No mid-beat save (never mid-dice or mid-Wake). **New climb** confirm-wipes the slot (meta bank / owned perks kept). `rng_seed` required.
 - **v0.1.11-2x:** combat **1x ↔ 2x** toggle (active-rate label); timings are halved at 2x; dice/log/float/grey-out stay in sync; mid-fight toggle applies to the next beat. No 3x / no skip / no balance change.
@@ -35,8 +36,7 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-[Release v0.1.13-statuspips](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.13-statuspips)
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.13-statuspips/tower-of-darkness-debug.apk)
+Debug APK at repo root after assemble (no GitHub release/tag for this WO). Prior: [v0.1.13-statuspips](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.13-statuspips).
 
 ## Build
 
@@ -46,4 +46,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
+Docs: `docs/brace-sync-v0114.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.

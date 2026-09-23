@@ -27,7 +27,9 @@ data class CombatEvent(
     val animStyle: CombatAnimStyle = CombatAnimStyle.QUICK,
     val sound: String = "hit",
     val glossaryHints: List<String> = emptyList(),
-    val goldLog: Boolean = false
+    val goldLog: Boolean = false,
+    /** Presentation only (v0.1.14): Brace absorbed on this hit; 0 = none. */
+    val braceAbsorbed: Int = 0
 )
 
 data class CombatState(
@@ -225,7 +227,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
             msg,
             FloatingText("-$dmg", false),
             sound = "hit",
-            glossaryHints = if (absorbed > 0) listOf("brace") else emptyList()
+            glossaryHints = if (absorbed > 0) listOf("brace") else emptyList(),
+            braceAbsorbed = absorbed
         )
         if (newHp <= 0) {
             events += CombatEvent("Defeat…", FloatingText("DOWN", false), sound = "miss")

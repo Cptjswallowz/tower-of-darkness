@@ -20,7 +20,7 @@ Under each fighter’s HP bar, show compact **status pips** for combat values th
 | **Brace** | Player | Absorb **left** | Current `brace` (absorb before HP) |
 | **Soften** | Enemy | Remaining **counter reduce** | Current Soften / `counterPenalty` (remaining reduce on enemy counter) |
 
-- **Hide at 0** — no empty pip, no “Brace 0”.
+- **Hide at 0** — no empty pip (Brace zeroing-hit exception: show “0” for that beat only — `brace-sync-v0114.md`).
 - Value on the pip = current remaining amount (not a history total).
 - **No new statuses** this pass unless already present in combat state. Do not invent Stun/Freeze pips unless those values are live on the fighter this fight.
 
@@ -41,6 +41,8 @@ Under each fighter’s HP bar, show compact **status pips** for combat values th
 - Presentation: stub icon + number OK this pass (Art may swap art later).
 
 ---
+
+**Brace draw sync (v0.1.14):** on-hit pip → float → HP order — see `brace-sync-v0114.md`.
 
 ## Explicit non-goals
 

@@ -106,6 +106,7 @@ class StatusPipsV0113Test {
     @Test
     fun brace_fullySpent_pipGone() {
         // Brace 3 vs counter 7–9 → remaining 0 after absorb
+        // v0.1.14: show “0” for the hit beat, hide on readyNext
         val engine = CombatEngine(Random(1))
         var s = forceFire(
             engine,
@@ -117,6 +118,8 @@ class StatusPipsV0113Test {
         if (s.awaitingWeapon) s = engine.resolveWeapon(s)
         s = engine.resolveEnemy(s)
         assertEquals(0, s.brace)
+        assertEquals(0, StatusPips.forPlayer(s).single().count)
+        s = engine.readyNext(s)
         assertTrue(StatusPips.forPlayer(s).isEmpty())
     }
 

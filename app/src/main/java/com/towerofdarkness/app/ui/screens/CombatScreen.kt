@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +38,7 @@ import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
+import com.towerofdarkness.app.domain.combat.BraceDrawSync
 import com.towerofdarkness.app.domain.combat.StatusPips
 import com.towerofdarkness.app.ui.components.EnemySilhouette
 import com.towerofdarkness.app.ui.components.GlossaryText
@@ -60,12 +62,43 @@ fun CombatScreen(gc: GameController) {
     val shake = remember { Animatable(0f) }
     var floatMsg by remember { mutableStateOf<String?>(null) }
     var diceShake by remember { mutableStateOf(0f) }
+    // v0.1.14: staged HP so pip + absorb float draw before leftover HP bar move
+    var displayedPlayerHp by remember { mutableIntStateOf(-1) }
+    var braceAbsorbFloat by remember { mutableStateOf<Int?>(null) }
+    var prevLogSize by remember { mutableIntStateOf(0) }
+    if (state != null && displayedPlayerHp < 0) {
+        displayedPlayerHp = state.playerHp
+    }
+
+    // New fight: snap staged HP (do not carry prior fight's lag)
+    LaunchedEffect(state?.enemy?.kind, state?.log?.size == 0) {
+        if (state != null && state.log.isEmpty()) {
+            displayedPlayerHp = state.playerHp
+            braceAbsorbFloat = null
+            prevLogSize = 0
+        }
+    }
 
     // Snapshot speed with this log beat so mid-toggle VFX follows NEXT beat holds
     LaunchedEffect(state?.log?.size) {
-        val last = state?.log?.lastOrNull() ?: return@LaunchedEffect
+        val s = state ?: return@LaunchedEffect
+        val last = s.log.lastOrNull() ?: return@LaunchedEffect
+        val newEvents = s.log.drop(prevLogSize.coerceAtMost(s.log.size))
+        prevLogSize = s.log.size
         val tick = GameController.combatHoldMs(40L, gc.combatSpeedX)
         val floatHold = GameController.combatHoldMs(700L, gc.combatSpeedX)
+        val absorbHold = GameController.combatHoldMs(BraceDrawSync.ABSORB_FLOAT_MS, gc.combatSpeedX)
+        // Brace absorb in THIS log delta (hit may be followed by Defeat…)
+        val absorbEvent = newEvents.lastOrNull { it.braceAbsorbed > 0 }
+        if (absorbEvent != null && BraceDrawSync.delayHpBarAfter(absorbEvent)) {
+            braceAbsorbFloat = absorbEvent.braceAbsorbed
+            delay(absorbHold)
+            braceAbsorbFloat = null
+            displayedPlayerHp = s.playerHp
+        } else {
+            braceAbsorbFloat = null
+            displayedPlayerHp = s.playerHp
+        }
         if (last.message.contains("Dice tumble")) {
             repeat(8) {
                 diceShake = if (it % 2 == 0) 4f else -4f
@@ -116,11 +149,12 @@ fun CombatScreen(gc: GameController) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 HeroShowcase(state.lastFiredCard?.rarity ?: Rarity.COMMON, Modifier.height(90.dp))
                 Text("You", color = Bone, fontSize = 12.sp)
-                HpBar(state.playerHp, state.playerMaxHp, Moss)
-                // Status pips under HP (not skill bar) — Brace from combatState.brace
+                HpBar(displayedPlayerHp.coerceAtLeast(0), state.playerMaxHp, Moss)
+                // Status pips under HP — Brace pip ticks first; absorb float then HP (v0.1.14)
                 StatusPipRow(
                     pips = StatusPips.forPlayer(state),
-                    onTerm = { gc.showGlossary(it) }
+                    onTerm = { gc.showGlossary(it) },
+                    braceAbsorbFloat = braceAbsorbFloat
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
