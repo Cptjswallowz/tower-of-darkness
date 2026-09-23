@@ -1,6 +1,7 @@
 # Wake presentation art — v0.1.15-wakeart (WO Elliott)
 
 Status: **design lock**. Presentation only — **no** Wake math / threshold / damage changes.  
+**v0.1.16 polish + freeze:** `art-audio/WAKE_ART_v0.1.16.md`.  
 Builds on `wake-v014.md` (FULL legendary + SPARK quiet) and `combat-2x-v0111.md` (rate).
 
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.

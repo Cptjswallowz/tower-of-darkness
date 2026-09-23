@@ -3,9 +3,10 @@ package com.towerofdarkness.app.domain.combat
 import com.towerofdarkness.app.domain.Balance
 
 /**
- * Wake presentation art (v0.1.15-wakeart) — pure mapping; no Wake math changes.
- * Drawables: ashbrand_icon, ashbrand_spark, wake_vfx_{charge,slash,impact}.
- * Aligns with docs/wake-art-v0115.md + docs/art-audio/WAKE_ART_v0.1.15.md.
+ * Wake presentation art (v0.1.16-wakeicon polish on v0.1.15) — pure mapping; no Wake math.
+ * Drawables: ashbrand_icon, ashbrand_spark, wake_vfx_{charge,slash,impact} (Art drop-in names).
+ * Aligns with docs/wake-icon-v0116.md + docs/art-audio/WAKE_ICON_v0.1.16.md.
+ * After this polish: Wake art frozen unless Elliott reopens.
  */
 enum class WakeIconPhase {
     /** Idle Ashbrand plate. */
@@ -46,8 +47,17 @@ object WakeArt {
     const val FRAME_SLASH_MS = 500L
     const val FRAME_IMPACT_MS = 400L
 
-    /** Same slot size as today's weapon plate chrome. */
+    /** Same slot size as today's weapon plate chrome (~48 dp readable). */
     const val ICON_SLOT_DP = 48
+
+    /** Polish lock: slash stroke ~2–3× thin stub; ash dots on arc. */
+    const val STROKE_THICKNESS_MULT_MIN = 2
+    const val STROKE_THICKNESS_MULT_MAX = 3
+    const val ASH_DOTS_MIN = 8
+    const val ASH_DOTS_MAX = 12
+
+    /** Impact is one small spark burst — not a second slash frame. */
+    const val IMPACT_IS_SPARK_BURST = true
 
     fun stageSequence(): List<WakeStageStep> = listOf(
         WakeStageStep(WakeStageFrame.CHARGE, FRAME_CHARGE_MS),

@@ -22,7 +22,7 @@ import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.ui.theme.Gold
 
 /**
- * Ashbrand slot icon — cracked ash-iron + gold fuller ([R.drawable.ashbrand_icon]).
+ * Ashbrand slot icon — cracked ash-iron + gold fuller on dark square ([R.drawable.ashbrand_icon]; v0.1.16 polish).
  * Same size on loadout weapon plate and combat weapon row.
  * SPARK: [R.drawable.ashbrand_spark] ember overlay only (no crescent).
  */
