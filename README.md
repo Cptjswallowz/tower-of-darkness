@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.14-bracesync)
+## Status (v0.1.15-wakeart)
 
+- **v0.1.15-wakeart:** Ashbrand **icon** on loadout + combat weapon slot; FULL Wake **charge → crack → crescent** (wake_vfx_charge/slash/impact) on portrait stage with existing gold log + WAKE float; SPARK = tiny ember on icon only (no crescent). 2x halves frame holds. Placeholder bodies. No Wake math change.
 - **v0.1.14-bracesync:** Brace hit **draw sync** — pip ticks / absorb float (−N on pip) **before** leftover HP bar; Brace “0” holds one beat then hides. Soften / absorb math unchanged.
 - **v0.1.13-statuspips:** Brace / Soften **status pips** under fighter HP bars (glyph + remaining count); tap → glossary. Mirrors `brace` / `counterPenalty`; hide at 0. No damage retune.
 - **v0.1.12-save:** one mid-run save slot (DataStore). Writes on node resolve / F1 stair Continue / loadout lock; Menu **Continue** resumes the run. No mid-beat save (never mid-dice or mid-Wake). **New climb** confirm-wipes the slot (meta bank / owned perks kept). `rng_seed` required.
@@ -47,4 +48,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
+Docs: `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.

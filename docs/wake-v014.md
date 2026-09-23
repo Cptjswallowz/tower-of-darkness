@@ -24,6 +24,8 @@ Full / half Wake **damage by level** and SPARK **chance** remain as in `combat-b
 
 ---
 
+**v0.1.15 art lock:** `wake-art-v0115.md` (icon + Full Wake crescent sequence; SPARK ember-only).
+
 ## FULL Wake — legendary beat
 
 When CHAIN forces a **FULL** Wake:

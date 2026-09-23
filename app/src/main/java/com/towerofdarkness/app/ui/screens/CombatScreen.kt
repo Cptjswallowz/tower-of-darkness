@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.combat.CombatAnimStyle
@@ -40,10 +41,15 @@ import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.domain.combat.BraceDrawSync
 import com.towerofdarkness.app.domain.combat.StatusPips
+import com.towerofdarkness.app.domain.combat.WakeArt
+import com.towerofdarkness.app.domain.combat.WakeIconPhase
+import com.towerofdarkness.app.domain.combat.WakeStageFrame
+import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.EnemySilhouette
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.components.HeroShowcase
 import com.towerofdarkness.app.ui.components.StatusPipRow
+import com.towerofdarkness.app.ui.components.WakeStageOverlay
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Ember
@@ -66,6 +72,9 @@ fun CombatScreen(gc: GameController) {
     var displayedPlayerHp by remember { mutableIntStateOf(-1) }
     var braceAbsorbFloat by remember { mutableStateOf<Int?>(null) }
     var prevLogSize by remember { mutableIntStateOf(0) }
+    // v0.1.15: Wake icon + portrait crescent (FULL only); SPARK ember on icon
+    var wakeIconPhase by remember { mutableStateOf(WakeIconPhase.IDLE) }
+    var wakeStageFrame by remember { mutableStateOf(WakeStageFrame.NONE) }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -120,6 +129,45 @@ fun CombatScreen(gc: GameController) {
         }
     }
 
+    // FULL Wake: charge → crack → crescent frames → clear; SPARK: ember only
+    LaunchedEffect(state?.beat, state?.weaponFlashed, state?.log?.size, gc.combatSpeedX) {
+        val s = state
+        if (s == null) {
+            wakeIconPhase = WakeIconPhase.IDLE
+            wakeStageFrame = WakeStageFrame.NONE
+            return@LaunchedEffect
+        }
+        if (!WakeArt.isWeaponBeat(s)) {
+            wakeIconPhase = WakeIconPhase.IDLE
+            wakeStageFrame = WakeStageFrame.NONE
+            return@LaunchedEffect
+        }
+        val speed = gc.combatSpeedX
+        if (WakeArt.isSparkOnly(s)) {
+            wakeStageFrame = WakeStageFrame.NONE
+            wakeIconPhase = WakeIconPhase.SPARK_EMBER
+            delay(WakeArt.holdMs(Balance.WEAPON_HOLD_MS, speed))
+            wakeIconPhase = WakeIconPhase.IDLE
+            return@LaunchedEffect
+        }
+        if (!WakeArt.isFullWakeBeat(s)) {
+            wakeIconPhase = WakeIconPhase.IDLE
+            wakeStageFrame = WakeStageFrame.NONE
+            return@LaunchedEffect
+        }
+        // Sequence fits inside WEAPON_FULL_HOLD_MS; 2x halves each frame
+        var elapsed = 0L
+        for (step in WakeArt.stageSequence()) {
+            wakeIconPhase = WakeArt.iconPhase(s, elapsed, speed)
+            wakeStageFrame = step.frame
+            val budget = WakeArt.holdMs(step.baseMs, speed)
+            delay(budget)
+            elapsed += budget
+        }
+        wakeStageFrame = WakeStageFrame.NONE
+        wakeIconPhase = WakeIconPhase.IDLE
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -145,26 +193,38 @@ fun CombatScreen(gc: GameController) {
         Text("Round ${state.round}", color = Bone.copy(0.6f), fontSize = 12.sp)
         Spacer(Modifier.height(6.dp))
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                HeroShowcase(state.lastFiredCard?.rarity ?: Rarity.COMMON, Modifier.height(90.dp))
-                Text("You", color = Bone, fontSize = 12.sp)
-                HpBar(displayedPlayerHp.coerceAtLeast(0), state.playerMaxHp, Moss)
-                // Status pips under HP — Brace pip ticks first; absorb float then HP (v0.1.14)
-                StatusPipRow(
-                    pips = StatusPips.forPlayer(state),
-                    onTerm = { gc.showGlossary(it) },
-                    braceAbsorbFloat = braceAbsorbFloat
-                )
+        Box(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    HeroShowcase(state.lastFiredCard?.rarity ?: Rarity.COMMON, Modifier.height(90.dp))
+                    Text("You", color = Bone, fontSize = 12.sp)
+                    HpBar(displayedPlayerHp.coerceAtLeast(0), state.playerMaxHp, Moss)
+                    // Status pips under HP — Brace pip ticks first; absorb float then HP (v0.1.14)
+                    StatusPipRow(
+                        pips = StatusPips.forPlayer(state),
+                        onTerm = { gc.showGlossary(it) },
+                        braceAbsorbFloat = braceAbsorbFloat
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EnemySilhouette(state.enemy.kind.displayName, state.enemy.isBoss)
+                    Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
+                    HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
+                    // Soften = remaining counterPenalty
+                    StatusPipRow(
+                        pips = StatusPips.forEnemy(state),
+                        onTerm = { gc.showGlossary(it) }
+                    )
+                }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                EnemySilhouette(state.enemy.kind.displayName, state.enemy.isBoss)
-                Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
-                HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
-                // Soften = remaining counterPenalty
-                StatusPipRow(
-                    pips = StatusPips.forEnemy(state),
-                    onTerm = { gc.showGlossary(it) }
+            // FULL Wake crescent only — safe of status bar / skill row (art margins)
+            if (wakeStageFrame != WakeStageFrame.NONE) {
+                WakeStageOverlay(
+                    frame = wakeStageFrame,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .align(Alignment.TopCenter)
                 )
             }
         }
@@ -188,7 +248,7 @@ fun CombatScreen(gc: GameController) {
         Spacer(Modifier.height(6.dp))
 
         // Weapon row (not in dice)
-        WeaponBar(state.weapon, flashed = state.weaponFlashed)
+        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase)
 
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
@@ -264,7 +324,11 @@ private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Mo
 }
 
 @Composable
-private fun WeaponBar(weapon: com.towerofdarkness.app.domain.combat.WeaponRuntime, flashed: Boolean) {
+private fun WeaponBar(
+    weapon: com.towerofdarkness.app.domain.combat.WeaponRuntime,
+    flashed: Boolean,
+    iconPhase: WakeIconPhase = WakeIconPhase.IDLE
+) {
     val tagColor = when (weapon.def.statusTag) {
         WeaponTag.Ember -> Ember
         WeaponTag.Notch -> Accent
@@ -279,7 +343,11 @@ private fun WeaponBar(weapon: com.towerofdarkness.app.domain.combat.WeaponRuntim
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(Modifier.weight(1f)) {
+        // Ashbrand icon — same slot size as loadout weapon plate
+        if (weapon.def.id == "ashbrand") {
+            AshbrandIcon(phase = iconPhase)
+        }
+        Column(Modifier.weight(1f).padding(start = 8.dp)) {
             Text("${weapon.def.title}  Lv${weapon.level}", color = Bone, fontSize = 13.sp)
             Text("${weapon.def.statusTag} · ${weapon.def.abilityTitle}", color = tagColor, fontSize = 10.sp)
         }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +31,7 @@ import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
 import com.towerofdarkness.app.domain.combat.WeaponCatalog
 import com.towerofdarkness.app.nav.GameController
+import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Bone
@@ -94,16 +96,22 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(WeaponCatalog.ashbrand).forEach { w ->
                 val on = weaponId.value == w.id
-                Column(
+                Row(
                     Modifier
                         .weight(1f)
                         .background(Panel, RoundedCornerShape(8.dp))
                         .border(2.dp, if (on) Ember else Bone.copy(0.3f), RoundedCornerShape(8.dp))
                         .clickable { weaponId.value = w.id }
-                        .padding(10.dp)
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(w.title, color = Bone, fontSize = 13.sp)
-                    Text("${w.statusTag} · ${w.abilityTitle}", color = Ember, fontSize = 11.sp)
+                    // Same Ashbrand icon slot size as combat weapon row
+                    AshbrandIcon()
+                    Column {
+                        Text(w.title, color = Bone, fontSize = 13.sp)
+                        Text("${w.statusTag} · ${w.abilityTitle}", color = Ember, fontSize = 11.sp)
+                    }
                 }
             }
         }
