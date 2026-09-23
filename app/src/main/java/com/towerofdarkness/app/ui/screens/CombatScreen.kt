@@ -59,24 +59,27 @@ fun CombatScreen(gc: GameController) {
     var floatMsg by remember { mutableStateOf<String?>(null) }
     var diceShake by remember { mutableStateOf(0f) }
 
+    // Snapshot speed with this log beat so mid-toggle VFX follows NEXT beat holds
     LaunchedEffect(state?.log?.size) {
         val last = state?.log?.lastOrNull() ?: return@LaunchedEffect
+        val tick = GameController.combatHoldMs(40L, gc.combatSpeedX)
+        val floatHold = GameController.combatHoldMs(700L, gc.combatSpeedX)
         if (last.message.contains("Dice tumble")) {
             repeat(8) {
                 diceShake = if (it % 2 == 0) 4f else -4f
-                delay(40)
+                delay(tick)
             }
             diceShake = 0f
         }
         last.floating?.let {
             floatMsg = it.text
-            delay(700)
+            delay(floatHold)
             floatMsg = null
         }
         if (last.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO) {
             repeat(6) {
                 shake.snapTo(if (it % 2 == 0) 8f else -8f)
-                delay(40)
+                delay(tick)
             }
             shake.snapTo(0f)
         }
@@ -99,8 +102,10 @@ fun CombatScreen(gc: GameController) {
                 color = if (state.enemy.isBoss) Ember else Gold,
                 fontSize = 18.sp
             )
-            // 1x stub — disabled, no 2x
-            OutlinedButton(onClick = {}, enabled = false) { Text("1x") }
+            // 1x ↔ 2x toggle — label shows ACTIVE rate
+            OutlinedButton(onClick = { gc.toggleCombatSpeed() }) {
+                Text("${gc.combatSpeedX}x")
+            }
         }
         Text("Round ${state.round}", color = Bone.copy(0.6f), fontSize = 12.sp)
         Spacer(Modifier.height(6.dp))

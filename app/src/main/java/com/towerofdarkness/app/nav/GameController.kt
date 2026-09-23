@@ -106,6 +106,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var combatState by mutableStateOf<CombatState?>(null)
         private set
+    /** Combat playback rate: 1 or 2. Persists for the run (cheap). Label shows ACTIVE rate. */
+    var combatSpeedX by mutableStateOf(1)
+        private set
     var shopOffers by mutableStateOf<List<ShopOffer>>(emptyList())
         private set
     var summary by mutableStateOf<RunSummaryData?>(null)
@@ -147,6 +150,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun showGlossary(term: String?) { glossaryTerm = term }
+
+    /** Toggle combat pace 1x ↔ 2x. Applies to the NEXT hold beat (current delay already committed). */
+    fun toggleCombatSpeed() {
+        combatSpeedX = if (combatSpeedX == 1) 2 else 1
+    }
 
     fun goMenu() { nav = NavState.MainMenu }
     fun goHub() { nav = NavState.MetaHub }
@@ -324,7 +332,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             s = engine.diceTumble(s)
             combatState = s
             s.log.lastOrNull()?.sound?.let { sound.play(it) }
-            delay(Balance.DICE_MS)
+            combatHold(Balance.DICE_MS)
             // B — slot already highlighted
 
             // C — skill
@@ -334,18 +342,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
             val skillMs = if (s.lastFiredCard?.rarity == Rarity.RARE ||
                 s.lastFiredCard?.rarity == Rarity.LEGENDARY
             ) Balance.SKILL_RARE_MS else Balance.SKILL_COMMON_MS
-            delay(skillMs)
+            combatHold(skillMs)
 
             // D — read hold
-            delay(Balance.READ_HOLD_MS)
+            combatHold(Balance.READ_HOLD_MS)
 
-            // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms
+            // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms @1x
             if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
                 val fullWake = s.pendingFullWake
                 s = engine.resolveWeapon(s)
                 combatState = s
                 s.log.lastOrNull()?.sound?.let { sound.play(it) }
-                delay(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
+                combatHold(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
             }
 
             if (s.finished) break
@@ -366,7 +374,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             s = engine.resolveEnemy(s)
             combatState = s
             s.log.lastOrNull()?.sound?.let { sound.play(it) }
-            delay(Balance.ENEMY_HOLD_MS)
+            combatHold(Balance.ENEMY_HOLD_MS)
 
             if (s.finished) break
             s = engine.readyNext(s)
@@ -400,8 +408,23 @@ class GameController(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /**
+     * Hold for one combat beat at the ACTIVE speed.
+     * Snapshots [combatSpeedX] when the hold starts so a mid-fight toggle
+     * only affects the NEXT beat (current delay already committed).
+     */
+    private suspend fun combatHold(baseMs: Long) {
+        delay(combatHoldMs(baseMs, combatSpeedX))
+    }
+
     /** Pure helpers for unit tests — weapon XP, treasure Gain lock, shop wallet, floor2. */
     companion object {
+        /** Scale a 1x hold by speedX (1 or 2 only). No 3x; no skip. */
+        fun combatHoldMs(baseMs: Long, speedX: Int): Long {
+            val x = if (speedX >= 2) 2 else 1
+            return (baseMs / x).coerceAtLeast(1L)
+        }
+
         /** Floor 1 boss win → stair beat; Floor 2+ boss win → run summary (no Floor 3). */
         fun afterBossWinNav(floor: Int): BossWinNav =
             if (floor < 2) BossWinNav.FLOOR_BREAK else BossWinNav.SUMMARY_VICTORY

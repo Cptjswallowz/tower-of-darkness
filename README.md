@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.10-bossrest)
+## Status (WIP → v0.1.11-2x)
 
+- **WIP v0.1.11-2x:** combat **1x ↔ 2x** toggle (active-rate label); holds ×0.5 at 2x; dice/log/float/grey-out stay in sync; mid-fight toggle applies to next beat. No 3x / no skip / no damage-weight-Wake rule changes. Tag/release not cut yet.
 - **v0.1.10-bossrest:** every Start→Boss path’s **last non-boss node is REST**; Rest Heal → **MAX HP**; Keen Eye Free Scout tap on fogged `?` reveals type and spends a charge (no enter). CARE-everywhere guarantee stays withdrawn.
 - **v0.1.10-routecare reversed:** CARE (REST|SHOP) on every S→B removed earlier; tag/release `v0.1.10-routecare` left for history. Do **not** recreate CARE-everywhere.
 - **Floor 2 climb:** Seal-Warden win → "The stair turns." → Floor 2 path (same run; no Hub). Ash-Warden clear → summary **"Victory — The seal breaks."** → Hub. No Floor 3.
@@ -43,4 +44,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`.
+Docs: `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`.

@@ -61,6 +61,8 @@ If a skill or Wake ends the fight, skip remaining beats → end gate.
 
 **1x stub only:** a single shared VFX/SFX stub may stand in for Wake (full/half), exhaust grey, and cycle reset this pass.
 
+**v0.1.11 combat rate:** 2-state toggle 1x ↔ 2x on the existing 1x control — see `combat-2x-v0111.md`. Does not retune this table; 2x is holds × 0.5.
+
 ---
 
 ## Weapon — Ashbrand (CHAIN + SPARK)

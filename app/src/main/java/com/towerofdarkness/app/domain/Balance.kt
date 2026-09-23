@@ -40,7 +40,7 @@ object Balance {
     const val TREASURE_REMNANTS = 6
     const val EVENT_REMNANTS = 3
 
-    // Combat pacing (ms) — phone-readable; no 2x
+    // Combat pacing (ms) — phone-readable 1x budgets; 2x scales holds × 0.5 via GameController
     const val DICE_MS = 800L
     const val SKILL_COMMON_MS = 1700L
     const val SKILL_RARE_MS = 2300L
