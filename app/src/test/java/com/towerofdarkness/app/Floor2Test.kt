@@ -60,6 +60,7 @@ class Floor2Test {
     fun floor2Path_seeds0to99_everyStartToBossHasCombat_eventsAtMostOne() {
         var fightless = 0
         var eventsOver = 0
+        var missingPreBossRest = 0
         for (seed in 0..99) {
             val path = PathGenerator.generate(floor = 2, rng = Random(seed.toLong()))
             assertEquals(2, path.floor)
@@ -75,13 +76,18 @@ class Floor2Test {
             dfs("start", mutableListOf())
             assertTrue("seed $seed routes", routes.isNotEmpty())
             for (route in routes) {
-                if (route.none { byId[it]!!.type == NodeType.COMBAT }) fightless++
+                val mid = route.filter {
+                    byId[it]!!.type != NodeType.START && byId[it]!!.type != NodeType.BOSS
+                }
+                if (mid.dropLast(1).none { byId[it]!!.type == NodeType.COMBAT }) fightless++
+                if (mid.isNotEmpty() && byId[mid.last()]!!.type != NodeType.REST) missingPreBossRest++
             }
             val events = path.nodes.count { it.type == NodeType.EVENT }
             if (events > 1) eventsOver++
         }
-        assertEquals("0 zero-combat S→B on Floor 2 gens 0–99", 0, fightless)
+        assertEquals("0 zero-combat-before-rest S→B on Floor 2 gens 0–99", 0, fightless)
         assertEquals("events ≤1 on every Floor 2 gen", 0, eventsOver)
+        assertEquals("every F2 S→B last non-boss is REST", 0, missingPreBossRest)
     }
 
     @Test

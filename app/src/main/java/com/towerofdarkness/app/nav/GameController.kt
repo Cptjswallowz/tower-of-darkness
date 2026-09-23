@@ -406,6 +406,25 @@ class GameController(app: Application) : AndroidViewModel(app) {
         fun afterBossWinNav(floor: Int): BossWinNav =
             if (floor < 2) BossWinNav.FLOOR_BREAK else BossWinNav.SUMMARY_VICTORY
 
+        /** Rest Heal → MAX HP; Deep Breath never stacks past max. */
+        fun applyRestHealToMax(maxHp: Int): Int = maxHp
+
+        /**
+         * Free Scout pure apply: reveal fogged node type only, spend 1 charge, no enter.
+         * Returns null if charges=0 or node not fogged / not scoutable.
+         */
+        fun applyFreeScout(
+            path: TowerPath,
+            nodeId: String,
+            charges: Int
+        ): Pair<TowerPath, Int>? {
+            if (charges <= 0) return null
+            val node = path.nodes.find { it.id == nodeId } ?: return null
+            if (node.revealed || node.scoutedTypeOnly) return null
+            if (node.type == NodeType.START || node.type == NodeType.BOSS) return null
+            return path.withReveal(nodeId, typeOnly = true) to (charges - 1)
+        }
+
         fun isHealOfferKind(kind: String): Boolean =
             kind == "heal_small" || kind == "heal_mid" || kind == "heal_full"
 
@@ -666,7 +685,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     fun restHeal() {
         val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
-        playerHp = (playerHp + restHealAmount()).coerceAtMost(maxHp)
+        // v0.1.10-bossrest: Rest Heal fills to MAX; Deep Breath does not overheal
+        playerHp = applyRestHealToMax(maxHp)
         returnToPathAfterResolve()
     }
 
@@ -680,18 +700,28 @@ class GameController(app: Application) : AndroidViewModel(app) {
         returnToPathAfterResolve()
     }
 
-    /** Path free scout from scout_charge — spends one charge when a fogged adjacent exists. */
+    /**
+     * Keen Eye Free Scout — tap a fogged (?) node: reveal type, spend 1 charge, do not enter.
+     * Clear Fog rumor re-roll is separate and must not call this.
+     */
+    fun useFreeScoutOn(nodeId: String): Boolean {
+        val p = path ?: return false
+        val result = applyFreeScout(p, nodeId, freeScoutCharges) ?: return false
+        path = result.first
+        freeScoutCharges = result.second
+        sound.play("ui")
+        return true
+    }
+
+    /** Path Free Scout button — spends one charge on the first fogged non-start/boss node. */
     fun useFreeScout(): Boolean {
         if (freeScoutCharges <= 0) return false
         val p = path ?: return false
-        val fogged = p.edges.filter { it.from == p.currentId }
-            .map { p.node(it.to) }
-            .filter { !it.revealed && !it.scoutedTypeOnly }
-        val target = fogged.firstOrNull() ?: return false
-        path = p.withReveal(target.id, typeOnly = true)
-        freeScoutCharges--
-        sound.play("ui")
-        return true
+        val target = p.nodes.firstOrNull {
+            !it.revealed && !it.scoutedTypeOnly &&
+                it.type != NodeType.START && it.type != NodeType.BOSS
+        } ?: return false
+        return useFreeScoutOn(target.id)
     }
 
     private fun scoutAdjacent() {

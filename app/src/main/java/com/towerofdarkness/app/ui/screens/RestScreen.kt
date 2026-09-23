@@ -23,7 +23,6 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 
 @Composable
 fun RestScreen(gc: GameController) {
-    val healAmt = gc.restHealAmount()
     val maxHp = Balance.PLAYER_MAX_HP + gc.metaHpBonus
     val full = gc.playerHp >= maxHp
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
@@ -41,7 +40,7 @@ fun RestScreen(gc: GameController) {
             enabled = !full,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (full) "Heal (already full)" else "Heal (+$healAmt)")
+            Text(if (full) "Heal (already full)" else "Heal (to full)")
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = { gc.restScout() }, modifier = Modifier.fillMaxWidth()) {

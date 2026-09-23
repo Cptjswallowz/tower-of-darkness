@@ -51,13 +51,15 @@ Do **not** re-open Loadout, Tutorial, or Hub between floors.
 
 ---
 
-## Floor 2 path rules (= v0.1.7 routefight)
+## Floor 2 path rules (= v0.1.7 combat + v0.1.10-bossrest)
 
-Same generator constraints as Floor 1 / 0.1.7:
+Same generator constraints as Floor 1:
 
-- Every Start→Boss route has **≥1 COMBAT**
+- Every Start→Boss route has **≥1 COMBAT** (v0.1.7)
+- Every Start→Boss route’s **last non-boss node is REST** (v0.1.10-bossrest) — see `bossrest-v0110.md`
+- **No** CARE-on-every-S→B guarantee (withdrawn)
 - Events on the floor: **≤1**
-- Fog / rumor visibility: unchanged (`rumors.md`)
+- Fog / rumor visibility: unchanged (`rumors.md`); Free Scout = Keen Eye (`bossrest-v0110.md`)
 
 ---
 

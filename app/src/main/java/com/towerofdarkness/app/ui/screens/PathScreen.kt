@@ -60,9 +60,11 @@ fun PathScreen(gc: GameController) {
         }
         if (gc.freeScoutCharges > 0) {
             Spacer(Modifier.height(6.dp))
-            OutlinedButton(onClick = { gc.useFreeScout() }) {
-                Text("Free Scout · charges ${gc.freeScoutCharges}")
-            }
+            Text(
+                "Free Scout · charges ${gc.freeScoutCharges} (tap a fogged ? node)",
+                color = Bone.copy(0.7f),
+                fontSize = 12.sp
+            )
         }
         if (gc.rumorRerolls > 0) {
             Spacer(Modifier.height(6.dp))
@@ -88,7 +90,11 @@ fun PathScreen(gc: GameController) {
                             currentId = path.currentId,
                             choiceIds = path.choices().map { it.id }.toSet(),
                             canReroll = gc.rumorRerolls > 0 && !node.revealed,
+                            canFreeScout = gc.freeScoutCharges > 0 &&
+                                !node.revealed && !node.scoutedTypeOnly &&
+                                node.type != NodeType.START && node.type != NodeType.BOSS,
                             onClick = { gc.selectPathNode(node.id) },
+                            onFreeScout = { gc.useFreeScoutOn(node.id) },
                             onReroll = { gc.rerollRumor(node.id) }
                         )
                     }
@@ -104,7 +110,9 @@ private fun PathNodeChip(
     currentId: String,
     choiceIds: Set<String>,
     canReroll: Boolean = false,
+    canFreeScout: Boolean = false,
     onClick: () -> Unit,
+    onFreeScout: () -> Unit = {},
     onReroll: () -> Unit = {}
 ) {
     val isCurrent = node.id == currentId
@@ -118,6 +126,7 @@ private fun PathNodeChip(
     val color = when {
         isCurrent -> Gold
         selectable -> Accent
+        canFreeScout -> Gold.copy(alpha = 0.85f)
         node.cleared -> Moss
         else -> Steel
     }
@@ -127,14 +136,19 @@ private fun PathNodeChip(
                 .size(52.dp)
                 .background(Panel, CircleShape)
                 .border(2.dp, color, CircleShape)
-                .clickable(enabled = selectable) { onClick() },
+                .clickable(enabled = selectable || canFreeScout) {
+                    when {
+                        selectable -> onClick()
+                        canFreeScout -> onFreeScout()
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             Text(label, color = Bone, fontSize = 12.sp)
         }
+        // Free Scout / revealed: icon + type name like row-1 (no extra rumor line)
         val rumorOrType = when {
-            showType && node.revealed -> node.type.name.lowercase()
-            node.scoutedTypeOnly -> node.type.name.lowercase() + " (scout)"
+            showType && (node.revealed || node.scoutedTypeOnly) -> node.type.name.lowercase()
             else -> node.rumor  // wrap in UI (2 lines), do not hard-clip mid-word
         }
         Text(

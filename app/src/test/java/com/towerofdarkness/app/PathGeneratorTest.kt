@@ -144,17 +144,18 @@ class PathGeneratorTest {
 
     /**
      * Constructed fightless branch + combat on sibling: enforceFloorRules must put
-     * COMBAT on the fightless Start→Boss path (prefer merge) without raising events.
+     * COMBAT on an earlier node of the fightless path, keep last non-boss as REST,
+     * without raising events above 1.
      */
     @Test
-    fun enforceFloorRules_fightlessBranch_getsCombatPreferMerge() {
+    fun enforceFloorRules_fightlessBranch_getsCombat_preBossRest() {
         val nodes = listOf(
             PathNode("start", NodeType.START, 0, 1, "s", revealed = true),
             PathNode("b0_r1", NodeType.COMBAT, 1, 0, "c"),
             PathNode("b0_r2", NodeType.SHOP, 2, 0, "sh"),
             PathNode("b1_r1", NodeType.TREASURE, 1, 1, "t"),
             PathNode("b1_r2", NodeType.EVENT, 2, 1, "e"),
-            PathNode("merge", NodeType.REST, 3, 1, "r"),
+            PathNode("merge", NodeType.SHOP, 3, 1, "sh2"),
             PathNode("boss", NodeType.BOSS, 4, 1, "b")
         )
         val edges = listOf(
@@ -167,13 +168,12 @@ class PathGeneratorTest {
             PathEdge("merge", "boss")
         )
         val raw = TowerPath(1, nodes, edges, "start")
-        // Floor already has COMBAT on branch 0 — old rule would leave branch 1 fightless.
         val fixed = PathGenerator.enforceFloorRules(raw, Random(0))
         val byId = fixed.nodes.associateBy { it.id }
-        assertEquals("event cap", 1, fixed.nodes.count { it.type == NodeType.EVENT })
+        assertTrue("event cap ≤1", fixed.nodes.count { it.type == NodeType.EVENT } <= 1)
         assertEquals(
-            "prefer merge → COMBAT when a path is fightless",
-            NodeType.COMBAT,
+            "last non-boss (merge) must be REST",
+            NodeType.REST,
             byId["merge"]!!.type
         )
         val outs = fixed.edges.groupBy({ it.from }, { it.to })
@@ -186,10 +186,54 @@ class PathGeneratorTest {
         }
         dfs("start", mutableListOf())
         routes.forEach { route ->
+            val mid = route.filter { byId[it]!!.type != NodeType.START && byId[it]!!.type != NodeType.BOSS }
+            assertEquals("last mid REST", NodeType.REST, byId[mid.last()]!!.type)
             assertTrue(
-                "route $route must have COMBAT",
-                route.any { byId[it]!!.type == NodeType.COMBAT }
+                "route $route must have COMBAT before REST",
+                mid.dropLast(1).any { byId[it]!!.type == NodeType.COMBAT }
             )
+        }
+    }
+
+    /** v0.1.10-bossrest: every generated S→B last non-boss is REST (F1+F2). */
+    @Test
+    fun everyStartToBossPath_lastNonBossIsRest_f1AndF2() {
+        for (floor in listOf(1, 2)) {
+            for (seed in 0..200) {
+                val path = PathGenerator.generate(floor = floor, rng = Random(seed.toLong()))
+                val byId = path.nodes.associateBy { it.id }
+                val outs = path.edges.groupBy({ it.from }, { it.to })
+                val routes = mutableListOf<List<String>>()
+                fun dfs(id: String, acc: MutableList<String>) {
+                    acc += id
+                    if (id == "boss") routes += acc.toList()
+                    else outs[id].orEmpty().forEach { dfs(it, acc) }
+                    acc.removeAt(acc.lastIndex)
+                }
+                dfs("start", mutableListOf())
+                assertTrue("floor $floor seed $seed routes", routes.isNotEmpty())
+                for (route in routes) {
+                    val mid = route.filter {
+                        byId[it]!!.type != NodeType.START && byId[it]!!.type != NodeType.BOSS
+                    }
+                    assertTrue("floor $floor seed $seed mid", mid.isNotEmpty())
+                    assertEquals(
+                        "floor $floor seed $seed last=${mid.last()} types=${mid.map { byId[it]!!.type }}",
+                        NodeType.REST,
+                        byId[mid.last()]!!.type
+                    )
+                    assertTrue(
+                        "floor $floor seed $seed combat before rest",
+                        mid.dropLast(1).any { byId[it]!!.type == NodeType.COMBAT }
+                    )
+                    // Boss untouched
+                    assertEquals(NodeType.BOSS, byId["boss"]!!.type)
+                }
+                assertTrue(
+                    "floor $floor seed $seed events ≤1",
+                    path.nodes.count { it.type == NodeType.EVENT } <= 1
+                )
+            }
         }
     }
 

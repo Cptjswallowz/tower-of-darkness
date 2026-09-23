@@ -166,10 +166,12 @@ object PathGenerator {
     }
 
     /**
-     * v0.1.5-path + v0.1.7-routefight locks:
+     * v0.1.5-path + v0.1.7-routefight + v0.1.10-bossrest locks:
      * - ≥1 COMBAT node before boss (mid + merge) on the floor
-     * - every Start→Boss path contains ≥1 COMBAT
+     * - every Start→Boss path contains ≥1 COMBAT *before* the pre-boss REST
+     * - every Start→Boss path's last non-boss node is REST
      * - at most 1 EVENT per floor
+     * CARE-everywhere (REST|SHOP on every path) is withdrawn — do not reintroduce.
      */
     internal fun enforceFloorRules(path: TowerPath, rng: Random): TowerPath {
         var nodes = path.nodes.toMutableList()
@@ -199,28 +201,30 @@ object PathGenerator {
             if (nodes[keep].type != NodeType.EVENT) replaceType(keep, NodeType.EVENT)
         }
 
-        // Ensure ≥1 COMBAT before boss (floor-wide)
+        // Ensure ≥1 COMBAT before boss (floor-wide). Prefer non-merge so merge can be pre-boss REST.
         val hasCombat = midIds.any { nodes[idx(it)].type == NodeType.COMBAT }
         if (!hasCombat) {
-            // Prefer merge; else first mid node. Combat requirement wins over keeping an Event.
-            val mergeI = idx("merge")
-            val candidate = if (mergeI >= 0) mergeI else midIds.map { idx(it) }.first()
+            val candidate = midIds.map { idx(it) }.firstOrNull { nodes[it].id != "merge" }
+                ?: midIds.map { idx(it) }.first()
             replaceType(candidate, NodeType.COMBAT)
         }
 
-        // v0.1.7-routefight: every Start→Boss route must include ≥1 COMBAT
-        // (floor-wide combat can sit on an unused branch while the player path is fightless).
-        ensureCombatOnEveryStartToBossPath(nodes, path.edges, rng)
+        // v0.1.7: every S→B has COMBAT on an earlier-than-last mid node (not the pre-boss slot).
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng)
+        // v0.1.10-bossrest: last non-boss on every S→B is REST
+        ensureLastNonBossIsRest(nodes, path.edges, rng)
+        // Re-check combat after REST conversion (merge may have been the only fight).
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng)
 
         return path.copy(nodes = nodes)
     }
 
     /**
-     * If a Start→Boss path has 0 COMBAT, convert its last non-boss node to COMBAT
-     * (prefer merge when present on that path). Event cap remains ≤1 (conversion only
-     * removes events).
+     * If a Start→Boss path has 0 COMBAT among mid nodes *before* the last non-boss,
+     * convert an earlier mid node to COMBAT (prefer non-EVENT). Leaves the last slot
+     * free for pre-boss REST. Event cap remains ≤1 (conversion only removes events).
      */
-    private fun ensureCombatOnEveryStartToBossPath(
+    private fun ensureCombatBeforePreBossRest(
         nodes: MutableList<PathNode>,
         edges: List<PathEdge>,
         rng: Random
@@ -231,6 +235,51 @@ object PathGenerator {
             nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
         }
 
+        for (route in startToBossRoutes(nodes, edges)) {
+            val midOnPath = route.filter { id ->
+                val t = nodes[idx(id)].type
+                t != NodeType.START && t != NodeType.BOSS
+            }
+            if (midOnPath.isEmpty()) continue
+            val earlier = midOnPath.dropLast(1)
+            val combatPool = if (earlier.isNotEmpty()) earlier else midOnPath
+            if (combatPool.any { nodes[idx(it)].type == NodeType.COMBAT }) continue
+
+            val candidateId = combatPool.firstOrNull { nodes[idx(it)].type != NodeType.EVENT }
+                ?: combatPool.last()
+            replaceType(idx(candidateId), NodeType.COMBAT)
+        }
+    }
+
+    /** Convert each S→B path's last non-boss node to REST (do not touch boss). */
+    private fun ensureLastNonBossIsRest(
+        nodes: MutableList<PathNode>,
+        edges: List<PathEdge>,
+        rng: Random
+    ) {
+        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
+        fun replaceType(at: Int, type: NodeType) {
+            val n = nodes[at]
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+        }
+
+        for (route in startToBossRoutes(nodes, edges)) {
+            val midOnPath = route.filter { id ->
+                val t = nodes[idx(id)].type
+                t != NodeType.START && t != NodeType.BOSS
+            }
+            val lastId = midOnPath.lastOrNull() ?: continue
+            if (nodes[idx(lastId)].type != NodeType.REST) {
+                replaceType(idx(lastId), NodeType.REST)
+            }
+        }
+    }
+
+    private fun startToBossRoutes(
+        nodes: List<PathNode>,
+        edges: List<PathEdge>
+    ): List<List<String>> {
+        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
         val outs = edges.groupBy({ it.from }, { it.to })
         val routes = mutableListOf<List<String>>()
         fun dfs(id: String, acc: MutableList<String>) {
@@ -242,22 +291,8 @@ object PathGenerator {
             }
             acc.removeAt(acc.lastIndex)
         }
-        val startId = nodes.firstOrNull { it.type == NodeType.START }?.id ?: return
+        val startId = nodes.firstOrNull { it.type == NodeType.START }?.id ?: return emptyList()
         dfs(startId, mutableListOf())
-
-        for (route in routes) {
-            val midOnPath = route.filter { id ->
-                val t = nodes[idx(id)].type
-                t != NodeType.START && t != NodeType.BOSS
-            }
-            if (midOnPath.any { nodes[idx(it)].type == NodeType.COMBAT }) continue
-
-            val candidateId = when {
-                "merge" in midOnPath -> "merge"
-                midOnPath.isNotEmpty() -> midOnPath.last()
-                else -> continue
-            }
-            replaceType(idx(candidateId), NodeType.COMBAT)
-        }
+        return routes
     }
 }
