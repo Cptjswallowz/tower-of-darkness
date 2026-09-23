@@ -166,10 +166,9 @@ object PathGenerator {
     }
 
     /**
-     * v0.1.5-path + v0.1.7-routefight + v0.1.10-routecare locks:
+     * v0.1.5-path + v0.1.7-routefight locks:
      * - ≥1 COMBAT node before boss (mid + merge) on the floor
      * - every Start→Boss path contains ≥1 COMBAT
-     * - every Start→Boss path contains ≥1 CARE (REST or SHOP)
      * - at most 1 EVENT per floor
      */
     internal fun enforceFloorRules(path: TowerPath, rng: Random): TowerPath {
@@ -212,15 +211,6 @@ object PathGenerator {
         // v0.1.7-routefight: every Start→Boss route must include ≥1 COMBAT
         // (floor-wide combat can sit on an unused branch while the player path is fightless).
         ensureCombatOnEveryStartToBossPath(nodes, path.edges, rng)
-
-        // v0.1.10-routecare: every Start→Boss route must include ≥1 CARE (REST|SHOP).
-        // Runs after combat lock; converts last eligible non-COMBAT → REST (prefer heal).
-        ensureCareOnEveryStartToBossPath(nodes, path.edges, rng)
-
-        // CARE may leave a route fightless if a shared COMBAT was never the conversion
-        // target but an earlier pass interacted oddly — repair combat without stripping
-        // a path's only CARE node.
-        ensureCombatPreservingCare(nodes, path.edges, rng)
 
         return path.copy(nodes = nodes)
     }
@@ -265,123 +255,6 @@ object PathGenerator {
             val candidateId = when {
                 "merge" in midOnPath -> "merge"
                 midOnPath.isNotEmpty() -> midOnPath.last()
-                else -> continue
-            }
-            replaceType(idx(candidateId), NodeType.COMBAT)
-        }
-    }
-
-    /**
-     * If a Start→Boss path has 0 CARE (REST|SHOP), convert its last non-boss,
-     * non-COMBAT node to REST. Prefer REST over SHOP (heal is the point).
-     * Do not convert the only COMBAT on a path; if all mid nodes are COMBAT, convert
-     * a non-sole COMBAT → REST only when no S→B route would become fightless.
-     * Do not add nodes. Event cap remains ≤1.
-     */
-    private fun ensureCareOnEveryStartToBossPath(
-        nodes: MutableList<PathNode>,
-        edges: List<PathEdge>,
-        rng: Random
-    ) {
-        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
-        fun replaceType(at: Int, type: NodeType) {
-            val n = nodes[at]
-            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
-        }
-        fun isCare(t: NodeType) = t == NodeType.REST || t == NodeType.SHOP
-
-        val outs = edges.groupBy({ it.from }, { it.to })
-        val routes = mutableListOf<List<String>>()
-        fun dfs(id: String, acc: MutableList<String>) {
-            acc += id
-            if (nodes[idx(id)].type == NodeType.BOSS || id == "boss") {
-                routes += acc.toList()
-            } else {
-                for (next in outs[id].orEmpty()) dfs(next, acc)
-            }
-            acc.removeAt(acc.lastIndex)
-        }
-        val startId = nodes.firstOrNull { it.type == NodeType.START }?.id ?: return
-        dfs(startId, mutableListOf())
-
-        for (route in routes) {
-            val midOnPath = route.filter { id ->
-                val t = nodes[idx(id)].type
-                t != NodeType.START && t != NodeType.BOSS
-            }
-            if (midOnPath.any { isCare(nodes[idx(it)].type) }) continue
-
-            // Prefer last non-boss, non-COMBAT → REST (WO).
-            val eligible = midOnPath.filter { nodes[idx(it)].type != NodeType.COMBAT }
-            if (eligible.isNotEmpty()) {
-                replaceType(idx(eligible.last()), NodeType.REST)
-                continue
-            }
-
-            // All mid nodes are COMBAT: convert a COMBAT → REST only if this path has
-            // ≥2 COMBAT and no Start→Boss route would become fightless (shared merge).
-            val combatIds = midOnPath.filter { nodes[idx(it)].type == NodeType.COMBAT }
-            if (combatIds.size < 2) continue
-            for (candidate in combatIds.asReversed()) {
-                val breaksCombat = routes.any { r ->
-                    r.count { id ->
-                        val t = if (id == candidate) NodeType.REST else nodes[idx(id)].type
-                        t == NodeType.COMBAT
-                    } == 0
-                }
-                if (!breaksCombat) {
-                    replaceType(idx(candidate), NodeType.REST)
-                    break
-                }
-            }
-        }
-    }
-
-    /**
-     * Post-CARE combat repair: if a Start→Boss path somehow has 0 COMBAT, convert a
-     * non-CARE mid node to COMBAT (prefer merge when non-CARE). Never strip a path's
-     * only CARE. If every mid node is CARE and there are ≥2, convert the last CARE.
-     */
-    private fun ensureCombatPreservingCare(
-        nodes: MutableList<PathNode>,
-        edges: List<PathEdge>,
-        rng: Random
-    ) {
-        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
-        fun replaceType(at: Int, type: NodeType) {
-            val n = nodes[at]
-            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
-        }
-        fun isCare(t: NodeType) = t == NodeType.REST || t == NodeType.SHOP
-
-        val outs = edges.groupBy({ it.from }, { it.to })
-        val routes = mutableListOf<List<String>>()
-        fun dfs(id: String, acc: MutableList<String>) {
-            acc += id
-            if (nodes[idx(id)].type == NodeType.BOSS || id == "boss") {
-                routes += acc.toList()
-            } else {
-                for (next in outs[id].orEmpty()) dfs(next, acc)
-            }
-            acc.removeAt(acc.lastIndex)
-        }
-        val startId = nodes.firstOrNull { it.type == NodeType.START }?.id ?: return
-        dfs(startId, mutableListOf())
-
-        for (route in routes) {
-            val midOnPath = route.filter { id ->
-                val t = nodes[idx(id)].type
-                t != NodeType.START && t != NodeType.BOSS
-            }
-            if (midOnPath.any { nodes[idx(it)].type == NodeType.COMBAT }) continue
-
-            val nonCare = midOnPath.filter { !isCare(nodes[idx(it)].type) }
-            val candidateId = when {
-                nonCare.isNotEmpty() -> {
-                    if ("merge" in nonCare) "merge" else nonCare.last()
-                }
-                midOnPath.count { isCare(nodes[idx(it)].type) } >= 2 ->
-                    midOnPath.last { isCare(nodes[idx(it)].type) }
                 else -> continue
             }
             replaceType(idx(candidateId), NodeType.COMBAT)

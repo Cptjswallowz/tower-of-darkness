@@ -51,12 +51,11 @@ Do **not** re-open Loadout, Tutorial, or Hub between floors.
 
 ---
 
-## Floor 2 path rules (= v0.1.7 routefight + v0.1.10 CARE)
+## Floor 2 path rules (= v0.1.7 routefight)
 
-Same generator constraints as Floor 1:
+Same generator constraints as Floor 1 / 0.1.7:
 
-- Every Start→Boss route has **≥1 COMBAT** (v0.1.7)
-- Every Start→Boss route has **≥1 CARE** (REST|SHOP) — see `routecare-v0110.md`
+- Every Start→Boss route has **≥1 COMBAT**
 - Events on the floor: **≤1**
 - Fog / rumor visibility: unchanged (`rumors.md`)
 
