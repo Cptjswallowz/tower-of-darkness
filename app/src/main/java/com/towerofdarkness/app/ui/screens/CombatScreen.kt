@@ -37,9 +37,11 @@ import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
+import com.towerofdarkness.app.domain.combat.StatusPips
 import com.towerofdarkness.app.ui.components.EnemySilhouette
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.components.HeroShowcase
+import com.towerofdarkness.app.ui.components.StatusPipRow
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Ember
@@ -115,14 +117,21 @@ fun CombatScreen(gc: GameController) {
                 HeroShowcase(state.lastFiredCard?.rarity ?: Rarity.COMMON, Modifier.height(90.dp))
                 Text("You", color = Bone, fontSize = 12.sp)
                 HpBar(state.playerHp, state.playerMaxHp, Moss)
-                if (state.brace > 0) {
-                    GlossaryText("Brace ${state.brace}", listOf("brace"), onTerm = { gc.showGlossary(it) }, fontSizeSp = 11)
-                }
+                // Status pips under HP (not skill bar) — Brace from combatState.brace
+                StatusPipRow(
+                    pips = StatusPips.forPlayer(state),
+                    onTerm = { gc.showGlossary(it) }
+                )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 EnemySilhouette(state.enemy.kind.displayName, state.enemy.isBoss)
                 Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
                 HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
+                // Soften = remaining counterPenalty
+                StatusPipRow(
+                    pips = StatusPips.forEnemy(state),
+                    onTerm = { gc.showGlossary(it) }
+                )
             }
         }
 
@@ -166,7 +175,7 @@ fun CombatScreen(gc: GameController) {
                 }
                 GlossaryText(
                     text = ev.message,
-                    highlights = (ev.glossaryHints + listOf("brace", "stun", "freeze")).distinct(),
+                    highlights = (ev.glossaryHints + listOf("brace", "soften", "stun", "freeze")).distinct(),
                     onTerm = { gc.showGlossary(it) },
                     color = color,
                     fontSizeSp = if (ev.goldLog || latest) 17 else 14

@@ -5,6 +5,7 @@ object Glossary {
         "stun" to "Stunned foes skip their next counterattack.",
         "freeze" to "Frozen foes skip their next counterattack.",
         "brace" to "Absorb damage before it reaches HP. Clears at round end if unused leftover.",
+        "soften" to "Reduces the enemy’s next counterattack damage. Remaining reduce shows on the Soften pip; clears when the counter resolves.",
         "remnants" to "Echoes of fallen climbers — spend them in the Hub.",
         "rumor" to "Vague hints about a path node — never exact stats.",
         "loadout" to "Your active bar of 5–6 cards; dice pick which fires each round.",

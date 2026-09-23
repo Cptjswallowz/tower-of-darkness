@@ -241,9 +241,10 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 round = state.round + 1
             )
         }
+        // Soften consumed this counter; Brace leftover remains until readyNext (round end).
         return state.copy(
             playerHp = newHp,
-            brace = 0,
+            brace = brace,
             counterPenalty = 0,
             log = state.log + events,
             highlightedId = null,
@@ -252,8 +253,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
         )
     }
 
+    /** Advance to next round — clear unused Brace leftover per cards-v0. */
     fun readyNext(state: CombatState): CombatState =
-        state.copy(beat = CombatBeat.READY, weaponFlashed = false)
+        state.copy(beat = CombatBeat.READY, weaponFlashed = false, brace = 0)
 
     private fun finishVictory(state: CombatState): CombatState {
         val events = listOf(
@@ -315,7 +317,11 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     )
                 }
                 if (e.counterPenalty > 0) {
-                    events += CombatEvent("Counter softened −${e.counterPenalty}", sound = "ui")
+                    events += CombatEvent(
+                        "Counter softened −${e.counterPenalty}",
+                        sound = "ui",
+                        glossaryHints = listOf("soften")
+                    )
                 }
                 s = s.copy(enemy = enemy, brace = brace, counterPenalty = s.counterPenalty + e.counterPenalty)
             }
