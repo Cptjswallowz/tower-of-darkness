@@ -4,9 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.12-save WIP)
+## Status (v0.1.12-save)
 
-- **v0.1.12-save (WIP):** one mid-run save slot (DataStore). Writes on node resolve / F1 stair Continue / loadout lock; never mid-dice or mid-Wake. Cold start / Menu **Continue** → Path, or **FloorBreak** if `pending_stair_continue`. **New climb** confirm-wipes the slot (meta bank / owned perks kept). `rng_seed` required. No tag/release until QA green.
+- **v0.1.12-save:** one mid-run save slot (DataStore). Writes on node resolve / F1 stair Continue / loadout lock; Menu **Continue** resumes the run. No mid-beat save (never mid-dice or mid-Wake). **New climb** confirm-wipes the slot (meta bank / owned perks kept). `rng_seed` required.
 - **v0.1.11-2x:** combat **1x ↔ 2x** toggle (active-rate label); timings are halved at 2x; dice/log/float/grey-out stay in sync; mid-fight toggle applies to the next beat. No 3x / no skip / no balance change.
 - **v0.1.10-bossrest:** every Start→Boss path’s **last non-boss node is REST**; Rest Heal → **MAX HP**; Keen Eye Free Scout tap on fogged `?` reveals type and spends a charge (no enter). CARE-everywhere guarantee stays withdrawn.
 - **v0.1.10-routecare reversed:** CARE (REST|SHOP) on every S→B removed earlier; tag/release `v0.1.10-routecare` left for history. Do **not** recreate CARE-everywhere.
@@ -19,7 +19,7 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 - Weapon XP: full Wake + combat win → **+1 Ashbrand level**
 - 5-skill exhaust bar + Ashbrand; Lv1 Wake threshold **3**; trash counters **7–9**; boss **6–9** / HP **28**
 - Placeholders for art/SFX
-- Still debug / placeholders — mid-run save in WIP; not shippable until QA
+- Still debug / placeholders.
 
 ### Measured n=2000 from v0.1.4-wake (default 5 + Ashbrand lv1)
 | Cohort | WR | Mean skill beats |
@@ -34,8 +34,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-[Release v0.1.11-2x](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.11-2x)
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.11-2x/tower-of-darkness-debug.apk)
+[Release v0.1.12-save](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.12-save)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.12-save/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -45,4 +45,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`.
+Docs: `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`.
