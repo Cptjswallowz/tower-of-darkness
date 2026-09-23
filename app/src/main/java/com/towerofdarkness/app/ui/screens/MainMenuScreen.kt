@@ -5,12 +5,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +32,8 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 
 @Composable
 fun MainMenuScreen(gc: GameController) {
+    var confirmNewClimb by remember { mutableStateOf(false) }
+
     Column(
         Modifier.fillMaxSize().background(VoidBg).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -35,10 +44,55 @@ fun MainMenuScreen(gc: GameController) {
         Spacer(Modifier.height(20.dp))
         HeroShowcase(Rarity.RARE)
         Spacer(Modifier.height(28.dp))
-        Button(onClick = { gc.climb() }) { Text("Climb") }
+        if (gc.hasMidRunSlot) {
+            Button(
+                onClick = { gc.continueClimb() },
+                modifier = Modifier.fillMaxWidth(0.85f)
+            ) { Text("Continue") }
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = { confirmNewClimb = true },
+                modifier = Modifier.fillMaxWidth(0.85f)
+            ) { Text("New climb") }
+        } else {
+            Button(
+                onClick = { gc.climb() },
+                modifier = Modifier.fillMaxWidth(0.85f)
+            ) { Text("Climb") }
+        }
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = { gc.goHub() }) { Text("Hub  ·  ${gc.remnantsBank} remnants") }
+        OutlinedButton(
+            onClick = { gc.goHub() },
+            modifier = Modifier.fillMaxWidth(0.85f)
+        ) { Text("Hub  ·  ${gc.remnantsBank} remnants") }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { /* settings stub */ }) { Text("Settings (stub)") }
+        OutlinedButton(
+            onClick = { /* settings stub */ },
+            modifier = Modifier.fillMaxWidth(0.85f)
+        ) { Text("Settings (stub)") }
+    }
+
+    if (confirmNewClimb) {
+        AlertDialog(
+            onDismissRequest = { confirmNewClimb = false },
+            title = { Text("Start a new climb?") },
+            text = {
+                Text(
+                    "This wipes the mid-run save. Remnants bank and owned perks stay.",
+                    color = Bone
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmNewClimb = false
+                        gc.confirmNewClimb()
+                    }
+                ) { Text("New climb") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmNewClimb = false }) { Text("Cancel") }
+            }
+        )
     }
 }

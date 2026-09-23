@@ -56,6 +56,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TowerRoot(gc: GameController) {
+    if (!gc.midRunBootstrapped) {
+        // Wait for DataStore mid-run read so Continue/cold-start does not flash Menu.
+        return
+    }
     when (gc.nav) {
         NavState.MainMenu -> MainMenuScreen(gc)
         NavState.Tutorial -> TutorialScreen(gc)

@@ -23,7 +23,7 @@ Menu
   → (optional) start another climb → Path
 ```
 
-Back stack: each screen owns a single route. No deep linking in the slice. Cold start lands on **Menu** unless a mid-run save exists (Meta & Ops owns save/resume; if absent, always Menu).
+Back stack: each screen owns a single route. No deep linking in the slice. Cold start: if a mid-run climb save exists → **Path** (`save-v0112.md`); else **Menu**. Meta & Ops owns slot schema.
 
 ---
 
@@ -31,8 +31,8 @@ Back stack: each screen owns a single route. No deep linking in the slice. Cold 
 
 ### 1. Menu
 - Actions: **Climb** (start / continue run), **Hub** (meta), optional Settings stub.
-- Climb with no save → Tutorial (if not yet completed this install) else Path.
-- Climb with save → resume at saved screen (Meta & Ops).
+- **Continue** (mid-run save present) → Path (`save-v0112.md`).
+- **New climb** → confirm wipe of mid-run slot, then Tutorial (if not done) else Path.
 
 ### 2. Tutorial
 - Beats (in order, short copy OK):

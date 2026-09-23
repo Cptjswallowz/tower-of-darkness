@@ -149,6 +149,8 @@ If Treasure already granted a rare card, Hub card row shows **owned** / skipped.
 
 ## 4. Save / resume schema sketch
 
+> **v0.1.12-save:** Mid-run write points, payload, and Menu Continue rules are authoritative in [`midrun-save-v0112.md`](midrun-save-v0112.md). Sketch below remains for meta keys; do not contradict that WO.
+
 Local only (no accounts in slice). Suggest JSON or DataStore keys; Engineer picks storage.
 
 ### Meta (`meta_v0`) — always persist
@@ -166,49 +168,23 @@ meta_v0 {
 }
 ```
 
-### Mid-run (`run_v0`) — write on screen enter / node resolve / shop buy; clear on Run Summary → Hub
+### Mid-run (`midrun_v0112`) — full fields in [`midrun-save-v0112.md`](midrun-save-v0112.md)
 
-```
-run_v0 {
-  schema: 0
-  run_id: string
-  rng_seed: long
-  route: enum                // Menu|Tutorial|Path|Loadout|Combat|Shop|Rest|Event|Treasure|Boss|Summary
-  path: {
-    layout_id: string        // fixed slice graph
-    revealed: string[]       // node ids
-    cleared: string[]
-    cursor: string | null    // current / pending node
-  }
-  loadout: {
-    locked: bool
-    card_ids: string[]       // exactly 5 (v0.1.3)
-  }
-  combat: {
-    player_hp: int
-    enemy_hp: int | null
-    round: int
-  } | null
-  wallet_run: int            // unbanked remnants this climb
-  shop_state: {
-    node_id: string
-    sold: string[]           // offer_ids bought
-  }[]
-  flags: {
-    floor_loadout_locked: bool
-  }
-}
-```
+Legacy name `run_v0` retired for mid-run. One slot. Writes: **node resolve** / **stair Continue** / **loadout lock** only. No mid-combat snapshot. Clear on Summary→Hub / New-climb confirm.
 
-### Resume rules
+### Resume rules (v0.1.12-save — see `save-v0112.md`)
 
 | Cold start | Behavior |
 |------------|----------|
-| `run_v0` present | Menu **Climb** → resume at `route` (per slice-screens) |
-| No `run_v0` | Menu; Climb starts Tutorial or Path |
-| Corrupt / schema mismatch | Discard `run_v0`, keep `meta_v0`; log once |
+| Mid-run slot present (climb in progress) | Resume on **Path** (not mid-beat combat) |
+| No mid-run slot | Menu; Climb / New climb starts Tutorial or Path |
+| Corrupt / schema mismatch | Discard mid-run slot, keep `meta_v0`; log once |
 
-**Feasible in slice:** yes if Engineer serializes on each navigation event. Minimum viable: persist on leaving Combat/Shop/Rest/Event/Treasure and on app background.
+**Menu:** **Continue** resumes saved climb. **New climb** requires confirm wipe of the mid-run slot.
+
+**Write moments (locked):** node resolve; stair Continue (F1→F2); loadout lock. **Do not** write mid-beat / mid-Wake.
+
+**Feasible in slice:** yes. Full field list: [`midrun-save-v0112.md`](midrun-save-v0112.md).
 
 ---
 
@@ -222,7 +198,7 @@ Flag to CoS before shipping if anyone proposes:
 4. **Minimal victory earn (1 combat + boss) &lt;15** — first Hub unlock unreachable → meta stall.
 5. **Hub with no affordable unlock and no Climb CTA** when bank &lt;15 — meta stall.
 6. **Importing external shop/skill cost tables** into ToD shop or unlocks — rejected by CoS decision (ToD greenfield only).
-7. **Mid-run save without `rng_seed`** — desync / non-reproducible resume (quality fork; escalate if cut).
+7. **Mid-run save without `rng_seed`** — **forbidden** (CoS lock v0.1.12: `rng_seed` required).
 8. **Banking only on win with 0 on loss and no combat consolation** — can starve Hub after learning deaths (soft meta stall); current table avoids via loss crumbs.
 
 ---
@@ -251,3 +227,6 @@ Flag to CoS before shipping if anyone proposes:
 | 2026-09-20 | Override: Shadow Latch @15 (cheapest card); Relic Shard @20; meta_hp_2 @15 parallel; stand by |
 | 2026-09-20 | v0.1.3 Hub copy: human titles; hide loadout_flex; weapon rows Ashbrand/Notch Pike/Vow Edge notes |
 | 2026-09-22 | v0.1.8-shopwallet: heal_small 3; empty-wallet UX; heal blocked at full HP; note Elliott exception to 5–15 |
+| 2026-09-23 | Point §4 mid-run rules to midrun-save-v0112.md (WO v0.1.12-save) |
+| 2026-09-23 | Expand midrun_v0112 vs Architect save-v0112 + floor2 persist; retire run_v0 combat snapshot |
+| 2026-09-23 | CoS: rng_seed required in mid-run slot |

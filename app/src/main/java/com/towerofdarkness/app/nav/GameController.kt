@@ -7,6 +7,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.towerofdarkness.app.data.MetaStore
+import com.towerofdarkness.app.data.MidRunAshbrand
+import com.towerofdarkness.app.data.MidRunLoadout
+import com.towerofdarkness.app.data.MidRunResume
+import com.towerofdarkness.app.data.MidRunShopVisit
+import com.towerofdarkness.app.data.MidRunSlot
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
@@ -109,6 +114,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
     /** Combat playback rate: 1 or 2. Persists for the run (cheap). Label shows ACTIVE rate. */
     var combatSpeedX by mutableStateOf(1)
         private set
+    /** Mid-run slot present (Menu Continue). */
+    var hasMidRunSlot by mutableStateOf(false)
+        private set
+    /** Cold-start / meta load finished (avoids Menu flash before resume). */
+    var midRunBootstrapped by mutableStateOf(false)
+        private set
+    private var runId: String = ""
+    private var runRngSeed: Long = 0L
+    private var runRemnantsEarned: Int = 0
+    private var unlocksThisRun: Set<String> = emptySet()
+    private var shopVisits: List<MidRunShopVisit> = emptyList()
+    private var pathLayoutId: String = ""
     var shopOffers by mutableStateOf<List<ShopOffer>>(emptyList())
         private set
     var summary by mutableStateOf<RunSummaryData?>(null)
@@ -142,6 +159,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
             remnantsBank = meta.remnantsBank.first()
             unlockedCards = meta.unlockedCards.first()
             metaHpBonus = meta.metaHpBonus.first()
+            val slot = meta.readMidRunSlot()
+            hasMidRunSlot = slot != null
+            if (slot != null) {
+                applyMidRunSlot(slot)
+                nav = MidRunSlot.resumeNav(slot)
+            }
+            midRunBootstrapped = true
         }
         viewModelScope.launch { meta.tutorialSeen.collect { tutorialSeen = it } }
         viewModelScope.launch { meta.remnantsBank.collect { remnantsBank = it } }
@@ -157,9 +181,44 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun goMenu() { nav = NavState.MainMenu }
-    fun goHub() { nav = NavState.MetaHub }
 
+    fun goHub() {
+        // Summary → Hub clears mid-run slot after bank (bank already in finishRun).
+        if (nav == NavState.RunSummary || summary != null) {
+            clearMidRunSlotAsync()
+        }
+        nav = NavState.MetaHub
+    }
+
+    /** Menu Continue — resume Path or FloorBreak from slot. */
+    fun continueClimb() {
+        viewModelScope.launch {
+            val slot = meta.readMidRunSlot() ?: return@launch
+            hasMidRunSlot = true
+            applyMidRunSlot(slot)
+            nav = MidRunSlot.resumeNav(slot)
+        }
+    }
+
+    /**
+     * Start a climb. If a mid-run slot exists, caller must confirm wipe via [confirmNewClimb].
+     * Without a slot, behaves as legacy Climb.
+     */
     fun climb() {
+        if (hasMidRunSlot) return // UI shows confirm; use confirmNewClimb
+        beginClimbFresh()
+    }
+
+    /** After New-climb confirm — wipe mid-run slot, then Tutorial/Path. Meta untouched. */
+    fun confirmNewClimb() {
+        viewModelScope.launch {
+            meta.clearMidRunSlot()
+            hasMidRunSlot = false
+            beginClimbFresh()
+        }
+    }
+
+    private fun beginClimbFresh() {
         if (!tutorialSeen) {
             tutorialStep = 0
             nav = NavState.Tutorial
@@ -169,23 +228,34 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun startNewRun() {
-        path = PathGenerator.generate(1, rng)
+        resetRunIdentity()
+        path = PathGenerator.generate(1, Random(MidRunSlot.floorSeed(runRngSeed, 1)))
+        pathLayoutId = "floor1_$runRngSeed"
         loadout = emptyList()
         // this-run weapon level resets; keep Ashbrand (or last selected def) at Lv1
         equippedWeapon = WeaponRuntime(equippedWeapon.def, level = 1, charge = 0)
         loadoutLocked = false
         pendingNodeId = null
         runWallet = 0
+        runRemnantsEarned = 0
         playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
         nodesCleared = 0
         weightHitchCardId = null
+        unlocksThisRun = emptySet()
+        shopVisits = emptyList()
         // scout_charge: +1 free Scout usable from Path (or Rest) each climb — observable
         freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
         rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
         summary = null
         combatState = null
+        clearMidRunSlotAsync()
         // slice-screens: Path first; Loadout via Edit or first resolve tap
         nav = NavState.Path
+    }
+
+    private fun resetRunIdentity() {
+        runId = java.util.UUID.randomUUID().toString()
+        runRngSeed = Random.Default.nextLong()
     }
 
     // --- Tutorial ---
@@ -205,16 +275,22 @@ class GameController(app: Application) : AndroidViewModel(app) {
         loadout = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
         equippedWeapon = WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 0)
         viewModelScope.launch { meta.setTutorialSeen(true) }
-        path = PathGenerator.generate(1, rng)
+        resetRunIdentity()
+        path = PathGenerator.generate(1, Random(MidRunSlot.floorSeed(runRngSeed, 1)))
+        pathLayoutId = "floor1_$runRngSeed"
         loadoutLocked = false
         pendingNodeId = null
         runWallet = 0
+        runRemnantsEarned = 0
+        unlocksThisRun = emptySet()
+        shopVisits = emptyList()
         playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
         nodesCleared = 0
         weightHitchCardId = null
         freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
         rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
         combatState = null
+        clearMidRunSlotAsync()
         nav = NavState.Path
     }
 
@@ -224,16 +300,22 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
         equippedWeapon = WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 0)
         viewModelScope.launch { meta.setTutorialSeen(true) }
-        path = PathGenerator.generate(1, rng)
+        resetRunIdentity()
+        path = PathGenerator.generate(1, Random(MidRunSlot.floorSeed(runRngSeed, 1)))
+        pathLayoutId = "floor1_$runRngSeed"
         loadoutLocked = false
         pendingNodeId = null
         runWallet = 0
+        runRemnantsEarned = 0
+        unlocksThisRun = emptySet()
+        shopVisits = emptyList()
         playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
         nodesCleared = 0
         weightHitchCardId = null
         freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
         rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
         combatState = null
+        clearMidRunSlotAsync()
         nav = NavState.Path
     }
 
@@ -262,6 +344,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
             enterNode(pending)
         } else {
             nav = NavState.Path
+            // Loadout confirm on Path — persist selection (lock write follows first resolve leave).
+            persistMidRun(pendingStair = false, resume = MidRunResume.Path)
         }
     }
 
@@ -289,8 +373,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
         val node = p.node(nodeId)
         path = p.moveTo(nodeId)
         pendingNodeId = null
+        var justLocked = false
         if (!loadoutLocked && node.type != NodeType.START) {
             loadoutLocked = true // CoS: lock on first leave Path into resolve
+            justLocked = true
+        }
+        if (justLocked) {
+            persistMidRun(pendingStair = false, resume = MidRunResume.Path)
         }
         when (node.type) {
             NodeType.COMBAT, NodeType.BOSS -> startCombat(node.type == NodeType.BOSS)
@@ -621,6 +710,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         path = path?.markCurrentCleared()
         nodesCleared++
         nav = NavState.Path
+        persistMidRun(pendingStair = false, resume = MidRunResume.Path)
     }
 
     private fun onCombatEnd(s: CombatState) {
@@ -629,13 +719,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
         if (s.playerWon) {
             var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
             if (boss && "boss_bonus_2" in unlockedCards) gain += 2
-            runWallet += gain
+            gainRemnants(gain)
             if (boss) {
                 path = path?.markCurrentCleared()
                 when (afterBossWinNav(floor)) {
                     BossWinNav.FLOOR_BREAK -> {
                         combatState = null
                         nav = NavState.FloorBreak
+                        // Dual write #1: pending stair → FloorBreak resume
+                        persistMidRun(pendingStair = true, resume = MidRunResume.FloorBreak)
                     }
                     BossWinNav.SUMMARY_VICTORY -> finishRun(won = true)
                 }
@@ -643,7 +735,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
                 returnToPathAfterResolve()
             }
         } else {
-            runWallet += if (boss) Balance.BOSS_LOSS_REMNANTS else Balance.COMBAT_LOSS_REMNANTS
+            gainRemnants(if (boss) Balance.BOSS_LOSS_REMNANTS else Balance.COMBAT_LOSS_REMNANTS)
             path = path?.markCurrentCleared()
             finishRun(won = false)
         }
@@ -656,7 +748,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
     fun continueAfterFloorBreak() {
         if (nav != NavState.FloorBreak) return
         // Persist: playerHp, runWallet, loadout, loadoutLocked, equippedWeapon, unlocked-this-run
-        path = PathGenerator.generate(2, rng)
+        path = PathGenerator.generate(2, Random(MidRunSlot.floorSeed(runRngSeed, 2)))
+        pathLayoutId = "floor2_$runRngSeed"
         pendingNodeId = null
         combatState = null
         treasureSwapLoseId = null
@@ -664,6 +757,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         shopOffers = emptyList()
         summary = null
         nav = NavState.Path
+        // Dual write #2: stair Continue → F2 path, clear pending
+        persistMidRun(pendingStair = false, resume = MidRunResume.Path)
     }
 
     fun fleeGrayed(): Boolean = true // CoS: Flee grayed
@@ -698,7 +793,16 @@ class GameController(app: Application) : AndroidViewModel(app) {
         loadout = loadout.dropLast(1) + inn
     }
 
-    fun leaveShop() { returnToPathAfterResolve() }
+    fun leaveShop() {
+        val nodeId = path?.currentId
+        val floor = path?.floor ?: 1
+        if (nodeId != null) {
+            val sold = shopOffers.filter { it.sold }.map { it.id }
+            val rest = shopVisits.filterNot { it.nodeId == nodeId && it.floor == floor }
+            shopVisits = rest + MidRunShopVisit(nodeId, floor, sold)
+        }
+        returnToPathAfterResolve()
+    }
 
     // --- Rest ---
     fun restHealAmount(): Int {
@@ -778,7 +882,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     // --- Event ---
     fun eventChoice(remnants: Boolean) {
         if (remnants) {
-            runWallet += Balance.EVENT_REMNANTS
+            gainRemnants(Balance.EVENT_REMNANTS)
         } else {
             // B — Heal 8, or take 4 damage (never hitch-only)
             if (rng.nextBoolean()) {
@@ -799,7 +903,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     fun treasureRemnants() {
         clearTreasureVisit()
-        runWallet += Balance.TREASURE_REMNANTS
+        gainRemnants(Balance.TREASURE_REMNANTS)
         returnToPathAfterResolve()
     }
 
@@ -824,6 +928,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
         // Unlock rare if offered from locked set
         if (gain.unlockCost > 0 && gain.id !in unlockedCards) {
+            unlocksThisRun = unlocksThisRun + gain.id
             viewModelScope.launch { meta.unlockCard(gain.id) }
         }
         loadout = loadout.map { if (it.id == loseId) gain else it }
@@ -853,6 +958,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         summary = RunSummaryData(won, nodesCleared, earned, path?.floor ?: 1, near)
         viewModelScope.launch { meta.addRemnants(earned) }
         runWallet = 0
+        clearMidRunSlotAsync()
         nav = NavState.RunSummary
     }
 
@@ -893,6 +999,92 @@ class GameController(app: Application) : AndroidViewModel(app) {
                 sound.play("ui")
             }
         }
+    }
+
+    // --- Mid-run save (v0.1.12) ---
+    private fun gainRemnants(amount: Int) {
+        if (amount <= 0) return
+        runWallet += amount
+        runRemnantsEarned += amount
+    }
+
+    private fun clearMidRunSlotAsync() {
+        hasMidRunSlot = false
+        viewModelScope.launch { meta.clearMidRunSlot() }
+    }
+
+    private fun persistMidRun(pendingStair: Boolean, resume: MidRunResume) {
+        val slot = buildMidRunSlot(pendingStair, resume) ?: return
+        hasMidRunSlot = true
+        viewModelScope.launch { meta.writeMidRunSlot(slot) }
+    }
+
+    private fun buildMidRunSlot(pendingStair: Boolean, resume: MidRunResume): MidRunSlot? {
+        val p = path ?: return null
+        if (runId.isEmpty()) {
+            resetRunIdentity()
+        }
+        val layout = pathLayoutId.ifEmpty { "floor${p.floor}_$runRngSeed" }
+        return MidRunSlot(
+            runId = runId,
+            rngSeed = runRngSeed,
+            floor = p.floor,
+            pendingStairContinue = pendingStair,
+            path = MidRunSlot.fromPath(p, layout),
+            playerHp = playerHp,
+            playerMaxHp = Balance.PLAYER_MAX_HP + metaHpBonus,
+            runWallet = runWallet,
+            runRemnantsEarned = runRemnantsEarned,
+            nodesCleared = nodesCleared,
+            loadout = MidRunLoadout(
+                locked = loadoutLocked,
+                cardIds = loadout.map { it.id }
+            ),
+            ashbrand = MidRunAshbrand(
+                weaponId = equippedWeapon.def.id,
+                level = equippedWeapon.level,
+                charge = equippedWeapon.charge
+            ),
+            freeScoutCharges = freeScoutCharges,
+            rumorRerolls = rumorRerolls,
+            combatSpeed2x = combatSpeedX >= 2,
+            unlocksThisRun = unlocksThisRun.toList(),
+            shopVisits = shopVisits,
+            resume = resume
+        )
+    }
+
+    private fun applyMidRunSlot(slot: MidRunSlot) {
+        runId = slot.runId
+        runRngSeed = slot.rngSeed
+        pathLayoutId = slot.path.layoutId
+        path = MidRunSlot.toTowerPath(slot.path)
+        playerHp = slot.playerHp
+        runWallet = slot.runWallet
+        runRemnantsEarned = slot.runRemnantsEarned
+        nodesCleared = slot.nodesCleared
+        loadout = slot.loadout.cardIds.mapNotNull { CardCatalog.byId(it) }
+        loadoutLocked = slot.loadout.locked
+        val weaponDef = WeaponCatalog.byId(slot.ashbrand.weaponId) ?: WeaponCatalog.default()
+        equippedWeapon = WeaponRuntime(
+            def = weaponDef,
+            level = slot.ashbrand.level.coerceIn(1, 3),
+            charge = slot.ashbrand.charge.coerceAtLeast(0)
+        )
+        freeScoutCharges = slot.freeScoutCharges
+        rumorRerolls = slot.rumorRerolls
+        combatSpeedX = if (slot.combatSpeed2x) 2 else 1
+        unlocksThisRun = slot.unlocksThisRun.toSet()
+        shopVisits = slot.shopVisits
+        pendingNodeId = null
+        combatState = null
+        combatJob?.cancel()
+        combatJob = null
+        treasureSwapLoseId = null
+        treasureSwapGainId = null
+        shopOffers = emptyList()
+        summary = null
+        weightHitchCardId = null
     }
 
     override fun onCleared() {
