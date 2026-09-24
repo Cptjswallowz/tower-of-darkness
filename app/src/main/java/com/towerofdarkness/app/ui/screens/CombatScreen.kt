@@ -198,7 +198,13 @@ fun CombatScreen(gc: GameController) {
         Box(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    HeroShowcase(state.lastFiredCard?.rarity ?: Rarity.COMMON, Modifier.height(90.dp))
+                    // v0.1.22-plate: static slot fill; rarity ignored; victory tint holds once
+                    val plateVictory = state.playerWon && (state.finished || state.beat == CombatBeat.AWAITING_CONTINUE)
+                    HeroShowcase(
+                        rarity = Rarity.COMMON,
+                        modifier = Modifier.height(90.dp),
+                        victoryHold = plateVictory
+                    )
                     Text("You", color = Bone, fontSize = 12.sp)
                     HpBar(displayedPlayerHp.coerceAtLeast(0), state.playerMaxHp, Moss)
                     // Status pips under HP — Brace pip ticks first; absorb float then HP (v0.1.14)
@@ -209,7 +215,12 @@ fun CombatScreen(gc: GameController) {
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    EnemySilhouette(state.enemy.kind, state.enemy.isBoss)
+                    val plateVictory = state.playerWon && (state.finished || state.beat == CombatBeat.AWAITING_CONTINUE)
+                    EnemySilhouette(
+                        kind = state.enemy.kind,
+                        isBoss = state.enemy.isBoss,
+                        victoryHold = plateVictory
+                    )
                     Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
                     HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
                     // Soften = remaining counterPenalty

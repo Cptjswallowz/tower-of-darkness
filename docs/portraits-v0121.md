@@ -68,3 +68,7 @@ Bodies identity notes in `bodies-v0118.md` still describe intended reads; **this
 - `EnemySilhouette`: resolves ash vs seal drawable; trash stay Canvas.
 - Title + combat You via `HeroShowcase` → `portrait_you`.
 - Shrink via `SPRITE_INSET_FRACTION`; pips / HP / Wake overlays untouched.
+
+---
+
+**Related:** v0.1.22-plate — static combat plate fill (no pulse). See `plate-v0122.md`.
