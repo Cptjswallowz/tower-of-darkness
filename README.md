@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.22-plate)
+## Status (v0.1.23-nobg)
 
+- **v0.1.23-nobg:** Combat portrait plates **removed** (PNG only). Title teal circle kept. Tagged release. Still debug.
 - **v0.1.22-plate:** Freeze portrait plate — **static fill**; **no pulse**; victory tint **once**. Art frozen. Tagged release. Still debug.
 - **v0.1.21-portraits:** Three attached stills slotted — **You**, **Ash-Warden**, **Seal-Warden** (no redraw). Trash placeholders unchanged. Wake / glyphs / volume / path / 2x / save frozen. Tagged release. Still debug.
 - **v0.1.20-volume:** Soft **drop shadow** + **gold-ash** top-left rim + **2-tone folds** on You / Ash-Warden / skill glyphs / Ashbrand icon (Art bake; Compose chrome no-op). No 3D engine. Vow Plate = heavy plate distinct from Iron Mantle. Wake / path / 2x / save frozen; Seal-Warden / trash placeholders unchanged. Tagged release. Still debug.
@@ -44,8 +45,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-[Release v0.1.22-plate](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.22-plate)
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.22-plate/tower-of-darkness-debug.apk)
+[Release v0.1.23-nobg](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.23-nobg)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.23-nobg/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -55,4 +56,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/qa-gate-v0122-plate-2026-09-24.md`, `docs/plate-v0122.md`, `docs/art-audio/PLATE_v0.1.22.md`, `docs/qa-gate-v0121-portraits-2026-09-24.md`, `docs/portraits-v0121.md`, `docs/art-audio/PORTRAITS_v0.1.21.md`, `docs/qa-gate-v0120-volume-2026-09-23.md`, `docs/volume-v0120.md`, `docs/art-audio/VOLUME_v0.1.20.md`, `docs/qa-gate-v0119-glyphs-2026-09-23.md`, `docs/glyphs-v0119.md`, `docs/art-audio/GLYPHS_v0.1.19.md`, `docs/qa-gate-v0118-bodies-2026-09-23.md`, `docs/bodies-v0118.md`, `docs/art-audio/BODIES_v0.1.18.md`, `docs/qa-gate-v0117-wakespeck-2026-09-23.md`, `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
+Docs: `docs/qa-gate-v0123-nobg-2026-09-24.md`, `docs/nobg-v0123.md`, `docs/art-audio/NOBG_v0.1.23.md`, `docs/qa-gate-v0122-plate-2026-09-24.md`, `docs/plate-v0122.md`, `docs/art-audio/PLATE_v0.1.22.md`, `docs/qa-gate-v0121-portraits-2026-09-24.md`, `docs/portraits-v0121.md`, `docs/art-audio/PORTRAITS_v0.1.21.md`, `docs/qa-gate-v0120-volume-2026-09-23.md`, `docs/volume-v0120.md`, `docs/art-audio/VOLUME_v0.1.20.md`, `docs/qa-gate-v0119-glyphs-2026-09-23.md`, `docs/glyphs-v0119.md`, `docs/art-audio/GLYPHS_v0.1.19.md`, `docs/qa-gate-v0118-bodies-2026-09-23.md`, `docs/bodies-v0118.md`, `docs/art-audio/BODIES_v0.1.18.md`, `docs/qa-gate-v0117-wakespeck-2026-09-23.md`, `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
