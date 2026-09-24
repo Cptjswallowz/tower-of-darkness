@@ -28,22 +28,24 @@ import com.towerofdarkness.app.ui.theme.Steel
 
 /**
  * Player portrait — circular soldier still ([R.drawable.portrait_you]).
- * v0.1.22-plate: static dark slot fill (or victory hold tint). No infinite
- * glow / rarity pulse behind the PNG; no second painted oval.
- * [rarity] kept for call-site compat; plate fill ignores it (frozen rarity systems).
+ * v0.1.23-nobg: combat = PNG only on dark stage (no plate / fill / tint / ring).
+ * Title may keep a teal circle via [showTitleCircle].
+ * [rarity] kept for call-site compat; unused (frozen rarity systems).
  */
 @Composable
 fun HeroShowcase(
     @Suppress("UNUSED_PARAMETER") rarity: Rarity = Rarity.UNCOMMON,
     modifier: Modifier = Modifier,
-    victoryHold: Boolean = false
+    showTitleCircle: Boolean = false
 ) {
     val slot = BodyArt.PLAYER_SLOT_DP.dp
     Box(
         modifier.then(Modifier.size(slot)),
         contentAlignment = Alignment.Center
     ) {
-        StaticPortraitPlate(victoryHold = victoryHold)
+        if (showTitleCircle && PortraitPlate.titleTealCircleAllowed()) {
+            TitleTealCircle()
+        }
         val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
         // Volume chrome wraps the clipped still; drawBehind stays outside content box.
         Box(
@@ -64,16 +66,12 @@ fun HeroShowcase(
 }
 
 /**
- * Static circular plate behind portrait PNGs (v0.1.22-plate).
- * Dark fill by default; optional victory hold tint — never pulsed / looped.
+ * Title-only teal circle behind You (v0.1.23-nobg).
+ * Static — no infinite pulse. Combat must not call this.
  */
 @Composable
-private fun StaticPortraitPlate(victoryHold: Boolean) {
-    val fill = if (victoryHold && PortraitPlate.VICTORY_TINT_ONESHOT_HOLD) {
-        Color(PortraitPlate.VICTORY_TINT_ARGB)
-    } else {
-        Color(PortraitPlate.FILL_ARGB)
-    }
+private fun TitleTealCircle() {
+    val fill = Color(PortraitPlate.TITLE_CIRCLE_ARGB)
     Canvas(Modifier.fillMaxSize()) {
         val cx = size.width / 2
         val cy = size.height / 2
@@ -89,18 +87,17 @@ private fun enemyPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortr
 }
 
 /**
- * Enemy portrait slot.
+ * Enemy portrait slot (combat only).
  * Ash-Warden (F2) → [R.drawable.portrait_ash_warden] (+ volume bake).
  * Seal-Warden / [EnemyKind.DRAGON] (F1) → [R.drawable.portrait_seal_warden] (no volume).
- * Trash / Wretch / Seal Spinner keep Canvas placeholders.
- * v0.1.22-plate: PNG bosses share static plate fill (no second oval, no pulse).
+ * Trash / Wretch / Seal Spinner keep Canvas placeholders (they ARE the body).
+ * v0.1.23-nobg: PNG bosses = no plate / fill / tint / ring under still.
  */
 @Composable
 fun EnemySilhouette(
     kind: EnemyKind,
     isBoss: Boolean,
-    modifier: Modifier = Modifier,
-    victoryHold: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     val bodyName = BodyArt.enemyPortraitDrawableName(kind)
     val portraitRes = enemyPortraitResId(kind)
@@ -111,7 +108,6 @@ fun EnemySilhouette(
     }.dp
     Box(modifier.then(Modifier.size(slotDp)), contentAlignment = Alignment.Center) {
         if (portraitRes != null && VolumeArt.appliesToEnemy(kind)) {
-            StaticPortraitPlate(victoryHold = victoryHold)
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Box(
                 Modifier
@@ -128,8 +124,7 @@ fun EnemySilhouette(
                 )
             }
         } else if (portraitRes != null) {
-            // Asset-backed boss without volume (Seal-Warden F1) — same static plate, no oval.
-            StaticPortraitPlate(victoryHold = victoryHold)
+            // Asset-backed boss without volume (Seal-Warden F1) — PNG only, no plate.
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Image(
                 painter = painterResource(portraitRes),
@@ -141,7 +136,7 @@ fun EnemySilhouette(
             )
         } else {
             // Trash / Wretch / Seal Spinner — Canvas placeholders, no volume.
-            // Silhouette shapes are the placeholder art (not a second oval behind a PNG).
+            // Silhouette shapes ARE the placeholder body (not a plate behind a PNG).
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 val body = if (isBoss) Ember else Steel

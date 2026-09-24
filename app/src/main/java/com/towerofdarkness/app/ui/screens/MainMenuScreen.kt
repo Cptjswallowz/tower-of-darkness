@@ -43,7 +43,8 @@ fun MainMenuScreen(gc: GameController) {
         Text("TOWER OF DARKNESS", color = Gold, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text("Ashen Host · fallen kingdom", color = Bone.copy(0.7f), fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
-        HeroShowcase(Rarity.RARE, Modifier.size(160.dp))
+        // v0.1.23-nobg: title teal circle OK (combat has no plate)
+        HeroShowcase(Rarity.RARE, Modifier.size(160.dp), showTitleCircle = true)
         Spacer(Modifier.height(28.dp))
         if (gc.hasMidRunSlot) {
             Button(

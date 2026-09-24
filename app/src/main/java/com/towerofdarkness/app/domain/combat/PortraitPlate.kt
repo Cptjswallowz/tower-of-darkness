@@ -1,47 +1,62 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Combat portrait slot plate — v0.1.22-plate.
+ * Portrait plate / circle contract — v0.1.23-nobg.
  *
- * Fill behind You / Ash-Warden / Seal-Warden is **static** (one dark fill).
- * No color pulse on dice / log / hit. Victory tint at most once at fight end,
- * then **hold** — never [infiniteRepeatable] / infinite glow.
- * PNG stills carry their own lighting — no second painted oval behind them.
+ * **Combat:** no plate / fill / tint / ring behind You, Seal-Warden, or Ash-Warden.
+ * PNGs sit on the dark stage only. Defeat / victory: no extra ring behind the figure
+ * (banner + Continue are enough).
  *
- * Aligns with docs/plate-v0122.md + docs/art-audio/PLATE_v0.1.22.md.
+ * **Title:** teal circle behind You may remain (title screen only).
+ *
+ * Trash Canvas placeholders are the placeholder body — not a plate; leave them.
+ *
+ * Supersedes combat use of v0.1.22-plate static fill / victory tint.
+ * Aligns with docs/nobg-v0123.md + docs/art-audio/NOBG_v0.1.23.md.
  */
 object PortraitPlate {
-    const val TAG = "v0.1.22-plate"
+    const val TAG = "v0.1.23-nobg"
 
-    /** Static dark plate (theme Ash). One treatment for You + both Wardens. */
+    /** Combat portraits draw PNG only — no disc / fill / tint under them. */
+    const val COMBAT_PLATE_ENABLED = false
+
+    /** Title screen may keep a teal circle behind You (not a combat plate). */
+    const val TITLE_TEAL_CIRCLE_ALLOWED = true
+
+    /** GlowRare teal — title circle fill (static; no pulse). */
+    const val TITLE_CIRCLE_ARGB = 0xFF38BDF8.toInt()
+
+    /** No defeat / victory ring behind combat figures. */
+    const val VICTORY_RING_BEHIND_FIGURE = false
+    const val DEFEAT_RING_BEHIND_FIGURE = false
+
+    /** Historical v0.1.22 dark fill — combat must not draw it anymore. */
     const val FILL_ARGB = 0xFF2B2A28.toInt()
 
-    /** Plate fill never animates / pulses. */
+    /** Combat plate fill must stay off (no pulse / recolor either). */
     const val FILL_IS_STATIC = true
-
-    /** No infinite glow / rememberInfiniteTransition under portraits. */
     const val ALLOWS_INFINITE_PULSE = false
-
-    /** Plate must not recolor on dice roll, combat log, or hit beats. */
     const val ALLOWS_DICE_LOG_HIT_RECOLOR = false
 
-    /**
-     * Victory may apply a tint once when the fight ends, then hold.
-     * Never loop / infiniteRepeatable.
-     */
-    const val VICTORY_TINT_ONESHOT_HOLD = true
+    /** Victory tint / ring behind figure is forbidden in combat. */
+    const val VICTORY_TINT_ONESHOT_HOLD = false
     const val VICTORY_TINT_INFINITE = false
-
-    /** Held victory tint (Gold @ ~40% alpha) — applied only while victory hold. */
     const val VICTORY_TINT_ARGB = 0x66C9A227.toInt()
 
     /** Second painted oval behind portrait PNG is forbidden. */
     const val SECOND_OVAL_BEHIND_PNG = false
 
-    fun appliesToPlayer(): Boolean = true
-    fun appliesToAshWarden(): Boolean = true
-    fun appliesToSealWarden(): Boolean = true
+    /** Combat You — no plate. */
+    fun appliesToPlayer(): Boolean = false
 
-    /** Trash Canvas placeholders keep their own silhouette shapes. */
+    /** Combat Ash-Warden — no plate. */
+    fun appliesToAshWarden(): Boolean = false
+
+    /** Combat Seal-Warden — no plate. */
+    fun appliesToSealWarden(): Boolean = false
+
+    /** Trash Canvas placeholders keep their own silhouette shapes (body, not plate). */
     fun appliesToTrashPlaceholders(): Boolean = false
+
+    fun titleTealCircleAllowed(): Boolean = TITLE_TEAL_CIRCLE_ALLOWED
 }

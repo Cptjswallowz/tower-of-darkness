@@ -20,6 +20,8 @@ Mirror (non-canonical): `/workspace/tower-of-darkness/assets/` — prefer app pa
 
 ---
 
+**v0.1.23 no combat plate:** `nobg-v0123.md` / `art-audio/NOBG_v0.1.23.md` (PNG only on dark stage; plates removed).
+
 **v0.1.22 combat plate:** `plate-v0122.md` / `art-audio/PLATE_v0.1.22.md` (static fill; no pulse; victory tint once).
 
 **v0.1.21 portrait stills:** `portraits-v0121.md` / `art-audio/PORTRAITS_v0.1.21.md` (Elliott Grok stills; crop+alpha only).

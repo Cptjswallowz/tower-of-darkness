@@ -8,8 +8,10 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.22-plate — static portrait slot fill; no infinite glow under You/Wardens;
- * victory tint one-shot hold; no second painted oval behind PNG stills.
+ * v0.1.22-plate — historical static-plate lock.
+ * **Superseded (combat)** by v0.1.23-nobg: combat plates removed.
+ * Kept to assert no infinite pulse / no dice-log-hit recolor / trash not plated.
+ * See [NobgV0123Test] for the active combat contract.
  */
 class PlateV0122Test {
 
@@ -34,29 +36,28 @@ class PlateV0122Test {
     }
 
     @Test
-    fun tag_andStaticFill_locked() {
-        assertEquals("v0.1.22-plate", PortraitPlate.TAG)
-        assertTrue(PortraitPlate.FILL_IS_STATIC)
+    fun supersededByNobg_combatPlateOff() {
+        // Active tag is nobg; combat plate flags stay off
+        assertEquals("v0.1.23-nobg", PortraitPlate.TAG)
+        assertFalse(PortraitPlate.COMBAT_PLATE_ENABLED)
         assertFalse(PortraitPlate.ALLOWS_INFINITE_PULSE)
         assertFalse(PortraitPlate.ALLOWS_DICE_LOG_HIT_RECOLOR)
         assertFalse(PortraitPlate.SECOND_OVAL_BEHIND_PNG)
-        // Dark Ash plate (not transparent) — one treatment
-        assertEquals(0xFF2B2A28.toInt(), PortraitPlate.FILL_ARGB)
+        assertTrue(PortraitPlate.FILL_IS_STATIC)
     }
 
     @Test
-    fun victoryTint_oneshotHold_notInfinite() {
-        assertTrue(PortraitPlate.VICTORY_TINT_ONESHOT_HOLD)
+    fun victoryTint_noLongerDrawnInCombat() {
+        assertFalse(PortraitPlate.VICTORY_TINT_ONESHOT_HOLD)
         assertFalse(PortraitPlate.VICTORY_TINT_INFINITE)
-        val a = (PortraitPlate.VICTORY_TINT_ARGB ushr 24) and 0xFF
-        assertTrue("victory tint should be visible but not opaque blowout", a in 0x20..0xB0)
+        assertFalse(PortraitPlate.VICTORY_RING_BEHIND_FIGURE)
     }
 
     @Test
-    fun appliesToYouAndBothWardens() {
-        assertTrue(PortraitPlate.appliesToPlayer())
-        assertTrue(PortraitPlate.appliesToAshWarden())
-        assertTrue(PortraitPlate.appliesToSealWarden())
+    fun combatSlots_noPlate_trashNotPlated() {
+        assertFalse(PortraitPlate.appliesToPlayer())
+        assertFalse(PortraitPlate.appliesToAshWarden())
+        assertFalse(PortraitPlate.appliesToSealWarden())
         assertFalse(PortraitPlate.appliesToTrashPlaceholders())
     }
 
@@ -71,25 +72,22 @@ class PlateV0122Test {
             "portrait plate must not use infiniteRepeatable",
             src.contains("infiniteRepeatable")
         )
-        assertTrue(
-            "static plate helper expected",
+        assertFalse(
+            "combat static plate helper must be removed under nobg",
             src.contains("StaticPortraitPlate")
         )
-        assertTrue(src.contains("PortraitPlate.FILL_ARGB") || src.contains("PortraitPlate"))
     }
 
     @Test
     fun portraitPngPaths_noSecondPaintedOvalBehindStill() {
         val src = heroShowcaseSource()
-        // Seal / Ash / You PNG branches must not drawOval behind the Image.
-        // Trash placeholder Canvas may still use drawOval as silhouette art.
         val sealBranch = src.substringAfter("Asset-backed boss without volume", "")
             .substringBefore("Trash / Wretch", src)
         assertFalse(
             "Seal-Warden PNG path must not drawOval behind still",
             sealBranch.contains("drawOval")
         )
-        assertTrue(src.contains("StaticPortraitPlate"))
+        assertFalse(PortraitPlate.SECOND_OVAL_BEHIND_PNG)
     }
 
     @Test
@@ -99,8 +97,8 @@ class PlateV0122Test {
             "combat You plate must not follow lastFiredCard rarity",
             src.contains("HeroShowcase(state.lastFiredCard")
         )
-        assertTrue(
-            "victory hold should drive optional one-shot tint",
+        assertFalse(
+            "nobg: no victoryHold plate wiring in combat",
             src.contains("victoryHold")
         )
     }
@@ -108,10 +106,8 @@ class PlateV0122Test {
     @Test
     fun victoryTint_notWiredAsInfiniteRepeatable() {
         val src = heroShowcaseSource() + "\n" + combatScreenSource()
-        // Guard: victory path must not introduce infinite plate animation.
         assertFalse(src.contains("infiniteRepeatable"))
         assertFalse(src.contains("rememberInfiniteTransition"))
-        assertTrue(PortraitPlate.VICTORY_TINT_ONESHOT_HOLD)
         assertFalse(PortraitPlate.VICTORY_TINT_INFINITE)
     }
 }

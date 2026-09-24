@@ -72,3 +72,7 @@ Bodies identity notes in `bodies-v0118.md` still describe intended reads; **this
 ---
 
 **Related:** v0.1.22-plate — static combat plate fill (no pulse). See `plate-v0122.md`.
+
+---
+
+**Related:** v0.1.23-nobg — no combat plate behind stills. See `nobg-v0123.md`.

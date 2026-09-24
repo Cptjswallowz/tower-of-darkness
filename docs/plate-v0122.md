@@ -48,3 +48,7 @@ Portraits stills (`portraits-v0121.md`), Wake art / Spark, glyphs, rarity colors
 - [x] Victory tint ≤1 at fight end, then hold — no loop (`victoryHold`)
 - [x] No second painted oval behind PNG
 - [x] Portraits / Wake / glyphs / rarity / path / 2x frozen
+
+---
+
+**Superseded (combat):** v0.1.23-nobg — combat plates removed; PNG only on dark stage. See `nobg-v0123.md`. Title teal circle may remain.
