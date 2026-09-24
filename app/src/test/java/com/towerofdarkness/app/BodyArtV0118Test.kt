@@ -23,7 +23,7 @@ class BodyArtV0118Test {
     @Test
     fun hallway_youIsSoldier_enemyStaysPlaceholder() {
         assertEquals("portrait_you", BodyArt.hallwayPlayerDrawableName())
-        assertTrue(BodyArt.hallwayEnemyUsesPlaceholder())
+        assertFalse("v0.1.26 pack PNGs shipped", BodyArt.hallwayEnemyUsesPlaceholder())
     }
 
     @Test
@@ -45,7 +45,7 @@ class BodyArtV0118Test {
     }
 
     @Test
-    fun trashAndSealSpinner_stayPlaceholders() {
+    fun trashWithoutLook_stillPlaceholder_packLookUsesPng() {
         val trash = listOf(
             EnemyKind.GOBLIN,
             EnemyKind.ORC,
@@ -53,9 +53,11 @@ class BodyArtV0118Test {
             EnemyKind.SPIDER
         )
         trash.forEach { kind ->
-            assertNull("expected placeholder for $kind", BodyArt.enemyPortraitDrawableName(kind))
+            assertNull("no look → no drawable for $kind", BodyArt.enemyPortraitDrawableName(kind))
             assertTrue(BodyArt.usesPlaceholderSilhouette(kind))
         }
+        assertFalse(BodyArt.usesPlaceholderSilhouette(EnemyKind.GOBLIN, com.towerofdarkness.app.domain.combat.EnemyLook.KNIFE))
+        assertEquals("portrait_sturdy_orc_axe", BodyArt.enemyPortraitDrawableName(EnemyKind.ORC, com.towerofdarkness.app.domain.combat.EnemyLook.AXE))
         assertEquals("Sturdy Orc", EnemyKind.SPIDER.displayName)
         assertEquals("enemies/enemy_spider.png", EnemyKind.SPIDER.asset)
         assertEquals(120, BodyArt.TRASH_SLOT_DP)

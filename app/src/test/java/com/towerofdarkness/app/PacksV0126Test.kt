@@ -218,14 +218,52 @@ class PacksV0126Test {
     }
 
     @Test
-    fun drawableHooks_ready_noInventedArt() {
+    fun packArtShipped_sixLooksWired_md5Contract() {
         val names = HallwayPacks.allDrawableNames()
         assertEquals(6, names.size)
-        assertTrue(names.contains("pack_weak_goblin_knife"))
-        assertTrue(names.contains("pack_sturdy_orc_hammer"))
-        // No PNGs dropped yet → not shipped
-        names.forEach { assertFalse("unexpected art $it", com.towerofdarkness.app.domain.combat.BodyArt.packArtShipped(it)) }
-        assertTrue(com.towerofdarkness.app.domain.combat.BodyArt.hallwayEnemyUsesPlaceholder())
+        assertTrue(names.contains("portrait_weak_goblin_knife"))
+        assertTrue(names.contains("portrait_sturdy_orc_hammer"))
+        names.forEach {
+            assertTrue("expected shipped $it", com.towerofdarkness.app.domain.combat.BodyArt.packArtShipped(it))
+        }
+        assertFalse(com.towerofdarkness.app.domain.combat.BodyArt.hallwayEnemyUsesPlaceholder())
+        assertEquals(120, com.towerofdarkness.app.domain.combat.BodyArt.TRASH_SLOT_DP)
+        val md5 = com.towerofdarkness.app.domain.combat.BodyArt.packMd5ByDrawable()
+        assertEquals("c1ccc07f907db3b6bfad687410bb0b4e", md5["portrait_weak_goblin_knife"])
+        assertEquals("3caaee488d85a5d4efad5c179e660224", md5["portrait_weak_goblin_bottle"])
+        assertEquals("9bdd728e852e5d9f0c4ade5b33ec9f67", md5["portrait_weak_goblin_spikes"])
+        assertEquals("a1d972dfe6d220420119159652a5a868", md5["portrait_sturdy_orc_axe"])
+        assertEquals("6fc981b9e7dff416b6183def2c704c75", md5["portrait_sturdy_orc_cleaver"])
+        assertEquals("bc61505abd0a37a89f504e844804169a", md5["portrait_sturdy_orc_hammer"])
+        // Files on disk match contract (cwd may be repo root or app/)
+        for ((name, expect) in md5) {
+            val f = listOf(
+                java.io.File("app/src/main/res/drawable/$name.png"),
+                java.io.File("src/main/res/drawable/$name.png")
+            ).firstOrNull { it.isFile }
+            assertNotNull("$name missing from cwd=${java.io.File(".").absolutePath}", f)
+            val actual = java.security.MessageDigest.getInstance("MD5")
+                .digest(f!!.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            assertEquals("md5 $name", expect, actual)
+        }
+        // With look, trash uses PNG not placeholder
+        assertFalse(
+            com.towerofdarkness.app.domain.combat.BodyArt.usesPlaceholderSilhouette(
+                EnemyKind.GOBLIN, EnemyLook.KNIFE
+            )
+        )
+        assertFalse(
+            com.towerofdarkness.app.domain.combat.BodyArt.usesPlaceholderSilhouette(
+                EnemyKind.ORC, EnemyLook.HAMMER
+            )
+        )
+        assertEquals(
+            "portrait_weak_goblin_knife",
+            com.towerofdarkness.app.domain.combat.BodyArt.enemyPortraitDrawableName(
+                EnemyKind.GOBLIN, EnemyLook.KNIFE
+            )
+        )
     }
 
     @Test

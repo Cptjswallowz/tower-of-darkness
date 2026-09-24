@@ -61,7 +61,7 @@ This **supersedes** the older F2 “prefer spider/troll over goblin” note in `
 
 - [x] Combat log + node UI show **Weak Goblin** / **Sturdy Orc** (old ids OK internally)
 - [x] 3 looks each; equal 1/3 on node create; persist mid-fight + save; re-roll next hallway fight
-- [x] No plate behind PNG (hooks ready; Art PNG drop pending)
+- [x] No plate behind PNG (Art PNGs wired)
 - [x] F1 hallway 75% goblin / 25% orc; F2 30% / 70%; bosses never; no Floor 3
 - [x] No HP / counter / Wake / boss / You / glyph / path / 2x / rumor-charge changes
 
@@ -74,11 +74,11 @@ Expected basenames under `app/src/main/res/drawable/` (PNG, no plate):
 
 | File | Look |
 |------|------|
-| `pack_weak_goblin_knife.png` | Weak Goblin / knife |
-| `pack_weak_goblin_bottle.png` | Weak Goblin / bottle |
-| `pack_weak_goblin_spikes.png` | Weak Goblin / spikes |
-| `pack_sturdy_orc_axe.png` | Sturdy Orc / axe |
-| `pack_sturdy_orc_cleaver.png` | Sturdy Orc / cleaver |
-| `pack_sturdy_orc_hammer.png` | Sturdy Orc / hammer |
+| `portrait_weak_goblin_knife.png` | Weak Goblin / knife |
+| `portrait_weak_goblin_bottle.png` | Weak Goblin / bottle |
+| `portrait_weak_goblin_spikes.png` | Weak Goblin / spikes |
+| `portrait_sturdy_orc_axe.png` | Sturdy Orc / axe |
+| `portrait_sturdy_orc_cleaver.png` | Sturdy Orc / cleaver |
+| `portrait_sturdy_orc_hammer.png` | Sturdy Orc / hammer |
 
 Engineer wires via `HallwayPacks.drawableName` + `getIdentifier` when files land. Do **not** invent art from JPG stills.

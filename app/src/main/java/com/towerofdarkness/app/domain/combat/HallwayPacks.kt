@@ -108,15 +108,15 @@ object HallwayPacks {
 
     /**
      * Drawable basename for a look (Art drop). Wired only when PNG is present under res/drawable.
-     * Naming: pack_weak_goblin_knife … pack_sturdy_orc_hammer.
+     * Naming: portrait_weak_goblin_knife … portrait_sturdy_orc_hammer.
      */
     fun drawableName(look: EnemyLook): String = when (look) {
-        EnemyLook.KNIFE -> "pack_weak_goblin_knife"
-        EnemyLook.BOTTLE -> "pack_weak_goblin_bottle"
-        EnemyLook.SPIKES -> "pack_weak_goblin_spikes"
-        EnemyLook.AXE -> "pack_sturdy_orc_axe"
-        EnemyLook.CLEAVER -> "pack_sturdy_orc_cleaver"
-        EnemyLook.HAMMER -> "pack_sturdy_orc_hammer"
+        EnemyLook.KNIFE -> "portrait_weak_goblin_knife"
+        EnemyLook.BOTTLE -> "portrait_weak_goblin_bottle"
+        EnemyLook.SPIKES -> "portrait_weak_goblin_spikes"
+        EnemyLook.AXE -> "portrait_sturdy_orc_axe"
+        EnemyLook.CLEAVER -> "portrait_sturdy_orc_cleaver"
+        EnemyLook.HAMMER -> "portrait_sturdy_orc_hammer"
     }
 
     fun allDrawableNames(): Set<String> = EnemyLook.entries.map { drawableName(it) }.toSet()

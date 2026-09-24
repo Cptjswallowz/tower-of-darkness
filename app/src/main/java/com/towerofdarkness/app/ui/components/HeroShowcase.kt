@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.towerofdarkness.app.R
@@ -88,11 +87,22 @@ private fun bossPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortra
     else -> null
 }
 
+@DrawableRes
+private fun packPortraitResId(look: EnemyLook?): Int? = when (look) {
+    EnemyLook.KNIFE -> R.drawable.portrait_weak_goblin_knife
+    EnemyLook.BOTTLE -> R.drawable.portrait_weak_goblin_bottle
+    EnemyLook.SPIKES -> R.drawable.portrait_weak_goblin_spikes
+    EnemyLook.AXE -> R.drawable.portrait_sturdy_orc_axe
+    EnemyLook.CLEAVER -> R.drawable.portrait_sturdy_orc_cleaver
+    EnemyLook.HAMMER -> R.drawable.portrait_sturdy_orc_hammer
+    null -> null
+}
+
 /**
  * Enemy portrait slot (combat only).
  * Ash-Warden (F2) → [R.drawable.portrait_ash_warden] (+ volume bake).
  * Seal-Warden / [EnemyKind.DRAGON] (F1) → [R.drawable.portrait_seal_warden] (no volume).
- * Hallway packs (v0.1.26): look → pack_* PNG via getIdentifier when Art dropped; else Canvas.
+ * Hallway packs (v0.1.26): look → portrait_weak_goblin_* / portrait_sturdy_orc_* (no plate).
  * v0.1.23-nobg: PNG = no plate / fill / tint / ring under still.
  */
 @Composable
@@ -102,18 +112,11 @@ fun EnemySilhouette(
     modifier: Modifier = Modifier,
     look: EnemyLook? = null
 ) {
-    val bodyName = BodyArt.enemyPortraitDrawableName(kind, look)
     val bossRes = bossPortraitResId(kind)
-    val context = LocalContext.current
-    val packResId = if (bossRes == null && bodyName != null && BodyArt.packArtShipped(bodyName)) {
-        context.resources.getIdentifier(bodyName, "drawable", context.packageName)
-    } else {
-        0
-    }
-    val portraitRes: Int? = bossRes ?: packResId.takeIf { it != 0 }
+    val packRes = if (bossRes == null) packPortraitResId(look) else null
+    val portraitRes: Int? = bossRes ?: packRes
     val slotDp = when {
         bossRes != null || isBoss -> BodyArt.BOSS_SLOT_DP
-        portraitRes != null -> BodyArt.TRASH_SLOT_DP
         else -> BodyArt.TRASH_SLOT_DP
     }.dp
     Box(modifier.then(Modifier.size(slotDp)), contentAlignment = Alignment.Center) {

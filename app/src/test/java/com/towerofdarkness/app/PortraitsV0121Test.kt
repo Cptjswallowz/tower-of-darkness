@@ -73,7 +73,7 @@ class PortraitsV0121Test {
         assertEquals("Sturdy Orc", EnemyKind.SPIDER.displayName)
         assertEquals("Weak Goblin", EnemyKind.GOBLIN.displayName)
         assertEquals(120, BodyArt.TRASH_SLOT_DP)
-        assertTrue(BodyArt.hallwayEnemyUsesPlaceholder())
+        assertFalse("v0.1.26 pack PNGs shipped", BodyArt.hallwayEnemyUsesPlaceholder())
     }
 
     @Test
