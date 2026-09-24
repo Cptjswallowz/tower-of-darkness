@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
@@ -42,7 +43,7 @@ fun MainMenuScreen(gc: GameController) {
         Text("TOWER OF DARKNESS", color = Gold, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text("Ashen Host · fallen kingdom", color = Bone.copy(0.7f), fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
-        HeroShowcase(Rarity.RARE)
+        HeroShowcase(Rarity.RARE, Modifier.size(160.dp))
         Spacer(Modifier.height(28.dp))
         if (gc.hasMidRunSlot) {
             Button(

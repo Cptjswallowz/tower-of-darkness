@@ -20,6 +20,8 @@ Mirror (non-canonical): `/workspace/tower-of-darkness/assets/` — prefer app pa
 
 ---
 
+**v0.1.18 combat bodies:** `bodies-v0118.md` (You + Ash-Warden only).
+
 ## 1. Hero — modular layers + rarity glow
 
 **Identity (PH):** Ashen Host–like remnant silhouette — **locked for PH** (Elliott widget skipped; stay on PH).  

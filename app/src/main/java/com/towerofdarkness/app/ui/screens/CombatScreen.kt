@@ -207,7 +207,7 @@ fun CombatScreen(gc: GameController) {
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    EnemySilhouette(state.enemy.kind.displayName, state.enemy.isBoss)
+                    EnemySilhouette(state.enemy.kind, state.enemy.isBoss)
                     Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
                     HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
                     // Soften = remaining counterPenalty

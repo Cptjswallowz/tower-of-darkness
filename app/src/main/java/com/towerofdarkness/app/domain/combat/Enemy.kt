@@ -13,7 +13,7 @@ enum class EnemyKind(
     TROLL("Stone Hunger", "enemies/enemy_troll.png", 7, 9),
     SPIDER("Seal Spinner", "enemies/enemy_spider.png", 7, 9),
     DRAGON("Seal-Warden", "enemies/enemy_dragon.png", 6, 9), // Floor 1 boss; counters via Balance.BOSS_COUNTER_*
-    ASH_WARDEN("Ash-Warden", "enemies/enemy_dragon.png", 6, 9) // Floor 2 boss; same kit/art stub
+    ASH_WARDEN("Ash-Warden", "portrait_ash_warden", 6, 9) // Floor 2 boss; v0.1.18 body still
 }
 
 data class Enemy(
