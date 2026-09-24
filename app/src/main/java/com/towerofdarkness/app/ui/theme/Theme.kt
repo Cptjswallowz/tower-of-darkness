@@ -16,6 +16,8 @@ val VoidBg = Color(0xFF0D0A14)
 val Panel = Color(0xFF1A1228)
 val Accent = Color(0xFF7B5EA7)
 val Gold = Color(0xFFC9A227)
+/** Warm gold-ash rim light (v0.1.20-volume). */
+val GoldAsh = Color(0xD4C9A86A)
 
 val GlowUncommon = Color(0xFF4ADE80)
 val GlowRare = Color(0xFF38BDF8)

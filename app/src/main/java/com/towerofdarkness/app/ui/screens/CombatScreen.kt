@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -317,17 +316,16 @@ private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Mo
     Column(
         modifier
             .height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp)
-            .alpha(if (dimmed) 0.35f else 1f)
-            .background(Panel, RoundedCornerShape(6.dp))
+            .background(Panel.copy(alpha = if (dimmed) 0.85f else 1f), RoundedCornerShape(6.dp))
             .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(6.dp))
             .padding(horizontal = 2.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Glyph ABOVE name (24–32 dp); grey-out alphas whole tile including glyph.
-        SkillGlyphIcon(cardId = card.id, spent = false, size = SkillGlyph.GLYPH_SIZE_DP.dp)
-        Text(card.title, color = Bone, fontSize = 9.sp, maxLines = 2)
-        Text("w${card.weight}", color = Bone.copy(0.5f), fontSize = 8.sp)
+        // Glyph ABOVE name; spent greys at VolumeArt.DIMMED_GLYPH_ALPHA (readable, no crush).
+        SkillGlyphIcon(cardId = card.id, spent = dimmed, size = SkillGlyph.GLYPH_SIZE_DP.dp)
+        Text(card.title, color = if (dimmed) Bone.copy(0.65f) else Bone, fontSize = 9.sp, maxLines = 2)
+        Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
     }
 }
 

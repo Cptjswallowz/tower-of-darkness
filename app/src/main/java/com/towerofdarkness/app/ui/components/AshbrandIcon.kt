@@ -18,11 +18,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.combat.WakeArt
+import com.towerofdarkness.app.domain.volume.VolumeArt
 import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.ui.theme.Gold
 
 /**
  * Ashbrand slot icon — cracked ash-iron + gold fuller on dark square ([R.drawable.ashbrand_icon]; v0.1.16 polish).
+ * v0.1.20: Art-baked volume on blade icon; Compose chrome no-op (not Wake VFX / spark).
  * Same size on loadout weapon plate and combat weapon row.
  * SPARK: [R.drawable.ashbrand_spark] ember overlay only (no crescent).
  */
@@ -46,7 +48,8 @@ fun AshbrandIcon(
         )
     )
     val seamPhase = phase == WakeIconPhase.CHARGE || phase == WakeIconPhase.CRACK
-    Box(modifier.size(slotSize), contentAlignment = Alignment.Center) {
+    val chrome = if (VolumeArt.appliesToAshbrandIcon()) Modifier.volumeChrome(circular = false) else Modifier
+    Box(modifier.size(slotSize).then(chrome), contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(R.drawable.ashbrand_icon),
             contentDescription = "Ashbrand",

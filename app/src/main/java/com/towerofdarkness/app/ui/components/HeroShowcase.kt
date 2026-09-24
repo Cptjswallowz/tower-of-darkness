@@ -26,6 +26,7 @@ import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.combat.BodyArt
 import com.towerofdarkness.app.domain.combat.EnemyKind
+import com.towerofdarkness.app.domain.volume.VolumeArt
 import com.towerofdarkness.app.ui.theme.Ash
 import com.towerofdarkness.app.ui.theme.Ember
 import com.towerofdarkness.app.ui.theme.GlowLegendary
@@ -35,6 +36,7 @@ import com.towerofdarkness.app.ui.theme.Steel
 
 /**
  * Player portrait — v0.1.18 circular soldier still ([R.drawable.portrait_you]).
+ * v0.1.20: Art-baked volume PNG; volumeChrome no-op (no double shadow; no pip shift).
  * Sits under frames / Wake crescent / pips; shrink sprite on clip, don't move chrome.
  * Optional rarity glow rings behind the still (no wardrobe / gear overlays).
  */
@@ -61,30 +63,32 @@ fun HeroShowcase(rarity: Rarity = Rarity.UNCOMMON, modifier: Modifier = Modifier
         Canvas(Modifier.fillMaxSize()) {
             val cx = size.width / 2
             val cy = size.height / 2
-            drawOval(
-                Ash.copy(alpha = 0.45f),
-                topLeft = Offset(cx - size.width * 0.28f, size.height * 0.82f),
-                size = androidx.compose.ui.geometry.Size(size.width * 0.56f, size.height * 0.1f)
-            )
             if (glow.alpha > 0f) {
                 drawCircle(glow, radius = size.minDimension * 0.48f, center = Offset(cx, cy))
             }
         }
         val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
-        Image(
-            painter = painterResource(R.drawable.portrait_you),
-            contentDescription = "You",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
+        // Volume chrome wraps the clipped still; drawBehind stays outside content box.
+        Box(
+            Modifier
                 .fillMaxSize(inset)
-                .clip(CircleShape)
-        )
+                .then(if (VolumeArt.appliesToPlayerPortrait()) Modifier.volumeChrome(circular = true) else Modifier)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.portrait_you),
+                contentDescription = "You",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            )
+        }
     }
 }
 
 /**
- * Enemy portrait slot. Ash-Warden (F2) uses [R.drawable.portrait_ash_warden];
- * F1 Seal-Warden / trash / Seal Spinner keep Canvas orange/steel placeholders.
+ * Enemy portrait slot. Ash-Warden (F2) uses [R.drawable.portrait_ash_warden] + volume;
+ * F1 Seal-Warden / trash / Seal Spinner keep Canvas orange/steel placeholders (no volume).
  */
 @Composable
 fun EnemySilhouette(
@@ -99,7 +103,25 @@ fun EnemySilhouette(
         else -> BodyArt.TRASH_SLOT_DP
     }.dp
     Box(modifier.then(Modifier.size(slotDp)), contentAlignment = Alignment.Center) {
-        if (bodyName != null) {
+        if (bodyName != null && VolumeArt.appliesToEnemy(kind)) {
+            val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
+            Box(
+                Modifier
+                    .fillMaxSize(inset)
+                    .volumeChrome(circular = true)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.portrait_ash_warden),
+                    contentDescription = kind.displayName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            }
+        } else if (bodyName != null) {
+            // Asset-backed but no volume (should not happen for current map).
+            val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 drawOval(
@@ -108,7 +130,6 @@ fun EnemySilhouette(
                     size = androidx.compose.ui.geometry.Size(size.width * 0.6f, size.height * 0.1f)
                 )
             }
-            val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Image(
                 painter = painterResource(R.drawable.portrait_ash_warden),
                 contentDescription = kind.displayName,
@@ -118,6 +139,7 @@ fun EnemySilhouette(
                     .clip(CircleShape)
             )
         } else {
+            // Seal-Warden / trash / Seal Spinner — Canvas placeholders, no volume.
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 val body = if (isBoss) Ember else Steel

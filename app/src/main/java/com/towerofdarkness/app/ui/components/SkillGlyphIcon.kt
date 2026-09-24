@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -14,14 +16,16 @@ import androidx.compose.ui.unit.dp
 import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.glyphs.SkillGlyph
 import com.towerofdarkness.app.domain.glyphs.SkillJob
+import com.towerofdarkness.app.domain.volume.VolumeArt
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Ember
 import com.towerofdarkness.app.ui.theme.Moss
 
 /**
  * Shared skill-tile glyph (v0.1.19) — combat bar + loadout row.
+ * v0.1.20: Art-baked volume PNG (shadow/rim/folds); volumeChrome is no-op (no double).
  * Size 24–32 dp above/beside name. No animations.
- * When [spent], dims glyph; combat [SkillSlot] may also alpha the whole tile.
+ * When [spent], greys glyph at [VolumeArt.DIMMED_GLYPH_ALPHA] — readable, not crushed.
  * Ashbrand uses [AshbrandIcon] only — do not call this for weapons.
  */
 @Composable
@@ -32,13 +36,19 @@ fun SkillGlyphIcon(
     size: Dp = SkillGlyph.GLYPH_SIZE_DP.dp
 ) {
     val resId = SkillGlyphResources.resId(cardId) ?: return
+    val grey = ColorMatrix().apply { setToSaturation(0f) }
     Image(
         painter = painterResource(resId),
         contentDescription = null,
         contentScale = ContentScale.Fit,
+        colorFilter = if (spent) ColorFilter.colorMatrix(grey) else null,
         modifier = modifier
             .size(size)
-            .alpha(if (spent) 0.4f else 1f)
+            .then(
+                if (VolumeArt.appliesToSkillGlyphTiles()) Modifier.volumeChrome(circular = false)
+                else Modifier
+            )
+            .alpha(if (spent) VolumeArt.DIMMED_GLYPH_ALPHA else 1f)
     )
 }
 
