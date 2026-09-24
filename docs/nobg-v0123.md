@@ -44,3 +44,7 @@ Portrait stills (`portraits-v0121.md`), Wake art / Spark, glyphs, rarity outline
 - [x] Title teal circle may remain
 - [x] Trash circles stay
 - [x] Art / Wake / glyphs / rarity outlines / path / 2x / save frozen
+
+---
+
+**Related:** v0.1.26-packs — pack PNGs still no plate. See `packs-v0126.md`.

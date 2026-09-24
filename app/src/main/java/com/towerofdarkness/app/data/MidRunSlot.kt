@@ -49,7 +49,9 @@ data class PathNodeSnap(
     val rumor: String,
     val revealed: Boolean,
     val scoutedTypeOnly: Boolean,
-    val cleared: Boolean
+    val cleared: Boolean,
+    val packKind: String? = null,
+    val packLook: String? = null
 )
 
 data class PathEdgeSnap(val from: String, val to: String)
@@ -103,7 +105,9 @@ data class MidRunSlot(
                         rumor = it.rumor,
                         revealed = it.revealed,
                         scoutedTypeOnly = it.scoutedTypeOnly,
-                        cleared = it.cleared
+                        cleared = it.cleared,
+                        packKind = it.packKind,
+                        packLook = it.packLook
                     )
                 },
                 edges = path.edges.map { PathEdgeSnap(it.from, it.to) }
@@ -120,7 +124,9 @@ data class MidRunSlot(
                     rumor = it.rumor,
                     revealed = it.revealed,
                     scoutedTypeOnly = it.scoutedTypeOnly,
-                    cleared = it.cleared
+                    cleared = it.cleared,
+                    packKind = it.packKind,
+                    packLook = it.packLook
                 )
             }
             val edges = snap.edges.map { PathEdge(it.from, it.to) }
@@ -240,16 +246,20 @@ data class MidRunSlot(
 
         private fun encodePath(p: MidRunPathSnap): String {
             val nodesJson = p.nodes.joinToString(",") { n ->
-                "{" +
-                    "\"id\":${jsonString(n.id)}," +
-                    "\"type\":${jsonString(n.type)}," +
-                    "\"row\":${n.row}," +
-                    "\"col\":${n.col}," +
-                    "\"rumor\":${jsonString(n.rumor)}," +
-                    "\"revealed\":${n.revealed}," +
-                    "\"scouted_type_only\":${n.scoutedTypeOnly}," +
-                    "\"cleared\":${n.cleared}" +
-                    "}"
+                buildString {
+                    append("{")
+                    append("\"id\":").append(jsonString(n.id)).append(",")
+                    append("\"type\":").append(jsonString(n.type)).append(",")
+                    append("\"row\":").append(n.row).append(",")
+                    append("\"col\":").append(n.col).append(",")
+                    append("\"rumor\":").append(jsonString(n.rumor)).append(",")
+                    append("\"revealed\":").append(n.revealed).append(",")
+                    append("\"scouted_type_only\":").append(n.scoutedTypeOnly).append(",")
+                    append("\"cleared\":").append(n.cleared)
+                    n.packKind?.let { append(",\"pack_kind\":").append(jsonString(it)) }
+                    n.packLook?.let { append(",\"pack_look\":").append(jsonString(it)) }
+                    append("}")
+                }
             }
             val edgesJson = p.edges.joinToString(",") { e ->
                 "{\"from\":${jsonString(e.from)},\"to\":${jsonString(e.to)}}"
@@ -280,7 +290,9 @@ data class MidRunSlot(
                     rumor = n.str("rumor") ?: "",
                     revealed = n.bool("revealed") ?: false,
                     scoutedTypeOnly = n.bool("scouted_type_only") ?: false,
-                    cleared = n.bool("cleared") ?: false
+                    cleared = n.bool("cleared") ?: false,
+                    packKind = n.str("pack_kind"),
+                    packLook = n.str("pack_look")
                 )
             }
             if (nodes.isEmpty()) return null

@@ -216,7 +216,8 @@ fun CombatScreen(gc: GameController) {
                     // v0.1.23-nobg: Warden PNG only; trash Canvas body unchanged
                     EnemySilhouette(
                         kind = state.enemy.kind,
-                        isBoss = state.enemy.isBoss
+                        isBoss = state.enemy.isBoss,
+                        look = state.enemy.look
                     )
                     Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
                     HpBar(state.enemy.hp, state.enemy.maxHp, Ember)

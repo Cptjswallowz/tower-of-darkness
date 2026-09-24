@@ -1,5 +1,6 @@
 package com.towerofdarkness.app.domain.path
 
+import com.towerofdarkness.app.domain.combat.HallwayPacks
 import kotlin.random.Random
 
 enum class NodeType { START, COMBAT, EVENT, TREASURE, SHOP, REST, BOSS }
@@ -12,7 +13,11 @@ data class PathNode(
     val rumor: String,
     val revealed: Boolean = false,
     val scoutedTypeOnly: Boolean = false,
-    val cleared: Boolean = false
+    val cleared: Boolean = false,
+    /** Hallway pack role (GOBLIN/ORC) — set when COMBAT node is authored. */
+    val packKind: String? = null,
+    /** Hallway look id — set with [packKind] on COMBAT create; persist save/resume. */
+    val packLook: String? = null
 )
 
 data class PathEdge(val from: String, val to: String)
@@ -106,6 +111,14 @@ object RumorPools {
     }
 }
 
+
+/** Author hallway pack (role+look) for a COMBAT node; clear for non-combat. */
+internal fun packFieldsForType(type: NodeType, floor: Int, rng: Random): Pair<String?, String?> {
+    if (type != NodeType.COMBAT) return null to null
+    val pack = HallwayPacks.roll(floor, rng)
+    return pack.kind.name to pack.look.id
+}
+
 object PathGenerator {
     /**
      * One-floor slice: entry → 2–3 branches (shared depth 2 or 3) → merge → Boss.
@@ -135,10 +148,13 @@ object PathGenerator {
                 } else {
                     laterPool[(b * 3 + d + rng.nextInt(3)) % laterPool.size]
                 }
+                val (pk, pl) = packFieldsForType(type, floor, rng)
                 val node = PathNode(
                     id = id, type = type, row = d, col = b,
                     rumor = RumorPools.forType(type, rng),
-                    revealed = d == 1
+                    revealed = d == 1,
+                    packKind = pk,
+                    packLook = pl
                 )
                 nodes += node
                 edges += PathEdge(prev, id)
@@ -149,9 +165,12 @@ object PathGenerator {
 
         val mergeId = "merge"
         val mergeType = listOf(NodeType.COMBAT, NodeType.REST, NodeType.EVENT).random(rng)
+        val (mergePk, mergePl) = packFieldsForType(mergeType, floor, rng)
         nodes += PathNode(
             mergeId, mergeType, row = depth + 1, col = 1,
-            rumor = RumorPools.forType(mergeType, rng)
+            rumor = RumorPools.forType(mergeType, rng),
+            packKind = mergePk,
+            packLook = mergePl
         )
         branchEnds.forEach { edges += PathEdge(it, mergeId) }
 
@@ -178,7 +197,8 @@ object PathGenerator {
         fun idx(id: String) = nodes.indexOfFirst { it.id == id }
         fun replaceType(at: Int, type: NodeType) {
             val n = nodes[at]
-            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+            val (pk, pl) = packFieldsForType(type, path.floor, rng)
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng), packKind = pk, packLook = pl)
         }
 
         val midIds = nodes.filter {
@@ -210,11 +230,11 @@ object PathGenerator {
         }
 
         // v0.1.7: every S→B has COMBAT on an earlier-than-last mid node (not the pre-boss slot).
-        ensureCombatBeforePreBossRest(nodes, path.edges, rng)
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor)
         // v0.1.10-bossrest: last non-boss on every S→B is REST
-        ensureLastNonBossIsRest(nodes, path.edges, rng)
+        ensureLastNonBossIsRest(nodes, path.edges, rng, path.floor)
         // Re-check combat after REST conversion (merge may have been the only fight).
-        ensureCombatBeforePreBossRest(nodes, path.edges, rng)
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor)
 
         return path.copy(nodes = nodes)
     }
@@ -227,12 +247,14 @@ object PathGenerator {
     private fun ensureCombatBeforePreBossRest(
         nodes: MutableList<PathNode>,
         edges: List<PathEdge>,
-        rng: Random
+        rng: Random,
+        floor: Int
     ) {
         fun idx(id: String) = nodes.indexOfFirst { it.id == id }
         fun replaceType(at: Int, type: NodeType) {
             val n = nodes[at]
-            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+            val (pk, pl) = packFieldsForType(type, floor, rng)
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng), packKind = pk, packLook = pl)
         }
 
         for (route in startToBossRoutes(nodes, edges)) {
@@ -255,12 +277,14 @@ object PathGenerator {
     private fun ensureLastNonBossIsRest(
         nodes: MutableList<PathNode>,
         edges: List<PathEdge>,
-        rng: Random
+        rng: Random,
+        floor: Int
     ) {
         fun idx(id: String) = nodes.indexOfFirst { it.id == id }
         fun replaceType(at: Int, type: NodeType) {
             val n = nodes[at]
-            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng))
+            val (pk, pl) = packFieldsForType(type, floor, rng)
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng), packKind = pk, packLook = pl)
         }
 
         for (route in startToBossRoutes(nodes, edges)) {

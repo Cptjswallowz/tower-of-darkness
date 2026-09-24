@@ -70,8 +70,8 @@ class PortraitsV0121Test {
             assertNull("expected no portrait for $kind", BodyArt.enemyPortraitDrawableName(kind))
             assertTrue(BodyArt.usesPlaceholderSilhouette(kind))
         }
-        assertEquals("Seal Spinner", EnemyKind.SPIDER.displayName)
-        assertEquals("Ash Wretch", EnemyKind.GOBLIN.displayName)
+        assertEquals("Sturdy Orc", EnemyKind.SPIDER.displayName)
+        assertEquals("Weak Goblin", EnemyKind.GOBLIN.displayName)
         assertEquals(120, BodyArt.TRASH_SLOT_DP)
         assertTrue(BodyArt.hallwayEnemyUsesPlaceholder())
     }

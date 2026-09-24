@@ -22,6 +22,9 @@ import com.towerofdarkness.app.domain.combat.WeaponRuntime
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.combat.CombatState
 import com.towerofdarkness.app.domain.combat.Enemy
+import com.towerofdarkness.app.domain.combat.EnemyKind
+import com.towerofdarkness.app.domain.combat.EnemyLook
+import com.towerofdarkness.app.domain.combat.HallwayPacks
 import com.towerofdarkness.app.domain.path.NodeType
 import com.towerofdarkness.app.domain.path.PathGenerator
 import com.towerofdarkness.app.domain.path.RumorPools
@@ -396,10 +399,44 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    /**
+     * Hallway trash from authored path node pack (look persists save/resume).
+     * Falls back to a fresh roll if the node lacks pack fields (legacy / non-combat).
+     */
+    private fun hallwayEnemyFromCurrentNode(floor: Int): Enemy {
+        val node = path?.current()
+        val kindName = node?.packKind
+        val lookId = node?.packLook
+        if (kindName != null && lookId != null) {
+            val kind = runCatching { EnemyKind.valueOf(kindName) }.getOrNull()
+            val look = EnemyLook.fromId(lookId)
+            if (kind != null && look != null && HallwayPacks.isHallwayKind(kind)) {
+                return Enemy.normal(kind, floor, look)
+            }
+        }
+        // Author now if missing, write back onto the path node for mid-run persist
+        val pack = HallwayPacks.roll(floor, rng)
+        if (node != null && path != null) {
+            path = path!!.copy(
+                nodes = path!!.nodes.map {
+                    if (it.id == node.id) {
+                        it.copy(packKind = pack.kind.name, packLook = pack.look.id)
+                    } else it
+                }
+            )
+        }
+        return pack.toEnemy(floor)
+    }
+
     // --- Combat ---
     private fun startCombat(boss: Boolean) {
         val floor = path?.floor ?: 1
-        val enemy = if (boss) Enemy.boss(floor) else Enemy.forFloorCombat(nodesCleared, floor)
+        val enemy = if (boss) {
+            Enemy.boss(floor)
+        } else {
+            hallwayEnemyFromCurrentNode(floor)
+        }
         val cards = effectiveLoadout()
         val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
         combatState = engine.start(

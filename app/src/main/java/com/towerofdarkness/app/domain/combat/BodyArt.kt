@@ -46,19 +46,46 @@ object BodyArt {
     /**
      * Enemy still drawable name, or null → keep [EnemySilhouette] Canvas placeholder.
      * Bosses: [EnemyKind.ASH_WARDEN] (F2), [EnemyKind.DRAGON] / Seal-Warden (F1).
-     * Trash / Wretch / Seal Spinner stay placeholders.
+     * Hallway packs (v0.1.26): look → pack_* drawable when Art PNG is shipped; else null.
      */
-    fun enemyPortraitDrawableName(kind: EnemyKind): String? = when (kind) {
+    fun enemyPortraitDrawableName(kind: EnemyKind, look: EnemyLook? = null): String? = when (kind) {
         EnemyKind.ASH_WARDEN -> ASH_WARDEN_DRAWABLE
         EnemyKind.DRAGON -> SEAL_WARDEN_DRAWABLE
-        else -> null
+        else -> look?.let { HallwayPacks.drawableName(it) }
     }
 
-    fun usesPlaceholderSilhouette(kind: EnemyKind): Boolean =
-        enemyPortraitDrawableName(kind) == null
+    fun usesPlaceholderSilhouette(kind: EnemyKind, look: EnemyLook? = null): Boolean {
+        val name = enemyPortraitDrawableName(kind, look) ?: return true
+        if (kind == EnemyKind.ASH_WARDEN || kind == EnemyKind.DRAGON) return false
+        // Trash pack PNG: placeholder until Art drops the file
+        return !packArtShipped(name)
+    }
 
-    /** Hallway / path / trash approach: You is soldier; enemy markers stay placeholders. */
+    /** Hallway / path / trash approach: You is soldier; enemy markers placeholders until pack PNGs. */
     fun hallwayPlayerDrawableName(): String = PLAYER_DRAWABLE
 
-    fun hallwayEnemyUsesPlaceholder(): Boolean = true
+    fun hallwayEnemyUsesPlaceholder(): Boolean = !anyPackArtShipped()
+
+    /**
+     * Art drop detection — true when the named pack PNG exists under res/drawable.
+     * Unit tests override via [packArtPresentOverride]; production checks classpath file list
+     * is not available, so default is false until PNGs are committed (hooks stay ready).
+     */
+    @Volatile
+    var packArtPresentOverride: Set<String>? = null
+
+    fun packArtShipped(drawableName: String): Boolean {
+        packArtPresentOverride?.let { return drawableName in it }
+        val candidates = listOf(
+            "app/src/main/res/drawable/$drawableName.png",
+            "src/main/res/drawable/$drawableName.png"
+        )
+        return candidates.any { java.io.File(it).isFile }
+    }
+
+    fun anyPackArtShipped(): Boolean =
+        HallwayPacks.allDrawableNames().any { packArtShipped(it) }
+
+    /** Expected drawable basenames for Art drop (no plate behind PNG). */
+    fun packDrawableNames(): Set<String> = HallwayPacks.allDrawableNames()
 }

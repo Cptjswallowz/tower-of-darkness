@@ -76,3 +76,7 @@ Bodies identity notes in `bodies-v0118.md` still describe intended reads; **this
 ---
 
 **Related:** v0.1.23-nobg — no combat plate behind stills. See `nobg-v0123.md`.
+
+---
+
+**Related:** v0.1.26-packs — hallway trash titles/looks (Weak Goblin / Sturdy Orc); still no plate. See `packs-v0126.md`.

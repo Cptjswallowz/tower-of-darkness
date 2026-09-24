@@ -94,3 +94,7 @@ Ash-Warden = same combat kit/behavior as Seal-Warden; distinct nameplate / HP on
 - [x] F2 trash HP 24; prefer spider/troll over goblin
 - [x] Ash-Warden HP 32, counters 6–9, same kit
 - [x] F2 clear → "Victory — The seal breaks." → Hub; no Floor 3
+
+---
+
+**Superseded (hallway pack weights):** v0.1.26-packs — F2 hallway **30% Weak Goblin / 70% Sturdy Orc** (not spider/troll preference). HP/counters unchanged. See `packs-v0126.md`.

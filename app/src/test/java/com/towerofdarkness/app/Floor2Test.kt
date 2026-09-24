@@ -128,17 +128,17 @@ class Floor2Test {
     }
 
     @Test
-    fun floor2Trash_prefersSpiderTrollOverGoblin() {
+    fun floor2Trash_sturdyOrcOutweighsWeakGoblin_v0126() {
+        // Superseded by v0.1.26-packs: F2 hallway 30% goblin / 70% orc
         val counts = mutableMapOf<EnemyKind, Int>()
-        for (i in 0 until 60) {
+        for (i in 0 until 200) {
             val e = Enemy.forFloorCombat(i, floor = 2)
             counts[e.kind] = (counts[e.kind] ?: 0) + 1
+            assertTrue(e.kind == EnemyKind.GOBLIN || e.kind == EnemyKind.ORC)
         }
-        val spider = counts[EnemyKind.SPIDER] ?: 0
-        val troll = counts[EnemyKind.TROLL] ?: 0
         val goblin = counts[EnemyKind.GOBLIN] ?: 0
-        assertTrue("spider ($spider) should outweigh goblin ($goblin)", spider > goblin)
-        assertTrue("troll ($troll) should outweigh goblin ($goblin)", troll > goblin)
+        val orc = counts[EnemyKind.ORC] ?: 0
+        assertTrue("orc ($orc) should outweigh goblin ($goblin) on F2", orc > goblin)
     }
 
     @Test

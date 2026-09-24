@@ -56,7 +56,7 @@ class BodyArtV0118Test {
             assertNull("expected placeholder for $kind", BodyArt.enemyPortraitDrawableName(kind))
             assertTrue(BodyArt.usesPlaceholderSilhouette(kind))
         }
-        assertEquals("Seal Spinner", EnemyKind.SPIDER.displayName)
+        assertEquals("Sturdy Orc", EnemyKind.SPIDER.displayName)
         assertEquals("enemies/enemy_spider.png", EnemyKind.SPIDER.asset)
         assertEquals(120, BodyArt.TRASH_SLOT_DP)
     }

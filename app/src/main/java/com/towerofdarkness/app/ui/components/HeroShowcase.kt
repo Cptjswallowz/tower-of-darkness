@@ -14,12 +14,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.combat.BodyArt
 import com.towerofdarkness.app.domain.combat.EnemyKind
+import com.towerofdarkness.app.domain.combat.EnemyLook
 import com.towerofdarkness.app.domain.combat.PortraitPlate
 import com.towerofdarkness.app.domain.volume.VolumeArt
 import com.towerofdarkness.app.ui.theme.Ash
@@ -80,7 +82,7 @@ private fun TitleTealCircle() {
 }
 
 @DrawableRes
-private fun enemyPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortraitDrawableName(kind)) {
+private fun bossPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortraitDrawableName(kind)) {
     BodyArt.ASH_WARDEN_DRAWABLE -> R.drawable.portrait_ash_warden
     BodyArt.SEAL_WARDEN_DRAWABLE -> R.drawable.portrait_seal_warden
     else -> null
@@ -90,20 +92,28 @@ private fun enemyPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortr
  * Enemy portrait slot (combat only).
  * Ash-Warden (F2) → [R.drawable.portrait_ash_warden] (+ volume bake).
  * Seal-Warden / [EnemyKind.DRAGON] (F1) → [R.drawable.portrait_seal_warden] (no volume).
- * Trash / Wretch / Seal Spinner keep Canvas placeholders (they ARE the body).
- * v0.1.23-nobg: PNG bosses = no plate / fill / tint / ring under still.
+ * Hallway packs (v0.1.26): look → pack_* PNG via getIdentifier when Art dropped; else Canvas.
+ * v0.1.23-nobg: PNG = no plate / fill / tint / ring under still.
  */
 @Composable
 fun EnemySilhouette(
     kind: EnemyKind,
     isBoss: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    look: EnemyLook? = null
 ) {
-    val bodyName = BodyArt.enemyPortraitDrawableName(kind)
-    val portraitRes = enemyPortraitResId(kind)
+    val bodyName = BodyArt.enemyPortraitDrawableName(kind, look)
+    val bossRes = bossPortraitResId(kind)
+    val context = LocalContext.current
+    val packResId = if (bossRes == null && bodyName != null && BodyArt.packArtShipped(bodyName)) {
+        context.resources.getIdentifier(bodyName, "drawable", context.packageName)
+    } else {
+        0
+    }
+    val portraitRes: Int? = bossRes ?: packResId.takeIf { it != 0 }
     val slotDp = when {
-        bodyName != null -> BodyArt.BOSS_SLOT_DP
-        isBoss -> BodyArt.BOSS_SLOT_DP
+        bossRes != null || isBoss -> BodyArt.BOSS_SLOT_DP
+        portraitRes != null -> BodyArt.TRASH_SLOT_DP
         else -> BodyArt.TRASH_SLOT_DP
     }.dp
     Box(modifier.then(Modifier.size(slotDp)), contentAlignment = Alignment.Center) {
@@ -125,6 +135,7 @@ fun EnemySilhouette(
             }
         } else if (portraitRes != null) {
             // Asset-backed boss without volume (Seal-Warden F1) — PNG only, no plate.
+            // Pack looks also land here when Art PNGs are present.
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Image(
                 painter = painterResource(portraitRes),

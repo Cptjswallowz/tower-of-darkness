@@ -1,6 +1,7 @@
 package com.towerofdarkness.app.domain.combat
 
 import com.towerofdarkness.app.domain.Balance
+import kotlin.random.Random
 
 enum class EnemyKind(
     val displayName: String,
@@ -8,10 +9,11 @@ enum class EnemyKind(
     val trashCounterMin: Int,
     val trashCounterMax: Int
 ) {
-    GOBLIN("Ash Wretch", "enemies/enemy_goblin.png", 7, 9),
-    ORC("Ruin Brute", "enemies/enemy_orc.png", 7, 9),
-    TROLL("Stone Hunger", "enemies/enemy_troll.png", 7, 9),
-    SPIDER("Seal Spinner", "enemies/enemy_spider.png", 7, 9),
+    GOBLIN("Weak Goblin", "enemies/enemy_goblin.png", 7, 9),
+    ORC("Sturdy Orc", "enemies/enemy_orc.png", 7, 9),
+    // Legacy kinds — hallway consolidated to GOBLIN/ORC; titles map to Sturdy Orc path
+    TROLL("Sturdy Orc", "enemies/enemy_troll.png", 7, 9),
+    SPIDER("Sturdy Orc", "enemies/enemy_spider.png", 7, 9),
     DRAGON("Seal-Warden", "portrait_seal_warden", 6, 9), // Floor 1 boss; v0.1.21 Seal-Warden still
     ASH_WARDEN("Ash-Warden", "portrait_ash_warden", 6, 9) // Floor 2 boss; v0.1.18 body still
 }
@@ -20,18 +22,29 @@ data class Enemy(
     val kind: EnemyKind,
     val maxHp: Int,
     val hp: Int,
-    val isBoss: Boolean = false
+    val isBoss: Boolean = false,
+    /** Hallway look variant; null for bosses. Persists for this fight / save-resume. */
+    val look: EnemyLook? = null
 ) {
     companion object {
-        fun normal(kind: EnemyKind = EnemyKind.ORC, floor: Int = 1): Enemy {
+        fun normal(
+            kind: EnemyKind = EnemyKind.ORC,
+            floor: Int = 1,
+            look: EnemyLook? = EnemyLook.defaultFor(kind)
+        ): Enemy {
             val hp = trashHpForFloor(floor)
-            return Enemy(kind, hp, hp, false)
+            val resolvedLook = when {
+                HallwayPacks.isBossKind(kind) -> null
+                look != null -> look
+                else -> EnemyLook.defaultFor(kind)
+            }
+            return Enemy(kind, hp, hp, false, resolvedLook)
         }
 
         fun boss(floor: Int = 1): Enemy {
             val hp = bossHpForFloor(floor)
             val kind = if (floor >= 2) EnemyKind.ASH_WARDEN else EnemyKind.DRAGON
-            return Enemy(kind, hp, hp, true)
+            return Enemy(kind, hp, hp, true, look = null)
         }
 
         fun trashHpForFloor(floor: Int): Int =
@@ -41,21 +54,16 @@ data class Enemy(
             if (floor >= 2) Balance.BOSS_FLOOR2_HP else Balance.BOSS_HP
 
         /**
-         * Floor trash pick. Floor 2 prefers spider/troll over goblin (weighted pool).
-         * [index] keeps deterministic cycling for tests; optional [rng] unused for index cycle.
+         * Hallway trash pick — v0.1.26-packs weighted 2-role table + look 1/3.
+         * [index] seeds a deterministic RNG for tests (not a cycling kind table).
          */
         fun forFloorCombat(index: Int, floor: Int = 1): Enemy {
-            val kinds = if (floor >= 2) {
-                // Prefer spider/troll: 2× each, 1× orc, 1× goblin
-                listOf(
-                    EnemyKind.SPIDER, EnemyKind.TROLL,
-                    EnemyKind.SPIDER, EnemyKind.TROLL,
-                    EnemyKind.ORC, EnemyKind.GOBLIN
-                )
-            } else {
-                listOf(EnemyKind.GOBLIN, EnemyKind.ORC, EnemyKind.SPIDER, EnemyKind.TROLL)
-            }
-            return normal(kinds[index % kinds.size], floor)
+            val rng = Random(index.toLong() * 31L + floor.toLong() * 17_771L)
+            return forFloorCombat(floor, rng)
         }
+
+        /** Hallway combat with explicit RNG (path node authoring / live start). */
+        fun forFloorCombat(floor: Int, rng: Random): Enemy =
+            HallwayPacks.enemyForHallway(floor, rng)
     }
 }
