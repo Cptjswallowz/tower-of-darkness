@@ -32,10 +32,14 @@ import com.towerofdarkness.app.domain.cards.CardCatalog
 import com.towerofdarkness.app.domain.combat.WeaponCatalog
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.components.AshbrandIcon
+import com.towerofdarkness.app.ui.components.SkillGlyphIcon
+import com.towerofdarkness.app.ui.components.skillJobIsBrace
+import com.towerofdarkness.app.domain.glyphs.SkillGlyph
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.theme.Accent
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Ember
+import com.towerofdarkness.app.ui.theme.Moss
 import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.GlowRare
 import com.towerofdarkness.app.ui.theme.GlowUncommon
@@ -130,9 +134,11 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
 
 @Composable
 private fun CardRow(card: Card, selected: Boolean, onGlossary: (String) -> Unit, onClick: () -> Unit) {
-    val border = when (card.rarity) {
-        Rarity.RARE -> GlowRare
-        Rarity.UNCOMMON -> GlowUncommon
+    // Brace-job keeps green when not selected (WO v0.1.19).
+    val border = when {
+        skillJobIsBrace(card.id) -> Moss
+        card.rarity == Rarity.RARE -> GlowRare
+        card.rarity == Rarity.UNCOMMON -> GlowUncommon
         else -> Bone.copy(0.3f)
     }
     Row(
@@ -141,8 +147,11 @@ private fun CardRow(card: Card, selected: Boolean, onGlossary: (String) -> Unit,
             .background(Panel, RoundedCornerShape(8.dp))
             .border(2.dp, if (selected) Accent else border, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(12.dp)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        SkillGlyphIcon(cardId = card.id, size = SkillGlyph.GLYPH_SIZE_DP.dp)
         Column(Modifier.weight(1f)) {
             Text("${card.title}  ·  ${card.rarity.displayName}  w${card.weight}", color = Bone, fontSize = 14.sp)
             GlossaryText(card.effect.description, onTerm = onGlossary, fontSizeSp = 12)

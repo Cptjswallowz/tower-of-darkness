@@ -45,6 +45,9 @@ import com.towerofdarkness.app.domain.combat.WakeArt
 import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.domain.combat.WakeStageFrame
 import com.towerofdarkness.app.ui.components.AshbrandIcon
+import com.towerofdarkness.app.ui.components.SkillGlyphIcon
+import com.towerofdarkness.app.ui.components.skillJobIsBrace
+import com.towerofdarkness.app.domain.glyphs.SkillGlyph
 import com.towerofdarkness.app.ui.components.EnemySilhouette
 import com.towerofdarkness.app.ui.components.GlossaryText
 import com.towerofdarkness.app.ui.components.HeroShowcase
@@ -301,23 +304,28 @@ fun CombatScreen(gc: GameController) {
 
 @Composable
 private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Modifier = Modifier) {
+    // Brace-job skills keep Moss/green outline (WO v0.1.19); current still Gold.
     val border = when {
         current -> Gold
         spent -> Steel.copy(0.3f)
+        skillJobIsBrace(card.id) -> Moss
         card.rarity == Rarity.RARE -> GlowRare
         card.rarity == Rarity.UNCOMMON -> GlowUncommon
         else -> Bone.copy(0.35f)
     }
+    val dimmed = spent && !current
     Column(
         modifier
-            .height(56.dp)
-            .alpha(if (spent && !current) 0.35f else 1f)
+            .height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp)
+            .alpha(if (dimmed) 0.35f else 1f)
             .background(Panel, RoundedCornerShape(6.dp))
             .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(6.dp))
-            .padding(4.dp),
+            .padding(horizontal = 2.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Glyph ABOVE name (24–32 dp); grey-out alphas whole tile including glyph.
+        SkillGlyphIcon(cardId = card.id, spent = false, size = SkillGlyph.GLYPH_SIZE_DP.dp)
         Text(card.title, color = Bone, fontSize = 9.sp, maxLines = 2)
         Text("w${card.weight}", color = Bone.copy(0.5f), fontSize = 8.sp)
     }

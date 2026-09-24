@@ -30,6 +30,8 @@ Rarity: `Common` | `Uncommon` | `Rare` (slice economy only; no craft).
 | 10 | Shadow Latch | Rare | MoveEffect | 2 | Deal **5** damage. Enemy’s next counter: **−2** damage (min 1). |
 | 11 | Relic Shard | Rare | Equipment | 2 | Heal **4** HP (cap 30). If HP was already full, gain **Brace 4** instead. |
 
+**v0.1.19 skill glyphs:** `glyphs-v0119.md` (Buriedbornes tile pictures; Ashbrand blade only).
+
 ## Default tutorial loadout (Skip / first confirm)
 
 Cards **1–5**: Hostflint, Cinder Step, Iron Mantle, Emberbrand, Dust Veil.

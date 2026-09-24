@@ -20,6 +20,8 @@ Mirror (non-canonical): `/workspace/tower-of-darkness/assets/` — prefer app pa
 
 ---
 
+**v0.1.19 skill glyphs:** `glyphs-v0119.md` / `art-audio/GLYPHS_v0.1.19.md` (placeholder vectors; Art drop-in).
+
 **v0.1.18 combat bodies:** `bodies-v0118.md` (You + Ash-Warden only).
 
 ## 1. Hero — modular layers + rarity glow
