@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.17-wakespeck)
+## Status (v0.1.18-bodies)
 
+- **v0.1.18-bodies:** Player soldier **circular still** (`portrait_you`) + Ash-Warden F2 boss still only (`portrait_ash_warden`). Trash / Seal Spinner / F1 Seal-Warden keep old placeholders. Hallway You=soldier / enemy=old circle. Wake art **frozen**. Still debug.
 - **v0.1.17-wakespeck:** Full Wake speck polish — **8–12 staggered gold/ash dots** along crescent + one **~8–12 px** impact burst on enemy at arrival (1-frame). Icon + crescent stroke **frozen** at 0.1.16. SPARK ember-only (no crescent/dots/burst). Same drawable names / holds / Wake math. All Wake art frozen after ship.
 - **v0.1.16-wakeicon:** Wake art polish + freeze — Ashbrand cracked ash-iron + gold fuller on dark square (~48 dp); FULL crescent **thicker gold stroke (2–3×)** + **8–12 ash dots**; impact = one spark burst (not second slash). SPARK ember-only. Same beats/holds/drawable names. No Wake math / SFX / frame-count change.
 - **v0.1.15-wakeart:** Ashbrand **icon** on loadout + combat weapon slot; FULL Wake **charge → crack → crescent** (wake_vfx_charge/slash/impact) on portrait stage with existing gold log + WAKE float; SPARK = tiny ember on icon only (no crescent). 2x halves frame holds. Placeholder bodies. No Wake math change.
@@ -39,8 +40,8 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-[Release v0.1.17-wakespeck](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.17-wakespeck)
-Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.17-wakespeck/tower-of-darkness-debug.apk)
+[Release v0.1.18-bodies](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.18-bodies)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.18-bodies/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -50,4 +51,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/qa-gate-v0117-wakespeck-2026-09-23.md`, `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
+Docs: `docs/qa-gate-v0118-bodies-2026-09-23.md`, `docs/bodies-v0118.md`, `docs/art-audio/BODIES_v0.1.18.md`, `docs/qa-gate-v0117-wakespeck-2026-09-23.md`, `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
