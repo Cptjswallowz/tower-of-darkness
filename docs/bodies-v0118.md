@@ -60,3 +60,7 @@ Do not invent wardrobe slots, pose sets, or hit-flash VFX.
 - [x] Trash / Seal Spinner / F1 Seal-Warden stay placeholders
 - [x] No wardrobe / poses / hit-flash; shrink sprite on clip, don’t move pips
 - [x] Frozen systems untouched
+
+---
+
+**Superseded (art source):** v0.1.21-portraits — Elliott Grok stills for You, Ash-Warden, and **Seal-Warden** (F1). See `portraits-v0121.md`. Trash Wretch/Spinner still placeholders. Identity reads above remain valid.

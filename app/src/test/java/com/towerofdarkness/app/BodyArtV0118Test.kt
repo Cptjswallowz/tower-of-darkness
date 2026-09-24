@@ -36,10 +36,11 @@ class BodyArtV0118Test {
     }
 
     @Test
-    fun f1SealWarden_dragon_staysPlaceholder() {
-        assertNull(BodyArt.enemyPortraitDrawableName(EnemyKind.DRAGON))
-        assertTrue(BodyArt.usesPlaceholderSilhouette(EnemyKind.DRAGON))
-        assertEquals("enemies/enemy_dragon.png", EnemyKind.DRAGON.asset)
+    fun f1SealWarden_dragon_usesSealPortrait_v0121() {
+        // Superseded by v0.1.21-portraits — Seal-Warden still replaces orange blob.
+        assertEquals("portrait_seal_warden", BodyArt.enemyPortraitDrawableName(EnemyKind.DRAGON))
+        assertFalse(BodyArt.usesPlaceholderSilhouette(EnemyKind.DRAGON))
+        assertEquals("portrait_seal_warden", EnemyKind.DRAGON.asset)
         assertEquals("Seal-Warden", EnemyKind.DRAGON.displayName)
     }
 

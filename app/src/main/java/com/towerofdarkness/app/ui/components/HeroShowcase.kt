@@ -1,5 +1,6 @@
 package com.towerofdarkness.app.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -35,8 +36,8 @@ import com.towerofdarkness.app.ui.theme.GlowUncommon
 import com.towerofdarkness.app.ui.theme.Steel
 
 /**
- * Player portrait — v0.1.18 circular soldier still ([R.drawable.portrait_you]).
- * v0.1.20: Art-baked volume PNG; volumeChrome no-op (no double shadow; no pip shift).
+ * Player portrait — v0.1.21 circular soldier still ([R.drawable.portrait_you]).
+ * Title circle + every combat You slot. Volume chrome no-op (Art bake; no pip shift).
  * Sits under frames / Wake crescent / pips; shrink sprite on clip, don't move chrome.
  * Optional rarity glow rings behind the still (no wardrobe / gear overlays).
  */
@@ -86,9 +87,19 @@ fun HeroShowcase(rarity: Rarity = Rarity.UNCOMMON, modifier: Modifier = Modifier
     }
 }
 
+@DrawableRes
+private fun enemyPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortraitDrawableName(kind)) {
+    BodyArt.ASH_WARDEN_DRAWABLE -> R.drawable.portrait_ash_warden
+    BodyArt.SEAL_WARDEN_DRAWABLE -> R.drawable.portrait_seal_warden
+    else -> null
+}
+
 /**
- * Enemy portrait slot. Ash-Warden (F2) uses [R.drawable.portrait_ash_warden] + volume;
- * F1 Seal-Warden / trash / Seal Spinner keep Canvas orange/steel placeholders (no volume).
+ * Enemy portrait slot.
+ * Ash-Warden (F2) → [R.drawable.portrait_ash_warden] (+ volume bake).
+ * Seal-Warden / [EnemyKind.DRAGON] (F1) → [R.drawable.portrait_seal_warden] (no volume).
+ * Trash / Wretch / Seal Spinner keep Canvas placeholders.
+ * Same slot sizes; shrink Image on clip — do not move pips / HP / Wake chrome.
  */
 @Composable
 fun EnemySilhouette(
@@ -97,13 +108,14 @@ fun EnemySilhouette(
     modifier: Modifier = Modifier
 ) {
     val bodyName = BodyArt.enemyPortraitDrawableName(kind)
+    val portraitRes = enemyPortraitResId(kind)
     val slotDp = when {
         bodyName != null -> BodyArt.BOSS_SLOT_DP
         isBoss -> BodyArt.BOSS_SLOT_DP
         else -> BodyArt.TRASH_SLOT_DP
     }.dp
     Box(modifier.then(Modifier.size(slotDp)), contentAlignment = Alignment.Center) {
-        if (bodyName != null && VolumeArt.appliesToEnemy(kind)) {
+        if (portraitRes != null && VolumeArt.appliesToEnemy(kind)) {
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Box(
                 Modifier
@@ -111,7 +123,7 @@ fun EnemySilhouette(
                     .volumeChrome(circular = true)
             ) {
                 Image(
-                    painter = painterResource(R.drawable.portrait_ash_warden),
+                    painter = painterResource(portraitRes),
                     contentDescription = kind.displayName,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -119,8 +131,8 @@ fun EnemySilhouette(
                         .clip(CircleShape)
                 )
             }
-        } else if (bodyName != null) {
-            // Asset-backed but no volume (should not happen for current map).
+        } else if (portraitRes != null) {
+            // Asset-backed boss without volume (Seal-Warden F1).
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
@@ -131,7 +143,7 @@ fun EnemySilhouette(
                 )
             }
             Image(
-                painter = painterResource(R.drawable.portrait_ash_warden),
+                painter = painterResource(portraitRes),
                 contentDescription = kind.displayName,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -139,7 +151,7 @@ fun EnemySilhouette(
                     .clip(CircleShape)
             )
         } else {
-            // Seal-Warden / trash / Seal Spinner — Canvas placeholders, no volume.
+            // Trash / Wretch / Seal Spinner — Canvas placeholders, no volume.
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 val body = if (isBoss) Ember else Steel

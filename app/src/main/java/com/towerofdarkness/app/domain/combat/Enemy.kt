@@ -12,7 +12,7 @@ enum class EnemyKind(
     ORC("Ruin Brute", "enemies/enemy_orc.png", 7, 9),
     TROLL("Stone Hunger", "enemies/enemy_troll.png", 7, 9),
     SPIDER("Seal Spinner", "enemies/enemy_spider.png", 7, 9),
-    DRAGON("Seal-Warden", "enemies/enemy_dragon.png", 6, 9), // Floor 1 boss; counters via Balance.BOSS_COUNTER_*
+    DRAGON("Seal-Warden", "portrait_seal_warden", 6, 9), // Floor 1 boss; v0.1.21 Seal-Warden still
     ASH_WARDEN("Ash-Warden", "portrait_ash_warden", 6, 9) // Floor 2 boss; v0.1.18 body still
 }
 
