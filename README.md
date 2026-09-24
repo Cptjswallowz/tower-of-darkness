@@ -37,10 +37,10 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 ## Debug APK
 
-Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble). **v0.1.17-wakespeck is tip-only (no tag).**
+Built locally as `tower-of-darkness-debug.apk` (see repo root after assemble).
 
-Prior tagged: [Release v0.1.16-wakeicon](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.16-wakeicon)
-Direct (0.1.16): [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.16-wakeicon/tower-of-darkness-debug.apk)
+[Release v0.1.17-wakespeck](https://github.com/Cptjswallowz/tower-of-darkness/releases/tag/v0.1.17-wakespeck)
+Direct: [tower-of-darkness-debug.apk](https://github.com/Cptjswallowz/tower-of-darkness/releases/download/v0.1.17-wakespeck/tower-of-darkness-debug.apk)
 
 ## Build
 
@@ -50,4 +50,4 @@ export ANDROID_HOME=/home/box/deps/android-sdk
 ./gradlew :app:assembleDebug
 ```
 
-Docs: `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
+Docs: `docs/qa-gate-v0117-wakespeck-2026-09-23.md`, `docs/wake-speck-v0117.md`, `docs/art-audio/WAKE_ART_v0.1.17.md`, `docs/wake-icon-v0116.md`, `docs/art-audio/WAKE_ICON_v0.1.16.md`, `docs/qa-gate-v0116-wakeicon-2026-09-23.md`, `docs/wake-art-v0115.md`, `docs/art-audio/WAKE_ART_v0.1.15.md`, `docs/qa-gate-v0115-wakeart-2026-09-23.md`, `docs/brace-sync-v0114.md`, `docs/qa-gate-v0114-bracesync-2026-09-23.md`, `docs/status-pips-v0113.md`, `docs/midrun-save-v0112.md`, `docs/save-v0112.md`, `docs/combat-2x-v0111.md`, `docs/bossrest-v0110.md`, `docs/floor2-v019.md`, `docs/wake-v014.md`, `docs/qa-gate-v015-path-2026-09-21.md`, `docs/qa-gate-v016-swaplock-2026-09-21.md`, `docs/qa-gate-v017-routefight-2026-09-22.md`, `docs/qa-gate-v018-shopwallet-2026-09-22.md`, `docs/qa-gate-v019-floor2-2026-09-22.md`, `docs/qa-gate-v0110-bossrest-2026-09-22.md`, `docs/qa-gate-v0112-save-2026-09-23.md`, `docs/qa-gate-v0113-statuspips-2026-09-23.md`.
