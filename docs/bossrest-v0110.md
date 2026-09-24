@@ -91,3 +91,7 @@ Scout (Rest or Free) still reveals **type only** — no second rumor line (`rumo
 ## Open (not in this WO)
 
 - Exact Free Scout charge count if Hub grants more than +1/climb later — Meta ladder owns; design assumes Keen Eye grants the climb’s charge pool as implemented.
+
+---
+
+**Related:** v0.1.24-rumorcharge — two wallets + tap priority + persist. See `rumorcharge-v0124.md`.

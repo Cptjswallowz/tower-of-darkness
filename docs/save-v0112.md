@@ -51,3 +51,7 @@ Clear the mid-run slot on Run Summary → Hub (existing meta sketch). Meta (`met
 ## Meta schema
 
 Full fields / F1→F2 alignment: [`midrun-save-v0112.md`](midrun-save-v0112.md).
+
+---
+
+**Related:** v0.1.24-rumorcharge — persist both Scout + rumor re-roll counts. See `rumorcharge-v0124.md`.

@@ -24,6 +24,7 @@ import com.towerofdarkness.app.domain.combat.CombatState
 import com.towerofdarkness.app.domain.combat.Enemy
 import com.towerofdarkness.app.domain.path.NodeType
 import com.towerofdarkness.app.domain.path.PathGenerator
+import com.towerofdarkness.app.domain.path.RumorPools
 import com.towerofdarkness.app.domain.path.TowerPath
 import com.towerofdarkness.app.domain.sound.AssetSoundBus
 import com.towerofdarkness.app.domain.sound.SoundBus
@@ -537,6 +538,78 @@ class GameController(app: Application) : AndroidViewModel(app) {
             return path.withReveal(nodeId, typeOnly = true) to (charges - 1)
         }
 
+        /**
+         * Rumor re-roll pure apply: replace rumor text on one still-fogged node, spend 1.
+         * Separate wallet from Free Scout — does not reveal type. Returns null if charges=0
+         * or node not eligible (revealed / scouted / START / BOSS).
+         */
+        fun applyRumorReroll(
+            path: TowerPath,
+            nodeId: String,
+            charges: Int,
+            newRumor: String
+        ): Pair<TowerPath, Int>? {
+            if (charges <= 0) return null
+            val node = path.nodes.find { it.id == nodeId } ?: return null
+            if (node.revealed || node.scoutedTypeOnly) return null
+            if (node.type == NodeType.START || node.type == NodeType.BOSS) return null
+            val updated = path.copy(
+                nodes = path.nodes.map {
+                    if (it.id == nodeId) it.copy(rumor = newRumor) else it
+                }
+            )
+            return updated to (charges - 1)
+        }
+
+        enum class FoggedTapKind { SCOUT, RUMOR }
+
+        data class FoggedTapResult(
+            val path: TowerPath,
+            val freeScoutCharges: Int,
+            val rumorRerolls: Int,
+            val kind: FoggedTapKind
+        )
+
+        /**
+         * Single fogged-node tap dispatcher: Scout-first if scout charges > 0 and eligible,
+         * else rumor re-roll if rumor charges > 0 and eligible, else null (no-op).
+         * Never decrements the wrong wallet.
+         */
+        fun dispatchFoggedNodeTap(
+            path: TowerPath,
+            nodeId: String,
+            freeScoutCharges: Int,
+            rumorRerolls: Int,
+            newRumor: String
+        ): FoggedTapResult? {
+            if (freeScoutCharges > 0) {
+                val scouted = applyFreeScout(path, nodeId, freeScoutCharges)
+                if (scouted != null) {
+                    return FoggedTapResult(
+                        path = scouted.first,
+                        freeScoutCharges = scouted.second,
+                        rumorRerolls = rumorRerolls,
+                        kind = FoggedTapKind.SCOUT
+                    )
+                }
+            }
+            if (rumorRerolls > 0) {
+                val rerolled = applyRumorReroll(path, nodeId, rumorRerolls, newRumor)
+                if (rerolled != null) {
+                    return FoggedTapResult(
+                        path = rerolled.first,
+                        freeScoutCharges = freeScoutCharges,
+                        rumorRerolls = rerolled.second,
+                        kind = FoggedTapKind.RUMOR
+                    )
+                }
+            }
+            return null
+        }
+
+        /** UI copy for rumor wallet (always reportable, including 0). */
+        fun rumorRerollsLabel(charges: Int): String = "Rumor re-rolls left: $charges"
+
         fun isHealOfferKind(kind: String): Boolean =
             kind == "heal_small" || kind == "heal_mid" || kind == "heal_full"
 
@@ -829,7 +902,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     /**
      * Keen Eye Free Scout — tap a fogged (?) node: reveal type, spend 1 charge, do not enter.
-     * Clear Fog rumor re-roll is separate and must not call this.
+     * Clear Fog rumor re-roll is a separate wallet and must not call this.
      */
     fun useFreeScoutOn(nodeId: String): Boolean {
         val p = path ?: return false
@@ -861,17 +934,35 @@ class GameController(app: Application) : AndroidViewModel(app) {
         path = p.withReveal(target.id, typeOnly = true)
     }
 
-    /** rumor_clarity: re-roll rumor text on one fogged node (once per climb). */
+    /**
+     * rumor_clarity: re-roll rumor text on one fogged node (separate wallet from Free Scout).
+     * Spends rumorRerolls only; does not reveal type.
+     */
     fun rerollRumor(nodeId: String): Boolean {
-        if (rumorRerolls <= 0) return false
         val p = path ?: return false
         val node = p.nodes.find { it.id == nodeId } ?: return false
-        if (node.revealed || node.type == com.towerofdarkness.app.domain.path.NodeType.START) return false
-        val newRumor = com.towerofdarkness.app.domain.path.RumorPools.forType(node.type, rng)
-        path = p.copy(nodes = p.nodes.map {
-            if (it.id == nodeId) it.copy(rumor = newRumor) else it
-        })
-        rumorRerolls--
+        val newRumor = RumorPools.forType(node.type, rng)
+        val result = applyRumorReroll(p, nodeId, rumorRerolls, newRumor) ?: return false
+        path = result.first
+        rumorRerolls = result.second
+        sound.play("ui")
+        return true
+    }
+
+    /**
+     * Single fogged-? tap path: Scout-first if freeScoutCharges > 0, else rumor re-roll
+     * if rumorRerolls > 0, else no-op (no state change). Wallets never shared.
+     */
+    fun onFoggedNodeTap(nodeId: String): Boolean {
+        val p = path ?: return false
+        val node = p.nodes.find { it.id == nodeId } ?: return false
+        val newRumor = RumorPools.forType(node.type, rng)
+        val result = dispatchFoggedNodeTap(
+            p, nodeId, freeScoutCharges, rumorRerolls, newRumor
+        ) ?: return false
+        path = result.path
+        freeScoutCharges = result.freeScoutCharges
+        rumorRerolls = result.rumorRerolls
         sound.play("ui")
         return true
     }

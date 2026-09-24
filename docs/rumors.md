@@ -67,6 +67,10 @@ On the Path screen, fogged (unrevealed) nodes show a **rumor** instead of the tr
 
 - Scout reveals **type only** (no second rumor line).
 
+## Charge wallets (v0.1.24)
+
+See `rumorcharge-v0124.md`: rumor re-roll charges and Free Scout charges are **two separate wallets**. Re-roll spends rumor charges and replaces rumor text on a still-fogged node; does not reveal type.
+
 ## Still open
 
-1. One rumor per node for the whole run vs re-roll if player leaves and returns while still fogged?
+1. Default rumor string sticky for the node until re-roll — confirm no auto-rotate on leave/return without spending a charge (assumed: sticky until re-roll or reveal).

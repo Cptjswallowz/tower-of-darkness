@@ -58,7 +58,7 @@ fun PathScreen(gc: GameController) {
                 )
             }
         }
-        if (gc.freeScoutCharges > 0) {
+        if (gc.hasPerk("scout_charge") && gc.freeScoutCharges > 0) {
             Spacer(Modifier.height(6.dp))
             Text(
                 "Free Scout · charges ${gc.freeScoutCharges} (tap a fogged ? node)",
@@ -66,9 +66,15 @@ fun PathScreen(gc: GameController) {
                 fontSize = 12.sp
             )
         }
-        if (gc.rumorRerolls > 0) {
+        // Always show when Clear Fog unlocked so counter can report 0 (never stuck at "1")
+        if (gc.hasPerk("rumor_clarity")) {
             Spacer(Modifier.height(6.dp))
-            Text("Rumor re-rolls left: ${gc.rumorRerolls} (tap a fogged choice below)", color = Bone.copy(0.55f), fontSize = 11.sp)
+            val rumorHint = if (gc.rumorRerolls > 0) " (tap a fogged ? node)" else ""
+            Text(
+                "${GameController.rumorRerollsLabel(gc.rumorRerolls)}$rumorHint",
+                color = Bone.copy(0.55f),
+                fontSize = 11.sp
+            )
         }
         Spacer(Modifier.height(12.dp))
         if (path == null) {
@@ -89,12 +95,14 @@ fun PathScreen(gc: GameController) {
                             node = node,
                             currentId = path.currentId,
                             choiceIds = path.choices().map { it.id }.toSet(),
-                            canReroll = gc.rumorRerolls > 0 && !node.revealed,
-                            canFreeScout = gc.freeScoutCharges > 0 &&
+                            canReroll = gc.rumorRerolls > 0 &&
+                                !node.revealed && !node.scoutedTypeOnly &&
+                                node.type != NodeType.START && node.type != NodeType.BOSS,
+                            canFoggedAct = (gc.freeScoutCharges > 0 || gc.rumorRerolls > 0) &&
                                 !node.revealed && !node.scoutedTypeOnly &&
                                 node.type != NodeType.START && node.type != NodeType.BOSS,
                             onClick = { gc.selectPathNode(node.id) },
-                            onFreeScout = { gc.useFreeScoutOn(node.id) },
+                            onFoggedTap = { gc.onFoggedNodeTap(node.id) },
                             onReroll = { gc.rerollRumor(node.id) }
                         )
                     }
@@ -110,9 +118,9 @@ private fun PathNodeChip(
     currentId: String,
     choiceIds: Set<String>,
     canReroll: Boolean = false,
-    canFreeScout: Boolean = false,
+    canFoggedAct: Boolean = false,
     onClick: () -> Unit,
-    onFreeScout: () -> Unit = {},
+    onFoggedTap: () -> Unit = {},
     onReroll: () -> Unit = {}
 ) {
     val isCurrent = node.id == currentId
@@ -126,7 +134,7 @@ private fun PathNodeChip(
     val color = when {
         isCurrent -> Gold
         selectable -> Accent
-        canFreeScout -> Gold.copy(alpha = 0.85f)
+        canFoggedAct -> Gold.copy(alpha = 0.85f)
         node.cleared -> Moss
         else -> Steel
     }
@@ -136,10 +144,11 @@ private fun PathNodeChip(
                 .size(52.dp)
                 .background(Panel, CircleShape)
                 .border(2.dp, color, CircleShape)
-                .clickable(enabled = selectable || canFreeScout) {
+                // Selectable choices still enter; otherwise Scout-first / rumor dispatcher
+                .clickable(enabled = selectable || canFoggedAct) {
                     when {
                         selectable -> onClick()
-                        canFreeScout -> onFreeScout()
+                        canFoggedAct -> onFoggedTap()
                     }
                 },
             contentAlignment = Alignment.Center
@@ -161,6 +170,7 @@ private fun PathNodeChip(
                 .padding(top = 2.dp)
                 .fillMaxWidth(0.28f)
         )
+        // Explicit rumor affordance on selectable fogged choices (rumor wallet only)
         if (canReroll && selectable) {
             Text(
                 "↻ rumor",
