@@ -1,6 +1,7 @@
 # Wake art polish — v0.1.16-wakeicon (WO Elliott)
 
 Status: **design lock**, then **Wake art freeze** unless Elliott reopens.  
+**v0.1.17 speck + full freeze:** `wake-speck-v0117.md`.  
 Presentation polish on `wake-art-v0115.md`. **No** Wake math / 2x hold retunes.
 
 **Scope:** Tower of Darkness is greenfield. Other projects are out of scope.

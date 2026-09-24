@@ -14,8 +14,8 @@ import com.towerofdarkness.app.domain.combat.WakeStageFrame
 /**
  * FULL Wake crescent overlay on the combat portrait stage.
  * Frames: charge → slash → impact (L→R crescent language baked in art).
- * v0.1.16 polish: thicker gold stroke + ash dots on slash; impact = spark burst
- * (not a second slash). Same drawable names for Art PNG drop-in.
+ * v0.1.17 speck: staggered gold/ash dots on charge/slash; impact = one ~8–12px
+ * burst on enemy (1-frame). Stroke/icon frozen. Same drawable names for Art drop-in.
  * SPARK / common skills: do not call with a non-NONE frame.
  */
 @Composable

@@ -3,10 +3,11 @@ package com.towerofdarkness.app.domain.combat
 import com.towerofdarkness.app.domain.Balance
 
 /**
- * Wake presentation art (v0.1.16-wakeicon polish on v0.1.15) — pure mapping; no Wake math.
- * Drawables: ashbrand_icon, ashbrand_spark, wake_vfx_{charge,slash,impact} (Art drop-in names).
- * Aligns with docs/wake-icon-v0116.md + docs/art-audio/WAKE_ICON_v0.1.16.md.
- * After this polish: Wake art frozen unless Elliott reopens.
+ * Wake presentation art (v0.1.17-wakespeck on v0.1.16) — pure mapping; no Wake math.
+ * Drawables: ashbrand_icon (frozen), ashbrand_spark (frozen), wake_vfx_{charge,slash,impact}
+ * (Art drop-in: staggered gold/ash dots + one ~8–12px impact burst). Same R.drawable names.
+ * Aligns with docs/wake-speck-v0117.md + docs/art-audio/WAKE_ART_v0.1.17.md.
+ * After this pass: all Wake art frozen unless Elliott reopens.
  */
 enum class WakeIconPhase {
     /** Idle Ashbrand plate. */
@@ -50,14 +51,24 @@ object WakeArt {
     /** Same slot size as today's weapon plate chrome (~48 dp readable). */
     const val ICON_SLOT_DP = 48
 
-    /** Polish lock: slash stroke ~2–3× thin stub; ash dots on arc. */
+    /** Stroke style frozen at v0.1.16; no restyle this pass. */
     const val STROKE_THICKNESS_MULT_MIN = 2
     const val STROKE_THICKNESS_MULT_MAX = 3
+    /** Full Wake only: 8–12 staggered gold/ash dots along crescent (not a second arc). */
     const val ASH_DOTS_MIN = 8
     const val ASH_DOTS_MAX = 12
+    const val SPECK_DOTS_STAGGERED = true
 
-    /** Impact is one small spark burst — not a second slash frame. */
+    /** Impact is one ~8–12px spark burst on enemy at arrival — 1-frame, not a second slash. */
     const val IMPACT_IS_SPARK_BURST = true
+    const val IMPACT_BURST_PX_MIN = 8
+    const val IMPACT_BURST_PX_MAX = 12
+
+    /** SPARK: ember on icon only — no crescent / dots / burst. */
+    const val SPARK_HAS_CRESCENT_DOTS_OR_BURST = false
+
+    /** After v0.1.17 ship: icon, stroke, dots, burst frozen. */
+    const val WAKE_ART_FULLY_FROZEN = true
 
     fun stageSequence(): List<WakeStageStep> = listOf(
         WakeStageStep(WakeStageFrame.CHARGE, FRAME_CHARGE_MS),
