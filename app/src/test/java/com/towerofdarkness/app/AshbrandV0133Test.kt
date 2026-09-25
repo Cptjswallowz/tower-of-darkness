@@ -11,8 +11,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * v0.1.33-ashbrand — blade icon crop + tap glossary; Wake math frozen.
- * See docs/ashbrand-v0133.md.
+ * v0.1.33-ashbrand — tap glossary + Wake math frozen (still asserted).
+ * v0.1.34-blade replaces the rejected rembg crop with the portrait still
+ * under the same R.drawable.ashbrand_icon name — see docs/blade-v0134.md.
  */
 class AshbrandV0133Test {
 

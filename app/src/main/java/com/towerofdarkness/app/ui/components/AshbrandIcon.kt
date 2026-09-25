@@ -24,7 +24,10 @@ import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.ui.theme.Gold
 
 /**
- * Ashbrand slot icon — blade-only crop on transparent ([R.drawable.ashbrand_icon]; v0.1.33).
+ * Ashbrand slot icon — painted portrait still in the weapon tile
+ * ([R.drawable.ashbrand_icon]; v0.1.34-blade). Engraved fuller + diamond pommel
+ * visible; charcoal bg / ember sparks kept. **No rembg / knockout redraw.**
+ * Same `R.drawable.ashbrand_icon` name (JPEG still). ContentScale.Fit.
  * v0.1.20: Art-baked volume on blade icon; Compose chrome no-op (not Wake VFX / spark).
  * Same size on loadout weapon plate and combat weapon row.
  * SPARK: [R.drawable.ashbrand_spark] ember overlay only (no crescent).
@@ -51,6 +54,7 @@ fun AshbrandIcon(
         )
     )
     val seamPhase = phase == WakeIconPhase.CHARGE || phase == WakeIconPhase.CRACK
+    // circular=false; volumeChrome is a no-op (Art bake SoT) — do not invent glyph-plate chrome.
     val chrome = if (VolumeArt.appliesToAshbrandIcon()) Modifier.volumeChrome(circular = false) else Modifier
     val tap = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     Box(modifier.size(slotSize).then(chrome).then(tap), contentAlignment = Alignment.Center) {

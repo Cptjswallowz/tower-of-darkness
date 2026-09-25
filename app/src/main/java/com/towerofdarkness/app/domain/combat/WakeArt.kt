@@ -4,7 +4,7 @@ import com.towerofdarkness.app.domain.Balance
 
 /**
  * Wake presentation art (v0.1.17-wakespeck on v0.1.16) — pure mapping; no Wake math.
- * Drawables: ashbrand_icon (frozen), ashbrand_spark (frozen), wake_vfx_{charge,slash,impact}
+ * Drawables: ashbrand_icon (v0.1.34 portrait still; same name), ashbrand_spark (frozen), wake_vfx_{charge,slash,impact}
  * (Art drop-in: staggered gold/ash dots + one ~8–12px impact burst). Same R.drawable names.
  * Aligns with docs/wake-speck-v0117.md + docs/art-audio/WAKE_ART_v0.1.17.md.
  * After this pass: all Wake art frozen unless Elliott reopens.
