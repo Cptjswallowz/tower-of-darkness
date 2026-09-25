@@ -75,3 +75,7 @@ Persist **both** remaining counts (`free_scout_charges`, `rumor_rerolls`) — al
 ---
 
 **Related:** v0.1.27-hub — Hub **Extra rumor** (6) / **Scout** (8) unlock grants; wallets stay separate. See `hub-v0127.md`.
+
+---
+
+**Related:** v0.1.28-hubkeep — baseline 1 rumor re-roll/floor always; Hub Extra rumor stacks. See `hubkeep-v0128.md`.

@@ -66,16 +66,14 @@ fun PathScreen(gc: GameController) {
                 fontSize = 12.sp
             )
         }
-        // Always show when Clear Fog unlocked so counter can report 0 (never stuck at "1")
-        if (gc.hasPerk("rumor_clarity")) {
-            Spacer(Modifier.height(6.dp))
-            val rumorHint = if (gc.rumorRerolls > 0) " (tap a fogged ? node)" else ""
-            Text(
-                "${GameController.rumorRerollsLabel(gc.rumorRerolls)}$rumorHint",
-                color = Bone.copy(0.55f),
-                fontSize = 11.sp
-            )
-        }
+        // v0.1.28-hubkeep: baseline rumor always on — always show counter (incl. 0)
+        Spacer(Modifier.height(6.dp))
+        val rumorHint = if (gc.rumorRerolls > 0) " (tap a fogged ? node)" else ""
+        Text(
+            "${GameController.rumorRerollsLabel(gc.rumorRerolls)}$rumorHint",
+            color = Bone.copy(0.55f),
+            fontSize = 11.sp
+        )
         Spacer(Modifier.height(12.dp))
         if (path == null) {
             Text("No path.", color = Bone)

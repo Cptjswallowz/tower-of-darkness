@@ -1,9 +1,9 @@
 package com.towerofdarkness.app.domain.hub
 
 /**
- * Hub remnant shop — v0.1.27-hub (WO LOCKED).
+ * Hub remnant shop — v0.1.27-hub offers + v0.1.28-hubkeep grant/migration.
  * Four fixed offers; persist unlock ids in meta unlocked set + remnants_bank.
- * See docs/hub-v0127.md.
+ * See docs/hub-v0127.md and docs/hubkeep-v0128.md.
  */
 data class HubOffer(
     val id: String,
@@ -24,6 +24,12 @@ object HubOffers {
 
     const val CARD_CINDER_VOW = "cinder_vow"
     const val CARD_GRAVE_NAIL = "grave_nail"
+
+    /** Legacy Clear Fog perk id (pre-Hub ladder). */
+    const val LEGACY_RUMOR_CLARITY = "rumor_clarity"
+
+    /** Always-on free rumor re-rolls per floor (hubkeep). Never charged. */
+    const val BASELINE_RUMOR_PER_FLOOR = 1
 
     val all: List<HubOffer> = listOf(
         HubOffer(ID_SCOUT, "Scout", "+1 Free Scout / climb", 8),
@@ -65,27 +71,40 @@ object HubOffers {
         return HubMetaSnapshot(bank - offer.cost, unlocks + offerId)
     }
 
-    /** Climb-start Free Scout charges from owned Hub Scout. */
+    /** Climb-start Free Scout charges from owned Hub Scout (no free baseline). */
     fun freeScoutChargesAtClimbStart(unlocks: Set<String>): Int =
         if (ID_SCOUT in unlocks) 1 else 0
 
-    /**
-     * Rumor re-rolls granted at a floor start.
-     * [extra_rumor] = +1 per floor (F1 + FloorBreak→F2).
-     * Legacy [rumor_clarity] still grants +1 at climb start only (caller skips on F2).
-     */
+    /** Hub Extra rumor stack amount (+1 / floor when owned). */
     fun extraRumorPerFloor(unlocks: Set<String>): Int =
         if (ID_EXTRA_RUMOR in unlocks) 1 else 0
 
-    fun legacyRumorClarityClimbGrant(unlocks: Set<String>): Int =
-        if ("rumor_clarity" in unlocks) 1 else 0
+    /**
+     * Rumor re-rolls at a floor start (F1 climb start and FloorBreak→F2 grant amount).
+     * Baseline 1 always + Extra rumor stack. See hubkeep-v0128.md.
+     */
+    fun rumorRerollsAtFloorStart(unlocks: Set<String>): Int =
+        BASELINE_RUMOR_PER_FLOOR + extraRumorPerFloor(unlocks)
 
+    /** Climb / F1 start — same as floor start (baseline + Extra). */
     fun rumorRerollsAtClimbStart(unlocks: Set<String>): Int =
-        extraRumorPerFloor(unlocks) + legacyRumorClarityClimbGrant(unlocks)
+        rumorRerollsAtFloorStart(unlocks)
 
-    /** FloorBreak → F2: only Extra rumor re-grants (+1). */
+    /** FloorBreak → F2: add (baseline + Extra) to remaining wallet. */
     fun rumorRerollsOnFloorAdvance(unlocks: Set<String>): Int =
-        extraRumorPerFloor(unlocks)
+        rumorRerollsAtFloorStart(unlocks)
+
+    /**
+     * One-shot unlock migration (hubkeep). Bank unchanged by caller.
+     * Maps legacy / card ids → Hub OWNED rows; never removes other unlocks.
+     */
+    fun migrateUnlocksForHubkeep(unlocks: Set<String>): Set<String> {
+        val out = unlocks.toMutableSet()
+        if (LEGACY_RUMOR_CLARITY in out) out += ID_EXTRA_RUMOR
+        if (CARD_CINDER_VOW in out) out += ID_HOST_OF_EMBERS
+        if (CARD_GRAVE_NAIL in out) out += ID_IRON_LESSON
+        return out
+    }
 
     fun skillUnlocked(cardId: String, unlocks: Set<String>): Boolean = when (cardId) {
         CARD_CINDER_VOW -> ID_HOST_OF_EMBERS in unlocks || CARD_CINDER_VOW in unlocks

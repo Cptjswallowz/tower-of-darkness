@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.hub.HubOffers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -21,6 +22,8 @@ class MetaStore(private val context: Context) {
     private val KEY_META_HP = intPreferencesKey("meta_hp_bonus")
     /** One mid-run slot JSON (`midrun_v0112`). Separate from meta bank keys. */
     private val KEY_MIDRUN = stringPreferencesKey("midrun_v0112")
+    /** One-shot hubkeep v0.1.28 migration flag — never wipe bank/unlocks. */
+    private val KEY_HUBKEEP_V0128 = booleanPreferencesKey("hubkeep_v0128_migrated")
 
     val tutorialSeen: Flow<Boolean> = context.dataStore.data.map { it[KEY_TUTORIAL] ?: false }
     val remnantsBank: Flow<Int> = context.dataStore.data.map { it[KEY_REMNANTS] ?: 0 }
@@ -63,6 +66,21 @@ class MetaStore(private val context: Context) {
 
     suspend fun setMetaHpBonus(bonus: Int) {
         context.dataStore.edit { it[KEY_META_HP] = bonus }
+    }
+
+    /**
+     * v0.1.28-hubkeep: one-shot migration on first launch of this build.
+     * Keeps remnants_bank; maps legacy/card flags → Hub OWNED rows; additive only.
+     * Idempotent via [KEY_HUBKEEP_V0128].
+     */
+    suspend fun ensureHubkeepV0128Migrated() {
+        context.dataStore.edit { prefs ->
+            if (prefs[KEY_HUBKEEP_V0128] == true) return@edit
+            val cur = prefs[KEY_UNLOCKED] ?: CardCatalog.starterUnlockedIds()
+            prefs[KEY_UNLOCKED] = HubOffers.migrateUnlocksForHubkeep(cur)
+            // remnants_bank intentionally untouched
+            prefs[KEY_HUBKEEP_V0128] = true
+        }
     }
 
     suspend fun readMidRunSlot(): MidRunSlot? {

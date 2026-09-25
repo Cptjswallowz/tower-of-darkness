@@ -160,6 +160,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
+            // v0.1.28-hubkeep: map legacy flags → Hub OWNED before UI / climb grants
+            meta.ensureHubkeepV0128Migrated()
             tutorialSeen = meta.tutorialSeen.first()
             remnantsBank = meta.remnantsBank.first()
             unlockedCards = meta.unlockedCards.first()
@@ -248,7 +250,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         weightHitchCardId = null
         unlocksThisRun = emptySet()
         shopVisits = emptyList()
-        // v0.1.27-hub: Scout +1 / climb; Extra rumor +1 / floor (+ legacy rumor_clarity climb)
+        // v0.1.28-hubkeep: Scout if owned; rumor = baseline 1/floor + Extra stack
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
         summary = null
@@ -867,7 +869,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         treasureSwapGainId = null
         shopOffers = emptyList()
         summary = null
-        // v0.1.27: Extra rumor grants +1 rumor re-roll per floor (FloorBreak → F2)
+        // v0.1.28-hubkeep: FloorBreak → F2 adds baseline 1 + Extra stack
         rumorRerolls += HubOffers.rumorRerollsOnFloorAdvance(unlockedCards)
         nav = NavState.Path
         // Dual write #2: stair Continue → F2 path, clear pending

@@ -51,14 +51,19 @@ class HubV0127Test {
     }
 
     @Test
-    fun extraRumor_grantsPerFloor_notClimbOnly() {
+    fun extraRumor_stacksOnBaseline_perFloor() {
+        // v0.1.28-hubkeep: baseline 1 + Extra → 2; bare unlocks → baseline 1
+        assertEquals(1, HubOffers.rumorRerollsAtClimbStart(emptySet()))
+        assertEquals(1, HubOffers.rumorRerollsOnFloorAdvance(emptySet()))
         val owned = setOf(HubOffers.ID_EXTRA_RUMOR)
-        assertEquals(1, HubOffers.rumorRerollsAtClimbStart(owned))
-        assertEquals(1, HubOffers.rumorRerollsOnFloorAdvance(owned))
-        // legacy Clear Fog: climb only
+        assertEquals(2, HubOffers.rumorRerollsAtClimbStart(owned))
+        assertEquals(2, HubOffers.rumorRerollsOnFloorAdvance(owned))
+        // legacy Clear Fog alone (pre-migration): still baseline only until migrate maps → Extra
         val legacy = setOf("rumor_clarity")
         assertEquals(1, HubOffers.rumorRerollsAtClimbStart(legacy))
-        assertEquals(0, HubOffers.rumorRerollsOnFloorAdvance(legacy))
+        val migrated = HubOffers.migrateUnlocksForHubkeep(legacy)
+        assertEquals(2, HubOffers.rumorRerollsAtClimbStart(migrated))
+        assertEquals(2, HubOffers.rumorRerollsOnFloorAdvance(migrated))
     }
 
     @Test

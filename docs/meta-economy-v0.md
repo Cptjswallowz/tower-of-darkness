@@ -234,3 +234,7 @@ Flag to CoS before shipping if anyone proposes:
 ---
 
 **Superseded (Hub offer set):** v0.1.27-hub — live Hub = 4 offers (Scout **8**, Extra rumor **6**, Host of Embers **12**, Iron Lesson **12**). See `hub-v0127.md`. Older Pathseer 20 / Fogbreak 35 ladder rows yield to this set when Hub v0.1.27 is live. Meta owns bank + OWNED persist.
+
+---
+
+**Related:** v0.1.28-hubkeep — Hub ADD not replace; migration keeps bank/OWNED. See `hubkeep-v0128.md`.
