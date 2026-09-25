@@ -20,13 +20,28 @@ import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
 
 @Composable
-fun GlossaryDialog(term: String?, onDismiss: () -> Unit) {
+fun GlossaryDialog(
+    term: String?,
+    onDismiss: () -> Unit,
+    onTerm: (String) -> Unit = {}
+) {
     if (term == null) return
     val def = Glossary.definition(term) ?: "No entry."
+    val title = when {
+        term.equals("ashbrand", ignoreCase = true) -> "Ashbrand"
+        else -> term.replaceFirstChar { it.uppercase() }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(term.replaceFirstChar { it.uppercase() }) },
-        text = { Text(def) },
+        title = { Text(title) },
+        text = {
+            GlossaryText(
+                text = def,
+                onTerm = onTerm,
+                color = Bone,
+                fontSizeSp = 14
+            )
+        },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
 }

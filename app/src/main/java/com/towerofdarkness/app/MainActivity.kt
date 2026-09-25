@@ -74,5 +74,9 @@ fun TowerRoot(gc: GameController) {
         NavState.RunSummary -> RunSummaryScreen(gc)
         NavState.MetaHub -> MetaHubScreen(gc)
     }
-    GlossaryDialog(gc.glossaryTerm) { gc.showGlossary(null) }
+    GlossaryDialog(
+        term = gc.glossaryTerm,
+        onDismiss = { gc.showGlossary(null) },
+        onTerm = { gc.showGlossary(it) }
+    )
 }

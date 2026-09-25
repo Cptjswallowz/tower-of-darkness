@@ -4,6 +4,17 @@ object Glossary {
     private const val BRACE_DEF =
         "Absorb damage before it reaches HP. Clears at round end if unused leftover."
 
+    /** Exact Ashbrand body — v0.1.33 WO (preserve line breaks). */
+    const val ASHBRAND_BODY =
+        "Ember weapon. Each damaging skill\n" +
+            "you resolve adds 1 Spark pip.\n" +
+            "At 3 Sparks the next beat can\n" +
+            "fire Wake — a heavy slash.\n" +
+            "Wake spends the pips. A combat\n" +
+            "win plus a Wake this fight\n" +
+            "raises Ashbrand 1 level.\n" +
+            "Cinder Vow checks for ≥1 pip."
+
     val terms: Map<String, String> = mapOf(
         "stun" to "Stunned foes skip their next counterattack.",
         "freeze" to "Frozen foes skip their next counterattack.",
@@ -22,7 +33,12 @@ object Glossary {
         "rust guard" to BRACE_DEF,
         "coal slam" to "A coal-heavy slam from the Ash-Warden.",
         "cinder hide" to BRACE_DEF,
-        "hit" to "A basic strike — the high-weight card in an enemy kit."
+        "hit" to "A basic strike — the high-weight card in an enemy kit.",
+        // v0.1.33 Ashbrand / Wake glossary
+        "ashbrand" to ASHBRAND_BODY,
+        "ember" to "Ember weapon nature / tag — Ashbrand’s charge flavor.",
+        "spark" to "Spark pip toward Wake; quiet half-Wake when charge is incomplete.",
+        "wake" to "Heavy slash that spends Spark pips."
     )
     fun definition(term: String): String? =
         terms.entries.find { it.key.equals(term, ignoreCase = true) }?.value

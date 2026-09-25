@@ -110,8 +110,9 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Same Ashbrand icon slot size as combat weapon row
-                    AshbrandIcon()
+                    // Same Ashbrand icon slot size as combat weapon row;
+                    // nested clickable → glossary only (row still selects weapon).
+                    AshbrandIcon(onClick = { gc.showGlossary("ashbrand") })
                     Column {
                         Text(w.title, color = Bone, fontSize = 13.sp)
                         Text("${w.statusTag} · ${w.abilityTitle}", color = Ember, fontSize = 11.sp)

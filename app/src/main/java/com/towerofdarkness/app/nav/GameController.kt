@@ -562,7 +562,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
      * only affects the NEXT beat (current delay already committed).
      */
     private suspend fun combatHold(baseMs: Long) {
-        delay(combatHoldMs(baseMs, combatSpeedX))
+        // Fight stays paused while a glossary sheet is open (tap icon / term).
+        var remaining = combatHoldMs(baseMs, combatSpeedX)
+        while (remaining > 0L) {
+            if (glossaryTerm != null) {
+                delay(50L)
+                continue
+            }
+            val step = minOf(50L, remaining)
+            delay(step)
+            remaining -= step
+        }
     }
 
     /** Pure helpers for unit tests — weapon XP, treasure Gain lock, shop wallet, floor2. */

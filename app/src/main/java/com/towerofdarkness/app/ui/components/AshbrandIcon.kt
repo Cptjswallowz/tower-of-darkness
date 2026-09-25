@@ -1,6 +1,7 @@
 package com.towerofdarkness.app.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -23,16 +24,18 @@ import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.ui.theme.Gold
 
 /**
- * Ashbrand slot icon — cracked ash-iron + gold fuller on dark square ([R.drawable.ashbrand_icon]; v0.1.16 polish).
+ * Ashbrand slot icon — blade-only crop on transparent ([R.drawable.ashbrand_icon]; v0.1.33).
  * v0.1.20: Art-baked volume on blade icon; Compose chrome no-op (not Wake VFX / spark).
  * Same size on loadout weapon plate and combat weapon row.
  * SPARK: [R.drawable.ashbrand_spark] ember overlay only (no crescent).
+ * Tap ([onClick]) opens glossary only — never fires Wake / spends Sparks.
  */
 @Composable
 fun AshbrandIcon(
     phase: WakeIconPhase = WakeIconPhase.IDLE,
     modifier: Modifier = Modifier,
-    slotSize: Dp = WakeArt.ICON_SLOT_DP.dp
+    slotSize: Dp = WakeArt.ICON_SLOT_DP.dp,
+    onClick: (() -> Unit)? = null
 ) {
     val brighten = when (phase) {
         WakeIconPhase.CHARGE -> 1.35f
@@ -49,7 +52,8 @@ fun AshbrandIcon(
     )
     val seamPhase = phase == WakeIconPhase.CHARGE || phase == WakeIconPhase.CRACK
     val chrome = if (VolumeArt.appliesToAshbrandIcon()) Modifier.volumeChrome(circular = false) else Modifier
-    Box(modifier.size(slotSize).then(chrome), contentAlignment = Alignment.Center) {
+    val tap = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    Box(modifier.size(slotSize).then(chrome).then(tap), contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(R.drawable.ashbrand_icon),
             contentDescription = "Ashbrand",

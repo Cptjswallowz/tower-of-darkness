@@ -278,7 +278,7 @@ fun CombatScreen(gc: GameController) {
         Spacer(Modifier.height(6.dp))
 
         // Weapon row (not in dice)
-        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase)
+        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase, onAshbrandTap = { gc.showGlossary("ashbrand") })
 
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
@@ -302,7 +302,8 @@ fun CombatScreen(gc: GameController) {
                     highlights = (ev.glossaryHints + listOf(
                         "brace", "soften", "stun", "freeze",
                         "shiv", "nip", "cleave", "hide",
-                        "seal pulse", "rust guard", "coal slam", "cinder hide", "hit"
+                        "seal pulse", "rust guard", "coal slam", "cinder hide", "hit",
+                        "ember", "spark", "wake", "ashbrand"
                     )).distinct(),
                     onTerm = { gc.showGlossary(it) },
                     color = color,
@@ -365,7 +366,8 @@ private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Mo
 private fun WeaponBar(
     weapon: com.towerofdarkness.app.domain.combat.WeaponRuntime,
     flashed: Boolean,
-    iconPhase: WakeIconPhase = WakeIconPhase.IDLE
+    iconPhase: WakeIconPhase = WakeIconPhase.IDLE,
+    onAshbrandTap: () -> Unit = {}
 ) {
     val tagColor = when (weapon.def.statusTag) {
         WeaponTag.Ember -> Ember
@@ -383,7 +385,8 @@ private fun WeaponBar(
     ) {
         // Ashbrand icon — same slot size as loadout weapon plate
         if (weapon.def.id == "ashbrand") {
-            AshbrandIcon(phase = iconPhase)
+            // Tap → glossary only; does not fire Wake or spend Sparks.
+            AshbrandIcon(phase = iconPhase, onClick = onAshbrandTap)
         }
         Column(Modifier.weight(1f).padding(start = 8.dp)) {
             Text("${weapon.def.title}  Lv${weapon.level}", color = Bone, fontSize = 13.sp)
