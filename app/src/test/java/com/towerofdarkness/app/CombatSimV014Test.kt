@@ -319,8 +319,8 @@ class CombatSimV014Test {
             "/workspace/tower-of-darkness/app/src/main/java/com/towerofdarkness/app/domain/combat/CombatEngine.kt"
         ).readText()
         assertTrue(
-            "resolveEnemy must use kind.trashCounterMin/Max when not boss",
-            resolveSrc.contains("state.enemy.kind.trashCounterMin to state.enemy.kind.trashCounterMax")
+            "resolveEnemy must use EnemyKits live kit (v0.1.32)",
+            resolveSrc.contains("EnemyKits.skillsFor") && resolveSrc.contains("enemySpentIds")
         )
 
         // Lv1 FULL by charge 3
@@ -471,7 +471,7 @@ class CombatSimV014Test {
             appendLine("| `WeaponCatalog.ashbrand.threshold(1)==3` + charge-ramp mustFull after 3 attacks | **PASS** |")
             appendLine("| Confirm reject 4 and 6 (`LOADOUT_MIN/MAX==5`) | **PASS** |")
             appendLine("| Skip → 5 skills + Ashbrand lv1 | **PASS** |")
-            appendLine("| `resolveEnemy` uses `kind.trashCounterMin/Max` when not boss | **PASS** (source verified) |")
+            appendLine("| `resolveEnemy` uses EnemyKits live kit (v0.1.32) | **PASS** (source verified) |")
             appendLine()
             appendLine("## Winrate vs targets")
             appendLine()

@@ -36,6 +36,9 @@ import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.EnemyKits
+import com.towerofdarkness.app.domain.combat.EnemySkill
+import com.towerofdarkness.app.domain.combat.EnemySkillKind
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.domain.combat.BraceDrawSync
@@ -43,6 +46,7 @@ import com.towerofdarkness.app.domain.combat.StatusPips
 import com.towerofdarkness.app.domain.combat.WakeArt
 import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.domain.combat.WakeStageFrame
+import androidx.compose.foundation.clickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.SkillGlyphIcon
 import com.towerofdarkness.app.ui.components.skillJobIsBrace
@@ -221,11 +225,26 @@ fun CombatScreen(gc: GameController) {
                     )
                     Text(state.enemy.kind.displayName, color = Bone, fontSize = 12.sp)
                     HpBar(state.enemy.hp, state.enemy.maxHp, Ember)
-                    // Soften = remaining counterPenalty
+                    // Soften / enemy Brace pips
                     StatusPipRow(
                         pips = StatusPips.forEnemy(state),
                         onTerm = { gc.showGlossary(it) }
                     )
+                    // v0.1.32: 2 specials + Hit under enemy HP (smaller chrome; not a 5th bar)
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    ) {
+                        EnemyKits.skillsFor(state.enemy).forEach { skill ->
+                            EnemyKitSlot(
+                                skill = skill,
+                                spent = skill.id in state.enemySpentIds,
+                                current = skill.id == state.enemyHighlightedId,
+                                onTap = { gc.showGlossary(skill.glossaryKey) }
+                            )
+                        }
+                    }
                 }
             }
             // FULL Wake crescent only — safe of status bar / skill row (art margins)
@@ -280,7 +299,11 @@ fun CombatScreen(gc: GameController) {
                 }
                 GlossaryText(
                     text = ev.message,
-                    highlights = (ev.glossaryHints + listOf("brace", "soften", "stun", "freeze")).distinct(),
+                    highlights = (ev.glossaryHints + listOf(
+                        "brace", "soften", "stun", "freeze",
+                        "shiv", "nip", "cleave", "hide",
+                        "seal pulse", "rust guard", "coal slam", "cinder hide", "hit"
+                    )).distinct(),
                     onTerm = { gc.showGlossary(it) },
                     color = color,
                     fontSizeSp = if (ev.goldLog || latest) 17 else 14
@@ -378,6 +401,45 @@ private fun WeaponBar(
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun EnemyKitSlot(
+    skill: EnemySkill,
+    spent: Boolean,
+    current: Boolean,
+    onTap: () -> Unit
+) {
+    val border = when {
+        current -> Gold
+        spent -> Steel.copy(0.3f)
+        skill.kind == EnemySkillKind.BRACE -> Moss
+        else -> Bone.copy(0.35f)
+    }
+    val dimmed = spent && !current
+    Column(
+        Modifier
+            .height(48.dp)
+            .clickable(onClick = onTap)
+            .background(Panel.copy(alpha = if (dimmed) 0.85f else 1f), RoundedCornerShape(4.dp))
+            .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(4.dp))
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            skill.title,
+            color = if (dimmed) Bone.copy(0.65f) else Bone,
+            fontSize = 8.sp,
+            maxLines = 1
+        )
+        Text(
+            "w${skill.weight}",
+            color = Bone.copy(if (dimmed) 0.4f else 0.5f),
+            fontSize = 7.sp
+        )
     }
 }
 

@@ -46,7 +46,7 @@ class StatusPipsV0113Test {
     fun glossary_hasBraceAndSoften() {
         assertNotNull(Glossary.definition("brace"))
         assertNotNull(Glossary.definition("soften"))
-        assertTrue(Glossary.definition("soften")!!.contains("counter", ignoreCase = true))
+        assertTrue(Glossary.definition("soften")!!.contains("damaging", ignoreCase = true))
     }
 
     @Test
@@ -75,32 +75,31 @@ class StatusPipsV0113Test {
 
     @Test
     fun brace_afterHitSpending2_pipIsNMinus2_thenGoneAtRoundEnd() {
-        // Soften 5 → counter dmg in 2..4. Find a seed where dmg == 2 so Brace 5 → remaining 3.
+        // Soften 5 + force Cleave (8) → dmg 3 after Soften; Brace 5 → remaining 2.
         val n = 5
-        var matched = false
-        for (seed in 0..8000) {
-            val engine = CombatEngine(Random(seed))
-            var s = engine.start(
-                listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
-                tank(),
-                weapon(),
-                maxHp = 99,
-                playerHp = 99
-            )
-            s = s.copy(brace = n, counterPenalty = 5)
-            s = engine.resolveEnemy(s)
-            if (s.finished) continue
-            if (s.brace != n - 2) continue
-            assertEquals(n - 2, StatusPips.forPlayer(s).single().count)
-            assertEquals(0, s.counterPenalty)
-            assertTrue(StatusPips.forEnemy(s).isEmpty())
-            s = engine.readyNext(s)
-            assertEquals(0, s.brace)
-            assertTrue(StatusPips.forPlayer(s).isEmpty())
-            matched = true
-            break
-        }
-        assertTrue("expected a seed yielding counter dmg 2 under Soften 5", matched)
+        val engine = CombatEngine(Random(0))
+        var s = engine.start(
+            listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
+            tank(),
+            weapon(),
+            maxHp = 99,
+            playerHp = 99
+        )
+        val kit = com.towerofdarkness.app.domain.combat.EnemyKits.skillsFor(s.enemy)
+        s = s.copy(
+            brace = n,
+            counterPenalty = 5,
+            enemySpentIds = kit.map { it.id }.filter { it != "cleave" }.toSet()
+        )
+        s = engine.resolveEnemy(s)
+        assertFalse(s.finished)
+        assertEquals(n - 3, s.brace) // Cleave 8 − Soften 5 = 3
+        assertEquals(n - 3, StatusPips.forPlayer(s).single().count)
+        assertEquals(0, s.counterPenalty)
+        assertTrue(StatusPips.forEnemy(s).none { it.term == "soften" })
+        s = engine.readyNext(s)
+        assertEquals(0, s.brace)
+        assertTrue(StatusPips.forPlayer(s).isEmpty())
     }
 
     @Test
@@ -116,6 +115,8 @@ class StatusPipsV0113Test {
         s = engine.resolveSkill(s)
         assertEquals(3, s.brace)
         if (s.awaitingWeapon) s = engine.resolveWeapon(s)
+        val kit = com.towerofdarkness.app.domain.combat.EnemyKits.skillsFor(s.enemy)
+        s = s.copy(enemySpentIds = kit.map { it.id }.filter { it != "hit" }.toSet())
         s = engine.resolveEnemy(s)
         assertEquals(0, s.brace)
         assertEquals(0, StatusPips.forPlayer(s).single().count)
@@ -134,13 +135,14 @@ class StatusPipsV0113Test {
         s = engine.resolveSkill(s)
         assertEquals(2, s.counterPenalty)
         val enemyPips = StatusPips.forEnemy(s)
-        assertEquals(1, enemyPips.size)
-        assertEquals("soften", enemyPips[0].term)
-        assertEquals(2, enemyPips[0].count)
+        assertTrue(enemyPips.any { it.term == "soften" && it.count == 2 })
         if (s.awaitingWeapon) s = engine.resolveWeapon(s)
+        // Force damaging Hit so Soften consumes (Hide would leave Soften)
+        val kit = com.towerofdarkness.app.domain.combat.EnemyKits.skillsFor(s.enemy)
+        s = s.copy(enemySpentIds = kit.map { it.id }.filter { it != "hit" }.toSet())
         s = engine.resolveEnemy(s)
         assertEquals(0, s.counterPenalty)
-        assertTrue(StatusPips.forEnemy(s).isEmpty())
+        assertTrue(StatusPips.forEnemy(s).none { it.term == "soften" })
     }
 
     @Test

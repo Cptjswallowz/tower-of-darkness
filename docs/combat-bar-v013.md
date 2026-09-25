@@ -146,3 +146,7 @@ Flee remains **grayed** (CoS temporary lock).
 - [ ] Continue CTA on end
 - [ ] 1x shared stub only
 - [ ] Hub: hide or disable `loadout_flex` (deferred)
+
+---
+
+**Related:** v0.1.32-enemykit — enemy uses same weight/grey machine after player skill. See `enemykit-v0132.md`.

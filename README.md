@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.31-floorart)
+## Status (v0.1.32-enemykit)
 
+- **v0.1.32-enemykit:** Enemy live kits (same weight/grey as player bar). Soften → next damaging kit skill; Nip ignores Soften; Hide family Brace. 3 tiles under enemy HP. No tag/release. Still debug.
 - **v0.1.31-floorart:** Path **backdrop** + **node type tokens** (fog until scout; Boss letter **B**). Captions kept. No Hub/Wake/2x/path-weight changes. Tagged release. Still debug.
 - **v0.1.29-hubmore:** Hub **7 offers** — keep four; add **Hostblood** (+2 climb max, start full) / **Warm Ash** (Brace 2 first combat) / **Ash Tithe** (+3 rem at summary). Unlock ids only; bank/OWNED hubkeep intact. Tagged release. Still debug.
 - **v0.1.28-hubkeep:** Hub stacks; baseline rumor restored (1/floor); Extra→2; Scout only if owned; no bank wipe; migration OWNED maps. Tagged release. Still debug.

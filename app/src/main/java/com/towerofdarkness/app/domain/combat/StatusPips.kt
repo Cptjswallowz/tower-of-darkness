@@ -3,6 +3,7 @@ package com.towerofdarkness.app.domain.combat
 /**
  * Combat status pips (v0.1.13) — pure mirror of existing [CombatState].
  * v0.1.14: Brace zeroing-hit holds “0” for that beat, then hides.
+ * v0.1.32: Soften = next damaging enemy kit skill; enemy Brace pip under foe.
  */
 data class StatusPip(
     /** Glossary key (brace / soften). */
@@ -40,14 +41,24 @@ object BraceDrawSync {
     fun delayHpBarAfter(event: CombatEvent): Boolean =
         event.braceAbsorbed > 0
 
+    /** Enemy kit (or legacy) line that dealt damage to the player. */
+    fun isEnemyPlayerHit(ev: CombatEvent): Boolean {
+        if (ev.braceAbsorbed > 0) return true
+        if (ev.message.contains("hits for")) return true
+        // v0.1.32: "Title — Skill N" damage lines carry a player-facing float
+        if (ev.message.contains(" — ") && ev.floating != null && !ev.floating.isPlayer) {
+            val t = ev.floating.text
+            if (t.startsWith("-") || t == "DOWN") return true
+        }
+        return false
+    }
+
     /**
      * Latest enemy-hit event that absorbed Brace, if still the active hit for zero-hold.
-     * Prefers the most recent “hits for” line so a later non-absorb hit clears the hold.
+     * Prefers the most recent player-facing hit so a later non-absorb hit clears the hold.
      */
     fun latestAbsorbHit(state: CombatState): CombatEvent? {
-        val lastHit = state.log.asReversed().firstOrNull { ev ->
-            ev.braceAbsorbed > 0 || ev.message.contains("hits for")
-        } ?: return null
+        val lastHit = state.log.asReversed().firstOrNull { isEnemyPlayerHit(it) } ?: return null
         return lastHit.takeIf { it.braceAbsorbed > 0 }
     }
 
@@ -73,8 +84,12 @@ object StatusPips {
         }
     }
 
-    /** Enemy pips under that foe's HP bar. Soften = remaining counterPenalty. */
+    /**
+     * Enemy pips under that foe's HP bar.
+     * Soften = remaining counterPenalty; Brace = enemyBrace (Hide family).
+     */
     fun forEnemy(state: CombatState): List<StatusPip> = buildList {
+        if (state.enemyBrace > 0) add(StatusPip("brace", state.enemyBrace))
         if (state.counterPenalty > 0) add(StatusPip("soften", state.counterPenalty))
     }
 }

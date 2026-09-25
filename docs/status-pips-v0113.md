@@ -68,3 +68,7 @@ Under each fighter’s HP bar, show compact **status pips** for combat values th
 - [ ] Tap → glossary; Soften glossary entry present
 - [ ] Values mirror existing combat state only; no rule retunes
 - [ ] Leave frozen systems untouched
+
+---
+
+**Superseded (Soften target when kits live):** v0.1.32-enemykit — Soften reduces next damaging **enemy kit skill** (not Hide/Rust Guard/Cinder Hide); Nip ignores Soften. See `enemykit-v0132.md`.

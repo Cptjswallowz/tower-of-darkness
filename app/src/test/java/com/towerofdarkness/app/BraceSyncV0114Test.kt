@@ -28,6 +28,18 @@ class BraceSyncV0114Test {
     private fun tank() = Enemy(EnemyKind.ORC, maxHp = 500, hp = 500, isBoss = false)
     private fun weapon() = WeaponRuntime(WeaponCatalog.ashbrand, level = 1, charge = 0)
 
+
+    private fun forceEnemySkill(
+        s: com.towerofdarkness.app.domain.combat.CombatState,
+        skillId: String
+    ): com.towerofdarkness.app.domain.combat.CombatState {
+        val kit = com.towerofdarkness.app.domain.combat.EnemyKits.skillsFor(s.enemy)
+        return s.copy(enemySpentIds = kit.map { it.id }.filter { it != skillId }.toSet())
+    }
+
+    private fun lastEnemySkillLine(s: com.towerofdarkness.app.domain.combat.CombatState) =
+        s.log.last { it.message.contains(" — ") && (it.braceAbsorbed > 0 || it.floating?.text?.startsWith("-") == true) }
+
     private fun forceFire(
         engine: CombatEngine,
         ids: List<String>,
@@ -74,43 +86,32 @@ class BraceSyncV0114Test {
 
     @Test
     fun braceZero_visibleOneBeatThenGone() {
-        // Find seed where Brace 3 is fully spent by counter
-        var matched = false
-        for (seed in 0..8000) {
-            val engine = CombatEngine(Random(seed))
-            var s = engine.start(
-                listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
-                tank(),
-                weapon(),
-                maxHp = 99,
-                playerHp = 99
-            )
-            s = s.copy(brace = 3, counterPenalty = 0)
-            val hpBefore = s.playerHp
-            s = engine.resolveEnemy(s)
-            if (s.finished) continue
-            if (s.brace != 0) continue
-            val hit = s.log.last { it.message.contains("hits for") }
-            assertTrue(hit.braceAbsorbed > 0)
-            assertEquals(3, hit.braceAbsorbed)
-            // Zero-hold this beat
-            val pips = StatusPips.forPlayer(s)
-            assertEquals(1, pips.size)
-            assertEquals("brace", pips[0].term)
-            assertEquals(0, pips[0].count)
-            assertTrue(BraceDrawSync.holdBraceZero(s))
-            assertEquals(CombatBeat.AFTER_ENEMY, s.beat)
-            // Next beat hides
-            s = engine.readyNext(s)
-            assertEquals(0, s.brace)
-            assertTrue(StatusPips.forPlayer(s).isEmpty())
-            assertFalse(BraceDrawSync.holdBraceZero(s))
-            // Leftover HP math still applied (absorb 3 → dmg reduced by 3)
-            assertEquals(hpBefore - (hit.message.substringAfter("hits for ").substringBefore(" ").toInt()), s.playerHp)
-            matched = true
-            break
-        }
-        assertTrue("expected a seed where Brace 3 is fully spent", matched)
+        // Force Cleave 8 vs Brace 3 → fully spent Brace, HP loses 5
+        val engine = CombatEngine(Random(0))
+        var s = engine.start(
+            listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
+            tank(),
+            weapon(),
+            maxHp = 99,
+            playerHp = 99
+        )
+        s = forceEnemySkill(s.copy(brace = 3, counterPenalty = 0), "cleave")
+        val hpBefore = s.playerHp
+        s = engine.resolveEnemy(s)
+        assertEquals(0, s.brace)
+        val hit = lastEnemySkillLine(s)
+        assertEquals(3, hit.braceAbsorbed)
+        val pips = StatusPips.forPlayer(s)
+        assertEquals(1, pips.size)
+        assertEquals("brace", pips[0].term)
+        assertEquals(0, pips[0].count)
+        assertTrue(BraceDrawSync.holdBraceZero(s))
+        assertEquals(CombatBeat.AFTER_ENEMY, s.beat)
+        s = engine.readyNext(s)
+        assertEquals(0, s.brace)
+        assertTrue(StatusPips.forPlayer(s).isEmpty())
+        assertFalse(BraceDrawSync.holdBraceZero(s))
+        assertEquals(hpBefore - 5, s.playerHp) // Cleave 8 − Brace 3
     }
 
     @Test
@@ -128,8 +129,9 @@ class BraceSyncV0114Test {
         assertEquals(3, StatusPips.forPlayer(s).single().count)
         if (s.awaitingWeapon) s = engine.resolveWeapon(s)
         val braceBeforeHit = s.brace
+        s = forceEnemySkill(s, "cleave")
         s = engine.resolveEnemy(s)
-        val hit = s.log.last { it.message.contains("hits for") }
+        val hit = lastEnemySkillLine(s)
         assertTrue(
             "skill-before-hit must absorb with pre-applied Brace",
             hit.braceAbsorbed > 0 || braceBeforeHit == 0
@@ -155,8 +157,9 @@ class BraceSyncV0114Test {
             playerHp = 99
         )
         assertEquals(0, s.brace)
+        s = forceEnemySkill(s, "cleave")
         s = engine.resolveEnemy(s)
-        val hit = s.log.last { it.message.contains("hits for") }
+        val hit = lastEnemySkillLine(s)
         assertEquals(0, hit.braceAbsorbed)
         assertNull(BraceDrawSync.absorbFloat(hit))
         assertFalse(BraceDrawSync.delayHpBarAfter(hit))
@@ -165,37 +168,29 @@ class BraceSyncV0114Test {
         s = s.copy(brace = 3, beat = CombatBeat.AFTER_SKILL)
         assertEquals(3, StatusPips.forPlayer(s).single().count)
         assertEquals(hpAfterNakedHit, s.playerHp)
-        assertEquals(0, s.log.last { it.message.contains("hits for") }.braceAbsorbed)
+        assertEquals(0, lastEnemySkillLine(s).braceAbsorbed)
     }
 
     @Test
     fun absorbMathUnchanged_minBraceDmg() {
-        // Soften 5 → counter in 2..4. Seed where dmg==2: Brace 5 → 3, HP loses 0 from that 2.
-        var matched = false
-        for (seed in 0..8000) {
-            val engine = CombatEngine(Random(seed))
-            var s = engine.start(
-                listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
-                tank(),
-                weapon(),
-                maxHp = 99,
-                playerHp = 99
-            )
-            s = s.copy(brace = 5, counterPenalty = 5)
-            val hpBefore = s.playerHp
-            s = engine.resolveEnemy(s)
-            if (s.finished) continue
-            if (s.brace != 3) continue
-            val hit = s.log.last { it.message.contains("hits for") }
-            assertEquals(2, hit.braceAbsorbed)
-            // leftover HP dmg = 0 for a fully absorbed 2
-            assertEquals(hpBefore, s.playerHp)
-            assertTrue(hit.message.contains("hits for 0"))
-            assertEquals(3, StatusPips.forPlayer(s).single().count)
-            matched = true
-            break
-        }
-        assertTrue("expected seed yielding absorb 2 with Soften 5", matched)
+        // Soften 5 + Cleave 8 → dmg 3; Brace 5 → remaining 2, HP loses 0 from that 3? Wait: absorb min(5,3)=3, brace=2, hpDmg=0
+        val engine = CombatEngine(Random(0))
+        var s = engine.start(
+            listOf(card("hostflint"), card("emberbrand"), card("ruin_seal"), card("tower_pike"), card("ash_press")),
+            tank(),
+            weapon(),
+            maxHp = 99,
+            playerHp = 99
+        )
+        s = forceEnemySkill(s.copy(brace = 5, counterPenalty = 5), "cleave")
+        val hpBefore = s.playerHp
+        s = engine.resolveEnemy(s)
+        assertEquals(2, s.brace) // 5 − 3
+        val hit = lastEnemySkillLine(s)
+        assertEquals(3, hit.braceAbsorbed)
+        assertEquals(hpBefore, s.playerHp)
+        assertTrue(hit.message.contains("Cleave 3"))
+        assertEquals(2, StatusPips.forPlayer(s).single().count)
     }
 
     @Test
@@ -208,10 +203,11 @@ class BraceSyncV0114Test {
         )
         s = engine.resolveSkill(s)
         assertEquals(2, s.counterPenalty)
-        assertEquals(2, StatusPips.forEnemy(s).single().count)
+        assertEquals(2, StatusPips.forEnemy(s).single { it.term == "soften" }.count)
         if (s.awaitingWeapon) s = engine.resolveWeapon(s)
+        s = forceEnemySkill(s, "hit")
         s = engine.resolveEnemy(s)
         assertEquals(0, s.counterPenalty)
-        assertTrue(StatusPips.forEnemy(s).isEmpty())
+        assertTrue(StatusPips.forEnemy(s).none { it.term == "soften" })
     }
 }

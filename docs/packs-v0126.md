@@ -82,3 +82,7 @@ Expected basenames under `app/src/main/res/drawable/` (PNG, no plate):
 | `portrait_sturdy_orc_hammer.png` | Sturdy Orc / hammer |
 
 Engineer wires via `HallwayPacks.drawableName` + `getIdentifier` when files land. Do **not** invent art from JPG stills.
+
+---
+
+**Related:** v0.1.32-enemykit — role kits (Weak Goblin / Sturdy Orc / Wardens); looks still cosmetic. See `enemykit-v0132.md`.

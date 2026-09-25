@@ -43,6 +43,7 @@ data class CombatState(
     val weapon: WeaponRuntime,
     val round: Int = 1,
     val log: List<CombatEvent> = emptyList(),
+    /** Soften remaining — reduces next damaging enemy kit skill (not Hide family / Nip). */
     val counterPenalty: Int = 0,
     val finished: Boolean = false,
     val playerWon: Boolean = false,
@@ -57,7 +58,12 @@ data class CombatState(
     val pendingFullWake: Boolean = false,
     val pendingSpark: Boolean = false,
     /** Sticky FULL Wake line for UI last-5 pin during Wake hold. */
-    val pinnedWakeLine: String? = null
+    val pinnedWakeLine: String? = null,
+    /** Enemy kit spent tile ids (same exhaust machine as player). */
+    val enemySpentIds: Set<String> = emptySet(),
+    val enemyHighlightedId: String? = null,
+    /** Brace on the enemy (Hide / Rust Guard / Cinder Hide). Persists until eaten. */
+    val enemyBrace: Int = 0
 )
 
 class CombatEngine(private val rng: Random = Random.Default) {
@@ -89,7 +95,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
         }
         events += CombatEvent("Dice tumble…", sound = "dice")
         val live = state.activeCards.filter { it.id !in spent }
-        val card = pickWeighted(live) ?: return state.copy(log = state.log + events)
+        val card = pickWeighted(live) { it.weight } ?: return state.copy(log = state.log + events)
         return state.copy(
             spentIds = spent,
             highlightedId = card.id,
@@ -158,7 +164,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
         var pinned: String? = s.pinnedWakeLine
         if (doFull) {
             val dmg = w.def.fullDmg(w.level)
-            val enemy = s.enemy.copy(hp = (s.enemy.hp - dmg).coerceAtLeast(0))
+            val applied = applyDamageToEnemy(s, dmg)
+            s = applied.state
             // Exact CHAIN FULL Wake payoff line (gold + WAKE float + legendary anim)
             val wakeLine = "ASHBRAND — WAKE $dmg"
             events += CombatEvent(
@@ -170,14 +177,15 @@ class CombatEngine(private val rng: Random = Random.Default) {
             )
             pinned = wakeLine
             fullProc = true
-            if (enemy.hp <= 0) fullKill = true
+            if (s.enemy.hp <= 0) fullKill = true
             w = w.copy(charge = 0)
-            s = s.copy(enemy = enemy, weapon = w, fullProcThisCombat = fullProc, fullProcKilled = fullKill)
+            s = s.copy(weapon = w, fullProcThisCombat = fullProc, fullProcKilled = fullKill)
         }
 
         if (doSpark) {
             val dmg = w.def.sparkDmg(w.level)
-            val enemy = s.enemy.copy(hp = (s.enemy.hp - dmg).coerceAtLeast(0))
+            val applied = applyDamageToEnemy(s, dmg)
+            s = applied.state
             // Spark: plain log only — no anim, no gold, no WAKE float
             events += CombatEvent(
                 message = "Ashbrand spark ($dmg)",
@@ -186,7 +194,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 sound = "card_fire",
                 goldLog = false
             )
-            s = s.copy(enemy = enemy, weapon = w)
+            s = s.copy(weapon = w)
         }
 
         s = s.copy(
@@ -202,39 +210,88 @@ class CombatEngine(private val rng: Random = Random.Default) {
         return s
     }
 
-    /** F — enemy counter (skipped if already dead). */
+    /**
+     * F — enemy live kit (v0.1.32): same weight / grey among unspent tiles.
+     * Soften → next damaging skill (not Hide family); Nip ignores Soften.
+     * Brace on You still absorbs before HP.
+     */
     fun resolveEnemy(state: CombatState): CombatState {
         if (state.enemy.hp <= 0) return finishVictory(state)
+        val kit = EnemyKits.skillsFor(state.enemy)
+        var spent = state.enemySpentIds
         val events = mutableListOf<CombatEvent>()
+        if (spent.size >= kit.size && kit.isNotEmpty()) {
+            spent = emptySet()
+            events += CombatEvent("Enemy cycle reset", sound = "ui")
+        }
+        val live = kit.filter { it.id !in spent }
+        val skill = pickWeighted(live) { it.weight }
+            ?: return state.copy(log = state.log + events, beat = CombatBeat.AFTER_ENEMY)
         events += CombatEvent("${state.enemy.kind.displayName} winds up…", sound = "ui")
-        val (cMin, cMax) = if (state.enemy.isBoss)
-            Balance.BOSS_COUNTER_MIN to Balance.BOSS_COUNTER_MAX
-        else
-            state.enemy.kind.trashCounterMin to state.enemy.kind.trashCounterMax
-        var dmg = rng.nextInt(cMin, cMax + 1) - state.counterPenalty
-        dmg = dmg.coerceAtLeast(1)
-        var brace = state.brace
-        var absorbed = 0
-        if (brace > 0) {
-            absorbed = minOf(brace, dmg)
-            brace -= absorbed
-            dmg -= absorbed
-        }
-        val newHp = (state.playerHp - dmg).coerceAtLeast(0)
-        val msg = buildString {
-            append("${state.enemy.kind.displayName} hits for $dmg")
-            if (absorbed > 0) append(" ($absorbed Brace)")
-        }
-        events += CombatEvent(
-            msg,
-            FloatingText("-$dmg", false),
-            sound = "hit",
-            glossaryHints = if (absorbed > 0) listOf("brace") else emptyList(),
-            braceAbsorbed = absorbed
+
+        var s = state.copy(
+            enemySpentIds = spent + skill.id,
+            enemyHighlightedId = skill.id
         )
-        if (newHp <= 0) {
+        var soften = s.counterPenalty
+
+        when (skill.kind) {
+            EnemySkillKind.BRACE -> {
+                val gain = skill.braceGain
+                s = s.copy(enemyBrace = s.enemyBrace + gain)
+                val msg = "${s.enemy.kind.displayName} — ${skill.title} $gain"
+                events += CombatEvent(
+                    msg,
+                    FloatingText("BRACE $gain", false),
+                    sound = "ui",
+                    glossaryHints = listOf(skill.glossaryKey, "brace")
+                )
+                // Soften pip stays — Hide family does not consume Soften
+            }
+            EnemySkillKind.NIP -> {
+                val raw = skill.rollDamage(rng)
+                // Nip ignores Soften; Soften does not clear
+                val (afterHit, hpDmg, absorbed) = hitPlayer(s, raw)
+                s = afterHit
+                val msg = buildString {
+                    append("${s.enemy.kind.displayName} — ${skill.title} $raw (ignores Soften)")
+                    if (absorbed > 0) append(" ($absorbed Brace)")
+                }
+                events += CombatEvent(
+                    msg,
+                    FloatingText("-$hpDmg", false),
+                    sound = "hit",
+                    glossaryHints = listOf(skill.glossaryKey, "nip", "soften") +
+                        if (absorbed > 0) listOf("brace") else emptyList(),
+                    braceAbsorbed = absorbed
+                )
+            }
+            EnemySkillKind.DAMAGE -> {
+                var raw = skill.rollDamage(rng)
+                if (soften > 0) {
+                    raw = (raw - soften).coerceAtLeast(1)
+                    soften = 0
+                }
+                val (afterHit, hpDmg, absorbed) = hitPlayer(s, raw)
+                s = afterHit.copy(counterPenalty = soften)
+                val msg = buildString {
+                    append("${s.enemy.kind.displayName} — ${skill.title} $raw")
+                    if (absorbed > 0) append(" ($absorbed Brace)")
+                }
+                events += CombatEvent(
+                    msg,
+                    FloatingText("-$hpDmg", false),
+                    sound = "hit",
+                    glossaryHints = listOf(skill.glossaryKey) +
+                        if (absorbed > 0) listOf("brace") else emptyList(),
+                    braceAbsorbed = absorbed
+                )
+            }
+        }
+
+        if (s.playerHp <= 0) {
             events += CombatEvent("Defeat…", FloatingText("DOWN", false), sound = "miss")
-            return state.copy(
+            return s.copy(
                 playerHp = 0,
                 brace = 0,
                 counterPenalty = 0,
@@ -242,15 +299,13 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 finished = true,
                 playerWon = false,
                 highlightedId = null,
+                enemyHighlightedId = skill.id,
+                enemySpentIds = spent + skill.id,
                 beat = CombatBeat.AWAITING_CONTINUE,
                 round = state.round + 1
             )
         }
-        // Soften consumed this counter; Brace leftover remains until readyNext (round end).
-        return state.copy(
-            playerHp = newHp,
-            brace = brace,
-            counterPenalty = 0,
+        return s.copy(
             log = state.log + events,
             highlightedId = null,
             beat = CombatBeat.AFTER_ENEMY,
@@ -258,9 +313,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
         )
     }
 
-    /** Advance to next round — clear unused Brace leftover per cards-v0. */
+    /** Advance to next round — clear unused Brace leftover per cards-v0. Enemy Brace persists. */
     fun readyNext(state: CombatState): CombatState =
-        state.copy(beat = CombatBeat.READY, weaponFlashed = false, brace = 0)
+        state.copy(beat = CombatBeat.READY, weaponFlashed = false, brace = 0, enemyHighlightedId = null)
 
     private fun finishVictory(state: CombatState): CombatState {
         val events = listOf(
@@ -276,39 +331,70 @@ class CombatEngine(private val rng: Random = Random.Default) {
         )
     }
 
+    /** Player Brace absorbs before HP. Returns (state, hpDamage, absorbed). */
+    private fun hitPlayer(state: CombatState, rawDmg: Int): Triple<CombatState, Int, Int> {
+        var dmg = rawDmg.coerceAtLeast(0)
+        var brace = state.brace
+        var absorbed = 0
+        if (brace > 0 && dmg > 0) {
+            absorbed = minOf(brace, dmg)
+            brace -= absorbed
+            dmg -= absorbed
+        }
+        val newHp = (state.playerHp - dmg).coerceAtLeast(0)
+        return Triple(state.copy(playerHp = newHp, brace = brace), dmg, absorbed)
+    }
+
+    /** Enemy Brace absorbs player damage before enemy HP. */
+    private data class EnemyDmgResult(val state: CombatState, val hpDamage: Int, val absorbed: Int)
+
+    private fun applyDamageToEnemy(state: CombatState, raw: Int): EnemyDmgResult {
+        var dmg = raw.coerceAtLeast(0)
+        var eBrace = state.enemyBrace
+        var absorbed = 0
+        if (eBrace > 0 && dmg > 0) {
+            absorbed = minOf(eBrace, dmg)
+            eBrace -= absorbed
+            dmg -= absorbed
+        }
+        val enemy = state.enemy.copy(hp = (state.enemy.hp - dmg).coerceAtLeast(0))
+        return EnemyDmgResult(state.copy(enemy = enemy, enemyBrace = eBrace), dmg, absorbed)
+    }
+
     private fun resolveCard(
         state: CombatState, card: Card, anim: CombatAnimStyle
     ): Triple<CombatState, List<CombatEvent>, Boolean> {
         val events = mutableListOf<CombatEvent>()
         var s = state
-        var enemy = s.enemy
         val sound = if (card.rarity == Rarity.RARE) "legendary" else "card_fire"
         var isAttack = false
 
         when (val e = card.effect) {
             is SkillEffect.Damage -> {
                 isAttack = true
-                enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
+                val applied = applyDamageToEnemy(s, e.damage)
+                s = applied.state
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
                     FloatingText("-${e.damage}", true, card.rarity == Rarity.RARE),
                     anim, sound
                 )
-                s = s.copy(enemy = enemy)
             }
             is SkillEffect.DamageAndHeal -> {
                 isAttack = true
-                enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
+                val applied = applyDamageToEnemy(s, e.damage)
+                s = applied.state
                 val nh = (s.playerHp + e.heal).coerceAtMost(s.playerMaxHp)
                 events += CombatEvent(
                     "${card.title}: ${e.damage} dmg, +${e.heal} HP",
                     FloatingText("-${e.damage}", true), anim, sound
                 )
-                s = s.copy(enemy = enemy, playerHp = nh)
+                s = s.copy(playerHp = nh)
             }
             is SkillEffect.DamageAndBraceIfAshPips -> {
                 isAttack = true
-                enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
+                val applied = applyDamageToEnemy(s, e.damage)
+                s = applied.state
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
                     FloatingText("-${e.damage}", true), anim, sound
@@ -322,11 +408,12 @@ class CombatEngine(private val rng: Random = Random.Default) {
                         glossaryHints = listOf("brace")
                     )
                 }
-                s = s.copy(enemy = enemy, brace = brace)
+                s = s.copy(brace = brace)
             }
             is MoveEffect.DamageAndSoften -> {
                 isAttack = true
-                enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
+                val applied = applyDamageToEnemy(s, e.damage)
+                s = applied.state
                 val brace = s.brace + e.braceGain
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
@@ -346,7 +433,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                         glossaryHints = listOf("soften")
                     )
                 }
-                s = s.copy(enemy = enemy, brace = brace, counterPenalty = s.counterPenalty + e.counterPenalty)
+                s = s.copy(brace = brace, counterPenalty = s.counterPenalty + e.counterPenalty)
             }
             is Equipment.GainBrace -> {
                 isAttack = false
@@ -379,14 +466,15 @@ class CombatEngine(private val rng: Random = Random.Default) {
         return Triple(s, events, isAttack)
     }
 
-    private fun pickWeighted(cards: List<Card>): Card? {
-        if (cards.isEmpty()) return null
-        val total = cards.sumOf { it.weight }
+    private fun <T> pickWeighted(items: List<T>, weightOf: (T) -> Int): T? {
+        if (items.isEmpty()) return null
+        val total = items.sumOf { weightOf(it) }
+        if (total <= 0) return items.last()
         var r = rng.nextInt(total)
-        for (c in cards) {
-            r -= c.weight
-            if (r < 0) return c
+        for (item in items) {
+            r -= weightOf(item)
+            if (r < 0) return item
         }
-        return cards.last()
+        return items.last()
     }
 }
