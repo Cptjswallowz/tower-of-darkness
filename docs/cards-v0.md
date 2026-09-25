@@ -68,3 +68,14 @@ Only after Hub buy. See `hub-v0127.md`. **No** further skills this tag.
 | 13 | Grave Nail | Uncommon | SkillEffect | 3 | Deal **4**. Next enemy counter **−1** (min 1). **Soften 1**. |
 
 Glyphs: Art **vow-spark** / **nail**. Same chrome + glossary as pool cards.
+
+## Ember pool (v0.1.35) — Hub-gated
+
+Uncommon **w3**. Meta owns Hub unlocks. Combat order + glossary: `emberpool-v0135.md`. **No** retune of cards #1–13.
+
+| # | Name | Rarity | Class | Weight | Effect (combat) |
+|---|------|--------|-------|--------|-----------------|
+| 14 | Ember Draw | Uncommon | SkillEffect | 3 | Deal **4**. If Sparks **0** before → **Brace 2**. Then +1 Spark if damaged. |
+| 15 | Brand Mark | Uncommon | SkillEffect | 3 | Deal **3**. If Sparks **≥1** before → **Soften 2**. Then +1 Spark if damaged. |
+| 16 | Spark Tithe | Uncommon | SkillEffect | 3 | Deal **6**. Tithe spend after +1 pip: net **0** if Sparks≥1 before (log Spark spent); else net **+1**. |
+| 17 | Wake Echo | Uncommon | SkillEffect | 3 | Deal **5**; if Wake already fired this fight, **+4** same log line (no second Spark). Then +1 Spark if damaged. |

@@ -77,6 +77,35 @@ object CardCatalog {
                     Rarity.UNCOMMON, 4, counterPenalty = 1
                 ),
                 Rarity.UNCOMMON, 3, unlockCost = 12),
+            // Hub-gated ember pool (v0.1.35) — pool only after Cold Draw / Brand / Spark / Echo Lesson
+            Card("ember_draw", "Ember Draw",
+                SkillEffect.EmberPoolSkill(
+                    "ember_draw", "Ember Draw",
+                    "Deal 4. If Sparks were 0 before this skill, gain Brace 2. Still adds 1 Spark after the hit.",
+                    Rarity.UNCOMMON, damage = 4, braceIfZeroBefore = 2
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 10),
+            Card("brand_mark", "Brand Mark",
+                SkillEffect.EmberPoolSkill(
+                    "brand_mark", "Brand Mark",
+                    "Deal 3. If Sparks were ≥1 before this skill, Soften 2. Still adds 1 Spark after the hit.",
+                    Rarity.UNCOMMON, damage = 3, softenIfBeforeGte1 = 2
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 10),
+            Card("spark_tithe", "Spark Tithe",
+                SkillEffect.EmberPoolSkill(
+                    "spark_tithe", "Spark Tithe",
+                    "Deal 6. If Sparks were ≥1 before, spend 1 Spark after the new pip (net 0). If 0 before, keep the new pip.",
+                    Rarity.UNCOMMON, damage = 6, titheSpendIfBeforeGte1 = true
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 12),
+            Card("wake_echo", "Wake Echo",
+                SkillEffect.EmberPoolSkill(
+                    "wake_echo", "Wake Echo",
+                    "Deal 5. If Wake already fired this fight, deal 4 more in the same line. Bonus does not add another Spark.",
+                    Rarity.UNCOMMON, damage = 5, echoBonusIfWakeFired = 4
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 12),
         )
     }
 
@@ -91,8 +120,7 @@ object CardCatalog {
     fun poolForRun(unlocked: Set<String>): List<Card> =
         all.filter { card ->
             when (card.id) {
-                HubOffers.CARD_CINDER_VOW,
-                HubOffers.CARD_GRAVE_NAIL -> HubOffers.skillUnlocked(card.id, unlocked)
+                in HubOffers.gatedSkillCardIds -> HubOffers.skillUnlocked(card.id, unlocked)
                 else -> card.id in unlocked || card.unlockCost == 0
             }
         }

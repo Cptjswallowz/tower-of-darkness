@@ -1,9 +1,9 @@
 package com.towerofdarkness.app.domain.hub
 
 /**
- * Hub remnant shop — v0.1.27–v0.1.29 offers + hubkeep grant/migration.
- * Seven fixed offers; persist unlock ids in meta unlocked set + remnants_bank.
- * See docs/hub-v0127.md, docs/hubkeep-v0128.md, docs/hubmore-v0129.md.
+ * Hub remnant shop — v0.1.27–v0.1.35 offers + hubkeep grant/migration.
+ * Eleven fixed offers; persist unlock ids in meta unlocked set + remnants_bank.
+ * See docs/hub-v0127.md, docs/hubkeep-v0128.md, docs/hubmore-v0129.md, docs/emberpool-v0135.md.
  */
 data class HubOffer(
     val id: String,
@@ -24,6 +24,10 @@ object HubOffers {
     const val ID_HOSTBLOOD = "hostblood"
     const val ID_WARM_ASH = "warm_ash"
     const val ID_ASH_TITHE = "ash_tithe"
+    const val ID_COLD_DRAW = "cold_draw"
+    const val ID_BRAND_LESSON = "brand_lesson"
+    const val ID_SPARK_LESSON = "spark_lesson"
+    const val ID_ECHO_LESSON = "echo_lesson"
 
     const val HOSTBLOOD_MAX_BONUS = 2
     const val WARM_ASH_BRACE = 2
@@ -31,6 +35,10 @@ object HubOffers {
 
     const val CARD_CINDER_VOW = "cinder_vow"
     const val CARD_GRAVE_NAIL = "grave_nail"
+    const val CARD_EMBER_DRAW = "ember_draw"
+    const val CARD_BRAND_MARK = "brand_mark"
+    const val CARD_SPARK_TITHE = "spark_tithe"
+    const val CARD_WAKE_ECHO = "wake_echo"
 
     /** Legacy Clear Fog perk id (pre-Hub ladder). */
     const val LEGACY_RUMOR_CLARITY = "rumor_clarity"
@@ -45,7 +53,11 @@ object HubOffers {
         HubOffer(ID_IRON_LESSON, "Iron Lesson", "Unlock skill Grave Nail", 12, CARD_GRAVE_NAIL),
         HubOffer(ID_HOSTBLOOD, "Hostblood", "+2 max HP each climb; start at new max", 10),
         HubOffer(ID_WARM_ASH, "Warm Ash", "Brace 2 at climb start", 8),
-        HubOffer(ID_ASH_TITHE, "Ash Tithe", "+3 remnants at run summary (win or death)", 8)
+        HubOffer(ID_ASH_TITHE, "Ash Tithe", "+3 remnants at run summary (win or death)", 8),
+        HubOffer(ID_COLD_DRAW, "Cold Draw", "Unlock skill Ember Draw", 10, CARD_EMBER_DRAW),
+        HubOffer(ID_BRAND_LESSON, "Brand Lesson", "Unlock skill Brand Mark", 10, CARD_BRAND_MARK),
+        HubOffer(ID_SPARK_LESSON, "Spark Lesson", "Unlock skill Spark Tithe", 12, CARD_SPARK_TITHE),
+        HubOffer(ID_ECHO_LESSON, "Echo Lesson", "Unlock skill Wake Echo", 12, CARD_WAKE_ECHO)
     )
 
     fun byId(id: String): HubOffer? = all.find { it.id == id }
@@ -114,6 +126,10 @@ object HubOffers {
         if (LEGACY_RUMOR_CLARITY in out) out += ID_EXTRA_RUMOR
         if (CARD_CINDER_VOW in out) out += ID_HOST_OF_EMBERS
         if (CARD_GRAVE_NAIL in out) out += ID_IRON_LESSON
+        if (CARD_EMBER_DRAW in out) out += ID_COLD_DRAW
+        if (CARD_BRAND_MARK in out) out += ID_BRAND_LESSON
+        if (CARD_SPARK_TITHE in out) out += ID_SPARK_LESSON
+        if (CARD_WAKE_ECHO in out) out += ID_ECHO_LESSON
         return out
     }
 
@@ -139,8 +155,18 @@ object HubOffers {
     fun skillUnlocked(cardId: String, unlocks: Set<String>): Boolean = when (cardId) {
         CARD_CINDER_VOW -> ID_HOST_OF_EMBERS in unlocks || CARD_CINDER_VOW in unlocks
         CARD_GRAVE_NAIL -> ID_IRON_LESSON in unlocks || CARD_GRAVE_NAIL in unlocks
+        CARD_EMBER_DRAW -> ID_COLD_DRAW in unlocks || CARD_EMBER_DRAW in unlocks
+        CARD_BRAND_MARK -> ID_BRAND_LESSON in unlocks || CARD_BRAND_MARK in unlocks
+        CARD_SPARK_TITHE -> ID_SPARK_LESSON in unlocks || CARD_SPARK_TITHE in unlocks
+        CARD_WAKE_ECHO -> ID_ECHO_LESSON in unlocks || CARD_WAKE_ECHO in unlocks
         else -> true
     }
+
+    /** Hub-gated skill card ids (not in pool until OWNED). */
+    val gatedSkillCardIds: Set<String> = setOf(
+        CARD_CINDER_VOW, CARD_GRAVE_NAIL,
+        CARD_EMBER_DRAW, CARD_BRAND_MARK, CARD_SPARK_TITHE, CARD_WAKE_ECHO
+    )
 }
 
 /**

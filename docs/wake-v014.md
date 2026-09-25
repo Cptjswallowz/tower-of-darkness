@@ -89,3 +89,7 @@ Authoritative table also in `balance-targets.md`.
 - [ ] Lv1 CHAIN thresh = **3**
 - [ ] `ENEMY_COUNTER` trash = **5–8**; boss counter **6–9**, boss HP **28**
 - [ ] Fog unchanged
+
+---
+
+**Related:** v0.1.35-emberpool — Wake Echo reads “Wake already fired this fight”; threshold math frozen. See `emberpool-v0135.md`.

@@ -26,8 +26,9 @@ class HubMoreV0129Test {
 
     @Test
     fun hubList_sevenOffers_costsLocked() {
-        assertEquals(7, HubOffers.all.size)
-        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8), HubOffers.all.map { it.cost })
+        // v0.1.35: 11 offers; first 7 costs/ids unchanged
+        assertEquals(11, HubOffers.all.size)
+        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8, 10, 10, 12, 12), HubOffers.all.map { it.cost })
         assertEquals(
             listOf(
                 HubOffers.ID_SCOUT,
@@ -36,10 +37,15 @@ class HubMoreV0129Test {
                 HubOffers.ID_IRON_LESSON,
                 HubOffers.ID_HOSTBLOOD,
                 HubOffers.ID_WARM_ASH,
-                HubOffers.ID_ASH_TITHE
+                HubOffers.ID_ASH_TITHE,
+                HubOffers.ID_COLD_DRAW,
+                HubOffers.ID_BRAND_LESSON,
+                HubOffers.ID_SPARK_LESSON,
+                HubOffers.ID_ECHO_LESSON
             ),
             HubOffers.all.map { it.id }
         )
+        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8), HubOffers.all.take(7).map { it.cost })
     }
 
     @Test

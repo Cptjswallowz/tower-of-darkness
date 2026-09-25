@@ -26,8 +26,8 @@ import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.VoidBg
 
 /**
- * Hub remnant shop — v0.1.27–v0.1.29.
- * Exactly 7 offers; Buy / OWNED / Can't afford. Old perk/card ladder hidden.
+ * Hub remnant shop — v0.1.27–v0.1.35.
+ * All HubOffers (11); Buy / OWNED / Can't afford. Old perk/card ladder hidden.
  */
 @Composable
 fun MetaHubScreen(gc: GameController) {

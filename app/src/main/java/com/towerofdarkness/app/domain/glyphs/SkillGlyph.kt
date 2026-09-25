@@ -27,7 +27,8 @@ object SkillGlyph {
 
     private val DAMAGE_IDS = setOf(
         "hostflint", "emberbrand", "tower_pike", "ruin_seal", "shadow_latch", "cinder_step",
-        "cinder_vow", "grave_nail"
+        "cinder_vow", "grave_nail",
+        "ember_draw", "brand_mark", "spark_tithe", "wake_echo"
     )
     private val BRACE_IDS = setOf(
         "iron_mantle", "vow_plate", "dust_veil"
@@ -50,7 +51,11 @@ object SkillGlyph {
         "ash_press" to "glyph_ash_press",
         "relic_shard" to "glyph_relic_shard",
         "cinder_vow" to "glyph_cinder_vow",
-        "grave_nail" to "glyph_grave_nail"
+        "grave_nail" to "glyph_grave_nail",
+        "ember_draw" to "glyph_ember_draw",
+        "brand_mark" to "glyph_brand_mark",
+        "spark_tithe" to "glyph_spark_tithe",
+        "wake_echo" to "glyph_wake_echo"
     )
 
     /** All catalog skill ids that must show a glyph. */

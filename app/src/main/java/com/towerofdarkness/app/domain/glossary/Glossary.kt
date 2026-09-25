@@ -38,7 +38,12 @@ object Glossary {
         "ashbrand" to ASHBRAND_BODY,
         "ember" to "Ember weapon nature / tag — Ashbrand’s charge flavor.",
         "spark" to "Spark pip toward Wake; quiet half-Wake when charge is incomplete.",
-        "wake" to "Heavy slash that spends Spark pips."
+        "wake" to "Heavy slash that spends Spark pips.",
+        // v0.1.35 ember pool skill names (tap title / log)
+        "ember draw" to "Deal 4. If you had no Sparks before this skill, gain Brace 2. Still adds 1 Spark after the hit.",
+        "brand mark" to "Deal 3. If you already had Sparks before this skill, Soften 2. Still adds 1 Spark after the hit.",
+        "spark tithe" to "Deal 6. If you had Sparks before, spend 1 Spark after the new pip is added (net zero). If you had none, keep the new pip. Logs “Spark spent” when it spends.",
+        "wake echo" to "Deal 5. If Wake already fired this fight, deal 4 more in the same line. The bonus does not add another Spark."
     )
     fun definition(term: String): String? =
         terms.entries.find { it.key.equals(term, ignoreCase = true) }?.value

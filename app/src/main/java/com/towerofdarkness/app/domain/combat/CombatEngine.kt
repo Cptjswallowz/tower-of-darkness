@@ -107,24 +107,59 @@ class CombatEngine(private val rng: Random = Random.Default) {
         )
     }
 
-    /** C — resolve highlighted skill; mark spent; attack skills +1 weapon charge. */
+    /**
+     * C — resolve highlighted skill; mark spent; attack skills +1 weapon charge.
+     * Ember pool (v0.1.35): read Sparks before → damage in resolveCard → +1 Spark →
+     * then Brace / Soften / Tithe. Wake threshold still queues for next weapon beat.
+     */
     fun resolveSkill(state: CombatState): CombatState {
         val card = state.lastFiredCard ?: return state
+        val pipsBefore = state.weapon.charge
         val anim = if (card.rarity == Rarity.RARE || card.rarity == Rarity.LEGENDARY)
             CombatAnimStyle.CHARGE_SHAKE_SLOWMO else CombatAnimStyle.QUICK
         val (after, events, isAttack) = resolveCard(state, card, anim)
+        val allEvents = events.toMutableList()
         var s = after.copy(
             spentIds = state.spentIds + card.id,
             highlightedId = card.id,
             lastSkillWasAttack = isAttack,
-            log = state.log + events,
             beat = CombatBeat.AFTER_SKILL
         )
         if (isAttack) {
             val w = s.weapon
             s = s.copy(weapon = w.copy(charge = (w.charge + 1).coerceAtMost(w.threshold + 2)))
         }
-        // CHAIN full and SPARK are independent — both may queue same beat
+        // Ember pool side effects AFTER +1 Spark (order lock — emberpool-v0135.md)
+        val ember = card.effect
+        if (ember is SkillEffect.EmberPoolSkill) {
+            if (ember.braceIfZeroBefore > 0 && pipsBefore == 0) {
+                s = s.copy(brace = s.brace + ember.braceIfZeroBefore)
+                allEvents += CombatEvent(
+                    "Brace +${ember.braceIfZeroBefore}",
+                    FloatingText("BRACE", true), anim, "card_fire",
+                    glossaryHints = listOf("brace")
+                )
+            }
+            if (ember.softenIfBeforeGte1 > 0 && pipsBefore >= 1) {
+                s = s.copy(counterPenalty = s.counterPenalty + ember.softenIfBeforeGte1)
+                allEvents += CombatEvent(
+                    "Counter softened −${ember.softenIfBeforeGte1}",
+                    sound = "ui",
+                    glossaryHints = listOf("soften")
+                )
+            }
+            if (ember.titheSpendIfBeforeGte1 && pipsBefore >= 1) {
+                val w = s.weapon
+                s = s.copy(weapon = w.copy(charge = (w.charge - 1).coerceAtLeast(0)))
+                allEvents += CombatEvent(
+                    "Spark spent",
+                    sound = "ui",
+                    glossaryHints = listOf("spark")
+                )
+            }
+        }
+        s = s.copy(log = state.log + allEvents)
+        // CHAIN full and SPARK are independent — both may queue same beat (after tithe)
         val mustFull = s.weapon.charge >= s.weapon.threshold
         val sparkChance = 0.08f + 0.04f * s.weapon.level
         val spark = rng.nextFloat() < sparkChance
@@ -409,6 +444,23 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     )
                 }
                 s = s.copy(brace = brace)
+            }
+            is SkillEffect.EmberPoolSkill -> {
+                // Damage (+ Wake Echo bonus) only; Brace/Soften/Tithe after charge++ in resolveSkill
+                isAttack = true
+                var dmg = e.damage
+                if (e.echoBonusIfWakeFired > 0 && s.fullProcThisCombat) {
+                    dmg += e.echoBonusIfWakeFired
+                }
+                val applied = applyDamageToEnemy(s, dmg)
+                s = applied.state
+                events += CombatEvent(
+                    "${card.title} deals $dmg",
+                    FloatingText("-$dmg", true), anim, sound,
+                    glossaryHints = listOf("spark", "wake", "brace", "soften").filter { t ->
+                        card.effect.description.contains(t, ignoreCase = true)
+                    }
+                )
             }
             is MoveEffect.DamageAndSoften -> {
                 isAttack = true

@@ -239,3 +239,4 @@ Flag to CoS before shipping if anyone proposes:
 
 **Related:** v0.1.28-hubkeep — Hub ADD not replace; migration keeps bank/OWNED. See `hubkeep-v0128.md`.
 | 2026-09-25 | v0.1.29-hubmore: +Hostblood 10 / Warm Ash 8 / Ash Tithe 8 — hubmore-v0129.md |
+| 2026-09-25 | v0.1.35-emberpool: Cold Draw/Brand/Spark/Echo Lesson 10/10/12/12 — emberpool-v0135.md |

@@ -32,17 +32,18 @@ class HubV0127Test {
         assertEquals("Hub · 12 remnants", HubOffers.titleBankLine(12))
         assertEquals("Remnants  0", HubOffers.hubBankLine(0))
         assertEquals("Remnants  7", HubOffers.hubBankLine(7))
-        assertEquals(7, HubOffers.all.size)
-        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8), HubOffers.all.map { it.cost })
+        assertEquals(11, HubOffers.all.size)
+        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8, 10, 10, 12, 12), HubOffers.all.map { it.cost })
         assertEquals(
             listOf(
                 "scout_charge", "extra_rumor", "host_of_embers", "iron_lesson",
-                "hostblood", "warm_ash", "ash_tithe"
+                "hostblood", "warm_ash", "ash_tithe",
+                "cold_draw", "brand_lesson", "spark_lesson", "echo_lesson"
             ),
             HubOffers.all.map { it.id }
         )
-        // v0.1.27 four KEEP unchanged at head of list
-        assertEquals(listOf(8, 6, 12, 12), HubOffers.all.take(4).map { it.cost })
+        // v0.1.27–v0.1.29 seven KEEP unchanged at head of list
+        assertEquals(listOf(8, 6, 12, 12, 10, 8, 8), HubOffers.all.take(7).map { it.cost })
     }
 
     @Test

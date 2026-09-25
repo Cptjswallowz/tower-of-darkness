@@ -136,3 +136,6 @@ Combat art, packs, Wake, path weights, 2x, trash/boss HP numbers, Cinder/Grave e
 |------|--------|
 | 2026-09-25 | v0.1.29-hubmore — Hostblood / Warm Ash / Ash Tithe Meta lock |
 | 2026-09-25 | Engineer — Hostblood/Warm Ash/Ash Tithe wired; HubMoreV0129Test |
+
+**Related:** v0.1.35-emberpool — +4 skill Hub unlocks; see `emberpool-v0135.md`.
+| 2026-09-25 | Related emberpool-v0135 (+4 skill unlocks) |

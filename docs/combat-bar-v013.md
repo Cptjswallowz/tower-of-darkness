@@ -150,3 +150,7 @@ Flee remains **grayed** (CoS temporary lock).
 ---
 
 **Related:** v0.1.32-enemykit — enemy uses same weight/grey machine after player skill. See `enemykit-v0132.md`.
+
+---
+
+**Related:** v0.1.35-emberpool — Ember Draw / Brand Mark / Spark Tithe / Wake Echo; Spark = charge pip; Wake check stays on weapon beat. See `emberpool-v0135.md`.

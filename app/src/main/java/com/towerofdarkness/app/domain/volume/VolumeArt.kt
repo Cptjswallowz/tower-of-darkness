@@ -78,7 +78,11 @@ object VolumeArt {
         "glyph_ash_press",
         "glyph_relic_shard",
         "glyph_cinder_vow",
-        "glyph_grave_nail"
+        "glyph_grave_nail",
+        "glyph_ember_draw",
+        "glyph_brand_mark",
+        "glyph_spark_tithe",
+        "glyph_wake_echo"
     )
 
     /** Fold-darkening targets (subset of Art bake — portraits + blade). */

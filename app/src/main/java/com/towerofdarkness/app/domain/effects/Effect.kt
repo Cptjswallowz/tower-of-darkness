@@ -51,6 +51,27 @@ sealed class SkillEffect : Effect() {
         val brace: Int,
         val minPips: Int = 1
     ) : SkillEffect()
+
+    /**
+     * Ember pool (v0.1.35): damage (+ optional Wake Echo bonus) in resolveCard;
+     * Brace / Soften / Tithe after +1 Spark in resolveSkill, keyed off pipsBefore.
+     * See docs/emberpool-v0135.md.
+     */
+    data class EmberPoolSkill(
+        override val id: String,
+        override val name: String,
+        override val description: String,
+        override val rarity: Rarity,
+        val damage: Int,
+        /** Added to [damage] in the same skill when fullProcThisCombat (Wake Echo). */
+        val echoBonusIfWakeFired: Int = 0,
+        /** After spark charge: if pipsBefore == 0, gain this Brace. */
+        val braceIfZeroBefore: Int = 0,
+        /** After spark charge: if pipsBefore ≥ 1, add Soften (counterPenalty). */
+        val softenIfBeforeGte1: Int = 0,
+        /** After spark charge: if pipsBefore ≥ 1, spend 1 Spark and log "Spark spent". */
+        val titheSpendIfBeforeGte1: Boolean = false
+    ) : SkillEffect()
 }
 
 /** Passive / triggered gear — brace or heal shards. */
