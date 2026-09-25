@@ -141,3 +141,7 @@ Spec lock = **green**. Engineer wired: baseline + Extra stack in `HubOffers`; on
 | 2026-09-24 | v0.1.28-hubkeep — baseline rumor 1/floor; stack Hub buys; migration OWNED; Meta & Ops |
 | 2026-09-24 | Meta green — bank/OWNED/grants confirmed vs Architect lock |
 | 2026-09-24 | Engineer — baseline rumor + migrate + HubKeepV0128Test |
+
+---
+
+**Related:** v0.1.29-hubmore — three more once-buy climb perks; bank/OWNED intact. See `hubmore-v0129.md`.

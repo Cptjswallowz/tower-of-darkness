@@ -143,6 +143,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var rumorRerolls by mutableStateOf(0)
         private set
+    /**
+     * Climb-scoped max HP (PLAYER_MAX + metaHpBonus + Hostblood once).
+     * Heal clamps / combat / mid-run player_max_hp all use this.
+     */
+    val climbMaxHp: Int
+        get() = HubOffers.climbMaxHp(Balance.PLAYER_MAX_HP, metaHpBonus, unlockedCards)
+    /**
+     * Warm Ash: Brace applied into first CombatState of the climb, then cleared.
+     * Not re-granted on FloorBreak or mid-run resume.
+     */
+    private var pendingStartBrace: Int = 0
     /** Treasure preview Lose (tapped card). Cleared on cancel; does not affect Gain. */
     var treasureSwapLoseId by mutableStateOf<String?>(null)
         private set
@@ -245,7 +256,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
-        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        playerHp = climbMaxHp
         nodesCleared = 0
         weightHitchCardId = null
         unlocksThisRun = emptySet()
@@ -253,6 +264,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         // v0.1.28-hubkeep: Scout if owned; rumor = baseline 1/floor + Extra stack
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
+        // v0.1.29-hubmore: Warm Ash Brace into first combat only
+        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
         summary = null
         combatState = null
         clearMidRunSlotAsync()
@@ -291,11 +304,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
         runRemnantsEarned = 0
         unlocksThisRun = emptySet()
         shopVisits = emptyList()
-        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        playerHp = climbMaxHp
         nodesCleared = 0
         weightHitchCardId = null
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
+        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -316,11 +330,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
         runRemnantsEarned = 0
         unlocksThisRun = emptySet()
         shopVisits = emptyList()
-        playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        playerHp = climbMaxHp
         nodesCleared = 0
         weightHitchCardId = null
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
+        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -441,13 +456,16 @@ class GameController(app: Application) : AndroidViewModel(app) {
             hallwayEnemyFromCurrentNode(floor)
         }
         val cards = effectiveLoadout()
-        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        val maxHp = climbMaxHp
+        val startBrace = pendingStartBrace
+        pendingStartBrace = 0
         combatState = engine.start(
             activeCards = cards,
             enemy = enemy,
             weapon = equippedWeapon.copy(charge = 0),
             maxHp = maxHp,
-            playerHp = playerHp.coerceAtMost(maxHp)
+            playerHp = playerHp.coerceAtMost(maxHp),
+            initialBrace = startBrace
         )
         nav = NavState.Combat
         sound.play("dice")
@@ -886,7 +904,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun buyOffer(offer: ShopOffer) {
-        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        val maxHp = climbMaxHp
         if (!canBuyShopOffer(offer, runWallet, playerHp, maxHp)) return
         runWallet -= offer.price
         shopOffers = shopOffers.map { if (it.id == offer.id) it.copy(sold = true) else it }
@@ -926,7 +944,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun restHeal() {
-        val maxHp = Balance.PLAYER_MAX_HP + metaHpBonus
+        val maxHp = climbMaxHp
         // v0.1.10-bossrest: Rest Heal fills to MAX; Deep Breath does not overheal
         playerHp = applyRestHealToMax(maxHp)
         returnToPathAfterResolve()
@@ -1019,7 +1037,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         } else {
             // B — Heal 8, or take 4 damage (never hitch-only)
             if (rng.nextBoolean()) {
-                playerHp = (playerHp + 8).coerceAtMost(Balance.PLAYER_MAX_HP + metaHpBonus)
+                playerHp = (playerHp + 8).coerceAtMost(climbMaxHp)
             } else {
                 playerHp = (playerHp - 4).coerceAtLeast(1)
             }
@@ -1084,20 +1102,24 @@ class GameController(app: Application) : AndroidViewModel(app) {
     // --- Summary / Hub ---
     private fun finishRun(won: Boolean) {
         val earned = runWallet
+        // v0.1.29-hubmore: Ash Tithe +3 at summary (win or death); not mid-run wallet
+        val tithe = HubOffers.ashTitheBonus(unlockedCards)
+        val banked = earned + tithe
         // Near-miss only if boss reached AND boss HP remaining ≤ 8
         val bossFight = combatState?.enemy?.isBoss == true
         val bossHpLeft = combatState?.enemy?.hp ?: 999
         val near = !won && bossFight && bossHpLeft <= 8
-        summary = RunSummaryData(won, nodesCleared, earned, path?.floor ?: 1, near)
-        viewModelScope.launch { meta.addRemnants(earned) }
+        summary = RunSummaryData(won, nodesCleared, banked, path?.floor ?: 1, near)
+        viewModelScope.launch { meta.addRemnants(banked) }
         runWallet = 0
+        pendingStartBrace = 0
         clearMidRunSlotAsync()
         nav = NavState.RunSummary
     }
 
     /**
-     * v0.1.27-hub: buy one of the four Hub offers. Spends remnants_bank immediately;
-     * persists unlock id in MetaStore unlocked set.
+     * v0.1.27–v0.1.29 hub: buy one Hub offer. Spends remnants_bank immediately;
+     * persists unlock id in MetaStore unlocked set (no new keys).
      */
     fun hubBuyOffer(offerId: String) {
         val offer = HubOffers.byId(offerId) ?: return
@@ -1181,7 +1203,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             pendingStairContinue = pendingStair,
             path = MidRunSlot.fromPath(p, layout),
             playerHp = playerHp,
-            playerMaxHp = Balance.PLAYER_MAX_HP + metaHpBonus,
+            playerMaxHp = climbMaxHp,
             runWallet = runWallet,
             runRemnantsEarned = runRemnantsEarned,
             nodesCleared = nodesCleared,
@@ -1229,6 +1251,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         combatState = null
         combatJob?.cancel()
         combatJob = null
+        // Warm Ash is climb-start only — never re-grant on Continuity resume
+        pendingStartBrace = 0
         treasureSwapLoseId = null
         treasureSwapGainId = null
         shopOffers = emptyList()

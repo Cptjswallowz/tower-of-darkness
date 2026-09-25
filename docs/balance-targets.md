@@ -43,3 +43,7 @@ Elliott may still override later. Until then, Engineer/QA treat as slice law:
 - Architect revises targets when CoS approves a design change.
 - Meta & Ops owns remnant sinks/sources within shop 5–15 and unlock ≥15.
 - QA owns measurement; Architect owns interpretation + proposed retune.
+
+---
+
+**Related:** v0.1.29-hubmore — Hostblood +2 max HP per climb (start full); base max unchanged; no trash/boss retune. See `hubmore-v0129.md`.

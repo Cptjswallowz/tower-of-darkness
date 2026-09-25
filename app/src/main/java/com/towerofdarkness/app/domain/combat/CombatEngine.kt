@@ -67,10 +67,12 @@ class CombatEngine(private val rng: Random = Random.Default) {
         enemy: Enemy,
         weapon: WeaponRuntime,
         maxHp: Int = Balance.PLAYER_MAX_HP,
-        playerHp: Int = maxHp
+        playerHp: Int = maxHp,
+        initialBrace: Int = 0
     ): CombatState = CombatState(
         playerHp = playerHp.coerceIn(1, maxHp),
         playerMaxHp = maxHp,
+        brace = initialBrace.coerceAtLeast(0),
         enemy = enemy,
         activeCards = activeCards,
         weapon = weapon

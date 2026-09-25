@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
@@ -22,7 +21,7 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 
 @Composable
 fun ShopScreen(gc: GameController) {
-    val maxHp = Balance.PLAYER_MAX_HP + gc.metaHpBonus
+    val maxHp = gc.climbMaxHp
     val hpFull = gc.playerHp >= maxHp
     val emptyWallet = GameController.shopShowsEmptyState(gc.runWallet)
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
