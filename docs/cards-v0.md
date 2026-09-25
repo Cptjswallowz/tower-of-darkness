@@ -57,3 +57,14 @@ Cards **1–5**: Hostflint, Cinder Step, Iron Mantle, Emberbrand, Dust Veil.
 - Loadout: **exactly 5**; no sixth skill; `loadout_flex` deferred.
 - Hub unlocks still: any pool card and/or meta perk (no signature system) — rarer cards via Treasure **and** Hub.
 - Exact rare drop/offer rates: provisional — not measured.
+
+## Hub unlock skills (v0.1.27)
+
+Only after Hub buy. See `hub-v0127.md`. **No** further skills this tag.
+
+| # | Name | Rarity | Class | Weight | Effect (combat) |
+|---|------|--------|-------|--------|-----------------|
+| 12 | Cinder Vow | Uncommon | SkillEffect | 3 | Deal **5**. If Ashbrand ≥1 pip → **Brace 2**. |
+| 13 | Grave Nail | Uncommon | SkillEffect | 3 | Deal **4**. Next enemy counter **−1** (min 1). **Soften 1**. |
+
+Glyphs: Art **vow-spark** / **nail**. Same chrome + glossary as pool cards.

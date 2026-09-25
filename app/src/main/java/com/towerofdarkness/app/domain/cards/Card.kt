@@ -5,6 +5,7 @@ import com.towerofdarkness.app.domain.effects.Effect
 import com.towerofdarkness.app.domain.effects.Equipment
 import com.towerofdarkness.app.domain.effects.MoveEffect
 import com.towerofdarkness.app.domain.effects.SkillEffect
+import com.towerofdarkness.app.domain.hub.HubOffers
 
 data class Card(
     val id: String,
@@ -61,6 +62,21 @@ object CardCatalog {
                 Equipment.HealOrBrace("relic_shard", "Relic Shard",
                     "Heal 4 HP. If already full, gain Brace 4 instead.", Rarity.RARE, 4, 4),
                 Rarity.RARE, 2, unlockCost = 20, hubUnlockable = true),
+            // Hub-gated (v0.1.27) — pool only after Host of Embers / Iron Lesson
+            Card("cinder_vow", "Cinder Vow",
+                SkillEffect.DamageAndBraceIfAshPips(
+                    "cinder_vow", "Cinder Vow",
+                    "Deal 5. If Ashbrand has ≥1 pip, gain Brace 2.",
+                    Rarity.UNCOMMON, damage = 5, brace = 2, minPips = 1
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 12),
+            Card("grave_nail", "Grave Nail",
+                MoveEffect.DamageAndSoften(
+                    "grave_nail", "Grave Nail",
+                    "Deal 4. Next enemy counter −1 (min 1). Soften 1.",
+                    Rarity.UNCOMMON, 4, counterPenalty = 1
+                ),
+                Rarity.UNCOMMON, 3, unlockCost = 12),
         )
     }
 
@@ -73,7 +89,13 @@ object CardCatalog {
     fun byId(id: String): Card? = all.find { it.id == id }
 
     fun poolForRun(unlocked: Set<String>): List<Card> =
-        all.filter { it.id in unlocked || it.unlockCost == 0 }
+        all.filter { card ->
+            when (card.id) {
+                HubOffers.CARD_CINDER_VOW,
+                HubOffers.CARD_GRAVE_NAIL -> HubOffers.skillUnlocked(card.id, unlocked)
+                else -> card.id in unlocked || card.unlockCost == 0
+            }
+        }
 
     fun hubUnlockables(owned: Set<String>): List<Card> =
         all.filter { it.hubUnlockable && it.id !in owned }.sortedBy { it.unlockCost }

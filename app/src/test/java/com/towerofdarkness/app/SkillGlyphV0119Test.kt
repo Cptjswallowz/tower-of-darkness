@@ -24,8 +24,8 @@ class SkillGlyphV0119Test {
             assertNotNull(SkillGlyph.job(card.id))
         }
         assertTrue(SkillGlyph.catalogFullyMapped())
-        assertEquals(11, SkillGlyph.mappedSkillIds().size)
-        assertEquals(11, CardCatalog.all.size)
+        assertEquals(13, SkillGlyph.mappedSkillIds().size)
+        assertEquals(13, CardCatalog.all.size)
     }
 
     @Test
@@ -54,7 +54,8 @@ class SkillGlyphV0119Test {
     @Test
     fun damageJobs_restOfCatalog() {
         val expected = setOf(
-            "hostflint", "emberbrand", "tower_pike", "ruin_seal", "shadow_latch", "cinder_step"
+            "hostflint", "emberbrand", "tower_pike", "ruin_seal", "shadow_latch", "cinder_step",
+            "cinder_vow", "grave_nail"
         )
         expected.forEach { id ->
             assertEquals("$id should be Damage", SkillJob.DAMAGE, SkillGlyph.job(id))
@@ -75,7 +76,9 @@ class SkillGlyphV0119Test {
             "vow_plate" to "glyph_vow_plate",
             "dust_veil" to "glyph_dust_veil",
             "ash_press" to "glyph_ash_press",
-            "relic_shard" to "glyph_relic_shard"
+            "relic_shard" to "glyph_relic_shard",
+            "cinder_vow" to "glyph_cinder_vow",
+            "grave_nail" to "glyph_grave_nail"
         )
         expected.forEach { (id, name) ->
             assertEquals(name, SkillGlyph.drawableName(id))

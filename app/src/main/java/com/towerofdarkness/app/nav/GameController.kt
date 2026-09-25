@@ -15,6 +15,7 @@ import com.towerofdarkness.app.data.MidRunSlot
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.CombatBeat
 import com.towerofdarkness.app.domain.combat.WeaponCatalog
@@ -247,9 +248,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         weightHitchCardId = null
         unlocksThisRun = emptySet()
         shopVisits = emptyList()
-        // scout_charge: +1 free Scout usable from Path (or Rest) each climb — observable
-        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
-        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        // v0.1.27-hub: Scout +1 / climb; Extra rumor +1 / floor (+ legacy rumor_clarity climb)
+        freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
+        rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
         summary = null
         combatState = null
         clearMidRunSlotAsync()
@@ -291,8 +292,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
         nodesCleared = 0
         weightHitchCardId = null
-        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
-        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
+        rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -316,8 +317,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         playerHp = Balance.PLAYER_MAX_HP + metaHpBonus
         nodesCleared = 0
         weightHitchCardId = null
-        freeScoutCharges = if ("scout_charge" in unlockedCards) 1 else 0
-        rumorRerolls = if ("rumor_clarity" in unlockedCards) 1 else 0
+        freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
+        rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -866,6 +867,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         treasureSwapGainId = null
         shopOffers = emptyList()
         summary = null
+        // v0.1.27: Extra rumor grants +1 rumor re-roll per floor (FloorBreak → F2)
+        rumorRerolls += HubOffers.rumorRerollsOnFloorAdvance(unlockedCards)
         nav = NavState.Path
         // Dual write #2: stair Continue → F2 path, clear pending
         persistMidRun(pendingStair = false, resume = MidRunResume.Path)
@@ -1090,6 +1093,21 @@ class GameController(app: Application) : AndroidViewModel(app) {
         nav = NavState.RunSummary
     }
 
+    /**
+     * v0.1.27-hub: buy one of the four Hub offers. Spends remnants_bank immediately;
+     * persists unlock id in MetaStore unlocked set.
+     */
+    fun hubBuyOffer(offerId: String) {
+        val offer = HubOffers.byId(offerId) ?: return
+        viewModelScope.launch {
+            if (offerId in unlockedCards) return@launch
+            if (meta.spendRemnants(offer.cost)) {
+                meta.unlockCard(offerId)
+                sound.play("ui")
+            }
+        }
+    }
+
     fun hubUnlock(cardId: String) {
         val card = CardCatalog.byId(cardId) ?: return
         val cost = card.unlockCost.coerceAtLeast(Balance.CHEAPEST_CARD_UNLOCK)
@@ -1110,17 +1128,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Persist scout_charge perk in unlockedCards set (id "scout_charge"). */
+    /** Persist scout_charge via Hub offer cost (8). */
     fun hubUnlockScoutCharge() {
-        viewModelScope.launch {
-            if ("scout_charge" !in unlockedCards && meta.spendRemnants(20)) {
-                meta.unlockCard("scout_charge")
-                sound.play("ui")
-            }
-        }
+        hubBuyOffer(HubOffers.ID_SCOUT)
     }
 
     fun hubUnlockPerk(perkId: String, cost: Int) {
+        // Prefer locked Hub offer costs when id is a v0.1.27 offer
+        val offer = HubOffers.byId(perkId)
+        if (offer != null) {
+            hubBuyOffer(perkId)
+            return
+        }
         viewModelScope.launch {
             if (perkId !in unlockedCards && meta.spendRemnants(cost)) {
                 meta.unlockCard(perkId)

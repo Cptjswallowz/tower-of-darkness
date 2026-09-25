@@ -55,7 +55,7 @@ class VolumeArtV0120Test {
         assertFalse(VolumeArt.glyphSymbolsRestyled())
         assertEquals("glyph_hostflint", SkillGlyph.drawableName("hostflint"))
         assertEquals("glyph_vow_plate", SkillGlyph.drawableName("vow_plate"))
-        assertEquals(11, SkillGlyph.mappedSkillIds().size)
+        assertEquals(13, SkillGlyph.mappedSkillIds().size)
         assertTrue(VolumeArt.vowPlatePlateClarifyAllowed())
     }
 
@@ -66,7 +66,7 @@ class VolumeArtV0120Test {
         assertTrue(baked.contains("portrait_ash_warden"))
         assertTrue(baked.contains("ashbrand_icon"))
         assertTrue(baked.contains("glyph_vow_plate"))
-        assertEquals(14, baked.size)
+        assertEquals(16, baked.size)
         assertFalse(baked.contains("ashbrand_spark"))
         assertFalse(baked.any { it.startsWith("wake_vfx_") })
     }

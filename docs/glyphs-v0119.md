@@ -87,3 +87,7 @@ Wake art, Spark, bodies, 2x, save, pips logic, path, combat math.
 - UI: `SkillGlyphIcon` on combat `SkillSlot` (glyph above name) + loadout `CardRow` (glyph beside name)
 - Drawables: `glyph_*.png` under `app/src/main/res/drawable/` — Art replaces same names
 - Slot height: 72 dp (was 56) so name + w# stay readable
+
+---
+
+**Related:** v0.1.27-hub — Art glyphs **vow-spark** (Cinder Vow), **nail** (Grave Nail). See `hub-v0127.md`.

@@ -230,3 +230,7 @@ Flag to CoS before shipping if anyone proposes:
 | 2026-09-23 | Point §4 mid-run rules to midrun-save-v0112.md (WO v0.1.12-save) |
 | 2026-09-23 | Expand midrun_v0112 vs Architect save-v0112 + floor2 persist; retire run_v0 combat snapshot |
 | 2026-09-23 | CoS: rng_seed required in mid-run slot |
+
+---
+
+**Superseded (Hub offer set):** v0.1.27-hub — live Hub = 4 offers (Scout **8**, Extra rumor **6**, Host of Embers **12**, Iron Lesson **12**). See `hub-v0127.md`. Older Pathseer 20 / Fogbreak 35 ladder rows yield to this set when Hub v0.1.27 is live. Meta owns bank + OWNED persist.

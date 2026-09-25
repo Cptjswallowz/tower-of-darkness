@@ -66,7 +66,7 @@ fun MainMenuScreen(gc: GameController) {
         OutlinedButton(
             onClick = { gc.goHub() },
             modifier = Modifier.fillMaxWidth(0.85f)
-        ) { Text("Hub  ·  ${gc.remnantsBank} remnants") }
+        ) { Text(com.towerofdarkness.app.domain.hub.HubOffers.titleBankLine(gc.remnantsBank)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(
             onClick = { /* settings stub */ },

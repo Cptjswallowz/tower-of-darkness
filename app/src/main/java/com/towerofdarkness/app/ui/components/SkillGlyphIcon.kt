@@ -82,6 +82,8 @@ object SkillGlyphResources {
         "glyph_dust_veil" -> R.drawable.glyph_dust_veil
         "glyph_ash_press" -> R.drawable.glyph_ash_press
         "glyph_relic_shard" -> R.drawable.glyph_relic_shard
+        "glyph_cinder_vow" -> R.drawable.glyph_cinder_vow
+        "glyph_grave_nail" -> R.drawable.glyph_grave_nail
         else -> null
     }
 }

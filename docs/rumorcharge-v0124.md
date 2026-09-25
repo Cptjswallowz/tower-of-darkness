@@ -71,3 +71,7 @@ Persist **both** remaining counts (`free_scout_charges`, `rumor_rerolls`) — al
 - [ ] Device QA: Keen Eye + Clear Fog — first fogged tap scouts; rumor stays 1; next tap (or ↻) spends rumor
 - [ ] Device QA: mid-run Continuity after spend restores both counters
 - [x] No art / Wake / glyphs / plate / path math / 2x / balance grant changes
+
+---
+
+**Related:** v0.1.27-hub — Hub **Extra rumor** (6) / **Scout** (8) unlock grants; wallets stay separate. See `hub-v0127.md`.

@@ -40,6 +40,17 @@ sealed class SkillEffect : Effect() {
         val damage: Int,
         val heal: Int
     ) : SkillEffect()
+
+    /** Deal damage; if Ashbrand pips ≥ minPips, gain Brace. */
+    data class DamageAndBraceIfAshPips(
+        override val id: String,
+        override val name: String,
+        override val description: String,
+        override val rarity: Rarity,
+        val damage: Int,
+        val brace: Int,
+        val minPips: Int = 1
+    ) : SkillEffect()
 }
 
 /** Passive / triggered gear — brace or heal shards. */

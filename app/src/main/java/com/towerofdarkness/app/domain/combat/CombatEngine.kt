@@ -304,6 +304,24 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 )
                 s = s.copy(enemy = enemy, playerHp = nh)
             }
+            is SkillEffect.DamageAndBraceIfAshPips -> {
+                isAttack = true
+                enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
+                events += CombatEvent(
+                    "${card.title} deals ${e.damage}",
+                    FloatingText("-${e.damage}", true), anim, sound
+                )
+                var brace = s.brace
+                if (s.weapon.pipsFilled >= e.minPips) {
+                    brace += e.brace
+                    events += CombatEvent(
+                        "Brace +${e.brace}",
+                        FloatingText("BRACE", true), anim, sound,
+                        glossaryHints = listOf("brace")
+                    )
+                }
+                s = s.copy(enemy = enemy, brace = brace)
+            }
             is MoveEffect.DamageAndSoften -> {
                 isAttack = true
                 enemy = enemy.copy(hp = (enemy.hp - e.damage).coerceAtLeast(0))
