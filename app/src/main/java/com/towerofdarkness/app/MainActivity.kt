@@ -14,6 +14,7 @@ import androidx.core.view.WindowCompat
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.nav.NavState
 import com.towerofdarkness.app.ui.components.GlossaryDialog
+import com.towerofdarkness.app.ui.screens.ClimbIntroScreen
 import com.towerofdarkness.app.ui.screens.CombatScreen
 import com.towerofdarkness.app.ui.screens.EventScreen
 import com.towerofdarkness.app.ui.screens.FloorBreakScreen
@@ -62,6 +63,7 @@ fun TowerRoot(gc: GameController) {
     }
     when (gc.nav) {
         NavState.MainMenu -> MainMenuScreen(gc)
+        NavState.ClimbIntro -> ClimbIntroScreen(gc)
         NavState.Tutorial -> TutorialScreen(gc)
         NavState.Path -> PathScreen(gc)
         NavState.Loadout -> LoadoutScreen(gc)

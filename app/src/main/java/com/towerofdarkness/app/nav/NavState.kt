@@ -2,6 +2,8 @@ package com.towerofdarkness.app.nav
 
 sealed class NavState {
     data object MainMenu : NavState()
+    /** Title→Climb fullscreen intro (fresh only). Skip/end → Tutorial or Path. */
+    data object ClimbIntro : NavState()
     data object Tutorial : NavState()
     data object Path : NavState()
     data object Loadout : NavState()

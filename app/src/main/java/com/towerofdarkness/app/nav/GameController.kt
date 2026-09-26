@@ -220,19 +220,47 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     /**
      * Start a climb. If a mid-run slot exists, caller must confirm wipe via [confirmNewClimb].
-     * Without a slot, behaves as legacy Climb.
+     * Without a slot, fresh Title Climb → ClimbIntro (if asset) then Tutorial/Path.
+     * Resume / [continueClimb] never enters ClimbIntro.
      */
     fun climb() {
         if (hasMidRunSlot) return // UI shows confirm; use confirmNewClimb
-        beginClimbFresh()
+        enterClimbIntroOrFresh()
     }
 
-    /** After New-climb confirm — wipe mid-run slot, then Tutorial/Path. Meta untouched. */
+    /** After New-climb confirm — wipe mid-run slot, then intro (if asset) → Tutorial/Path. Meta untouched. */
     fun confirmNewClimb() {
         viewModelScope.launch {
             meta.clearMidRunSlot()
             hasMidRunSlot = false
+            enterClimbIntroOrFresh()
+        }
+    }
+
+    /**
+     * Fresh climb gate: show [NavState.ClimbIntro] when asset present; else silent skip to [beginClimbFresh].
+     * Not used by [continueClimb] / cold-start mid-run restore.
+     */
+    private fun enterClimbIntroOrFresh() {
+        if (ClimbIntroGate.shouldShowIntro(freshClimb = true, assetPresent = hasClimbIntroAsset())) {
+            nav = NavState.ClimbIntro
+        } else {
             beginClimbFresh()
+        }
+    }
+
+    /** Intro ended or skipped — proceed to Tutorial/Path as legacy beginClimbFresh. */
+    fun finishClimbIntro() {
+        if (nav != NavState.ClimbIntro) return
+        beginClimbFresh()
+    }
+
+    private fun hasClimbIntroAsset(): Boolean {
+        return try {
+            getApplication<Application>().assets.open(ClimbIntroGate.ASSET_NAME).use { }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
