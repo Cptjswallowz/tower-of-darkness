@@ -120,10 +120,11 @@ class WakeArtV0115Test {
         assertEquals(WakeIconPhase.CHARGE, WakeArt.iconPhase(s, 0L, 1))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 400L, 1))
         assertEquals(WakeIconPhase.CRACK, WakeArt.iconPhase(s, 400L, 1))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 900L, 1))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 900L, 1)) // still slash (+200ms)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 1100L, 1))
         // After sequence: overlay clears (hold tail)
         val afterSeq = WakeArt.stageSequenceDuration1x()
-        assertEquals(1300L, afterSeq)
+        assertEquals(1500L, afterSeq) // charge400 + slash700 + impact400
         assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, afterSeq, 1))
         assertTrue(afterSeq < WakeArt.fullWakeHold1x())
     }
@@ -138,16 +139,17 @@ class WakeArtV0115Test {
 
         assertEquals(400L, WakeArt.holdMs(WakeArt.FRAME_CHARGE_MS, 1))
         assertEquals(200L, WakeArt.holdMs(WakeArt.FRAME_CHARGE_MS, 2))
-        assertEquals(500L, WakeArt.holdMs(WakeArt.FRAME_SLASH_MS, 1))
-        assertEquals(250L, WakeArt.holdMs(WakeArt.FRAME_SLASH_MS, 2))
+        assertEquals(700L, WakeArt.holdMs(WakeArt.FRAME_SLASH_MS, 1))
+        assertEquals(350L, WakeArt.holdMs(WakeArt.FRAME_SLASH_MS, 2))
         assertEquals(400L, WakeArt.holdMs(WakeArt.FRAME_IMPACT_MS, 1))
         assertEquals(200L, WakeArt.holdMs(WakeArt.FRAME_IMPACT_MS, 2))
 
         // Same frame order at 2x, compressed clocks
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 2))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 200L, 2))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 450L, 2))
-        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 650L, 2))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 450L, 2)) // still slash (+200ms hold)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 560L, 2))
+        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 760L, 2))
 
         assertEquals(2300L, WakeArt.fullWakeHold1x())
         assertEquals(1150L, WakeArt.fullWakeHold2x())

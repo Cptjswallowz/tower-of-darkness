@@ -45,7 +45,7 @@ object WakeArt {
 
     /** Art note @1x budgets inside FULL Wake hold (do not change hold math). */
     const val FRAME_CHARGE_MS = 400L
-    const val FRAME_SLASH_MS = 500L
+    const val FRAME_SLASH_MS = 700L
     const val FRAME_IMPACT_MS = 400L
 
     /** Same slot size as today's weapon plate chrome (~48 dp readable). */

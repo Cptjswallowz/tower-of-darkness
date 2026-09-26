@@ -110,8 +110,9 @@ class WakeArtV0116Test {
         assertEquals("WAKE", wake.floating?.text)
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 1))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 400L, 1))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 900L, 1))
-        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 1300L, 1))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 900L, 1)) // still slash (+200ms)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 1100L, 1))
+        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 1500L, 1))
     }
 
     @Test
@@ -119,8 +120,9 @@ class WakeArtV0116Test {
         val s = afterFullWake()
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 2))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 200L, 2))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 450L, 2))
-        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 650L, 2))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 450L, 2)) // still slash (+200ms hold)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 560L, 2))
+        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 760L, 2))
         assertEquals(2300L, WakeArt.fullWakeHold1x())
         assertEquals(1150L, WakeArt.fullWakeHold2x())
     }

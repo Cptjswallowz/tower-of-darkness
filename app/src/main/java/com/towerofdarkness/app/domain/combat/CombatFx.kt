@@ -1,10 +1,10 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.38-fxaim (aim / paint fix on v0.1.37 maps).
+ * Shared combat FX kernel — v0.1.39-fxread (readability: bigger Brace, heavier slash).
  * Pure domain maps + duration + recipient-slash / Brace-pip helpers.
  * Compose renders flash / short recipient slash / brace pips / float / shake.
- * Never changes damage / Wake math. See docs/fx-v0137.md + docs/fxaim-v0138.md.
+ * Never changes damage / Wake math / who gets FX. See docs/fxread-v0139.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -115,7 +115,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.38-fxaim"
+    const val TAG = "v0.1.39-fxread"
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
@@ -139,20 +139,29 @@ object CombatFx {
 
     // --- 1x duration budgets (presentation only) ---
     const val FLASH_MS = 120L
-    const val STROKE_SMALL_MS = 200L
-    const val STROKE_MEDIUM_MS = 280L
+    const val STROKE_SMALL_MS = 400L
+    const val STROKE_MEDIUM_MS = 480L
     const val FLOAT_MS = 700L
     const val SHAKE_MEDIUM_MS = 240L
     const val SHAKE_WAKE_MS = 400L
-    const val BRACE_PIP_MS = 560L
+    const val BRACE_PIP_MS = 700L
+    /** Fade only in the last [BRACE_PIP_FADE_MS] of the hold (full opacity before). */
+    const val BRACE_PIP_FADE_MS = 200L
     const val SOFTEN_PULSE_MS = 420L
 
-    const val THICK_SMALL = 1.5f
-    const val THICK_MEDIUM = 3.0f
+    const val THICK_SMALL = 2.1f
+    const val THICK_MEDIUM = 4.2f
     const val SHAKE_SMALL_AMP = 0f
     const val SHAKE_MEDIUM_AMP = 4f
     const val SHAKE_WAKE_AMP = 12f
     const val BRACE_PIP_CAP = 5
+    /** Pip radius as fraction of min(stage w,h); was 0.018, now 1.5×. */
+    const val BRACE_PIP_RADIUS_FRAC = 0.027f
+    /** Prior pip radius (v0.1.38) — tests assert 1.5×. */
+    const val BRACE_PIP_RADIUS_FRAC_PRIOR = 0.018f
+    /** Prior stroke thicknesses (v0.1.38) — tests assert 1.4×. */
+    const val THICK_SMALL_PRIOR = 1.5f
+    const val THICK_MEDIUM_PRIOR = 3.0f
 
     /** Player SMALL ids (lock table). */
     val PLAYER_SMALL: Set<String> = setOf(
@@ -223,6 +232,22 @@ object CombatFx {
      */
     fun bracePipCount(gained: Int): Int =
         gained.coerceAtLeast(0).coerceAtMost(BRACE_PIP_CAP)
+
+    /**
+     * Brace pip alpha over hold progress 0→1.
+     * Full opacity until fade window starts at (BRACE_PIP_MS - BRACE_PIP_FADE_MS) / BRACE_PIP_MS,
+     * then linear fade to floor ~0.15.
+     */
+    fun bracePipAlpha(progress: Float): Float {
+        val p = progress.coerceIn(0f, 1f)
+        val fadeStart = (BRACE_PIP_MS - BRACE_PIP_FADE_MS).toFloat() / BRACE_PIP_MS.toFloat()
+        return if (p < fadeStart) {
+            0.95f
+        } else {
+            val t = ((p - fadeStart) / (1f - fadeStart)).coerceIn(0f, 1f)
+            (0.95f * (1f - t)).coerceAtLeast(0.15f)
+        }
+    }
 
     /**
      * Short diagonal cut on [recipient] bust only.

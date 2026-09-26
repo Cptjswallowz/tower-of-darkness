@@ -92,8 +92,9 @@ class WakeArtV0117Test {
         assertTrue(WakeArt.showCrescent(s))
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 1))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 400L, 1))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 900L, 1))
-        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 1300L, 1))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 900L, 1)) // still slash (+200ms)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 1100L, 1))
+        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 1500L, 1))
     }
 
     @Test
@@ -120,13 +121,14 @@ class WakeArtV0117Test {
         assertTrue(WakeArt.stageSequenceDuration1x() <= Balance.WEAPON_FULL_HOLD_MS)
         // Frame budgets unchanged (no extra beat timing)
         assertEquals(400L, WakeArt.FRAME_CHARGE_MS)
-        assertEquals(500L, WakeArt.FRAME_SLASH_MS)
+        assertEquals(700L, WakeArt.FRAME_SLASH_MS)
         assertEquals(400L, WakeArt.FRAME_IMPACT_MS)
         val s = afterFullWake()
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 2))
         assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 200L, 2))
-        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 450L, 2))
-        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 650L, 2))
+        assertEquals(WakeStageFrame.SLASH, WakeArt.stageFrame(s, 450L, 2)) // still slash (+200ms hold)
+        assertEquals(WakeStageFrame.IMPACT, WakeArt.stageFrame(s, 560L, 2))
+        assertEquals(WakeStageFrame.NONE, WakeArt.stageFrame(s, 760L, 2))
         assertEquals(CombatBeat.AFTER_WEAPON, s.beat)
         assertTrue(WakeArt.WAKE_ART_FULLY_FROZEN)
     }

@@ -18,7 +18,7 @@ import com.towerofdarkness.app.domain.combat.FxTier
 import kotlin.math.min
 
 /**
- * Presentation layer for v0.1.38-fxaim recipient slash (short cut on one bust).
+ * Presentation layer for v0.1.39-fxread recipient slash (heavier stroke) + Brace pips.
  * Wake slash stays in [WakeStageOverlay] — do not draw Wake tier here.
  * Banned: full-width gold bar You↔foe; whole-row tint flash.
  */
@@ -102,9 +102,9 @@ fun CombatBracePipsOverlay(
         }
         val cy = CombatFx.BUST_Y * h
         val radius = min(w, h) * 0.11f
-        val alpha = (1f - progress).coerceIn(0.15f, 0.95f)
+        val alpha = CombatFx.bracePipAlpha(progress)
         val lift = progress * min(w, h) * 0.06f
-        val pipR = min(w, h) * 0.018f
+        val pipR = min(w, h) * CombatFx.BRACE_PIP_RADIUS_FRAC
         for (i in 0 until n) {
             val ang = (i.toFloat() / n.coerceAtLeast(1)) * (Math.PI.toFloat() * 1.6f) - 0.4f
             val px = cx + kotlin.math.cos(ang) * radius
