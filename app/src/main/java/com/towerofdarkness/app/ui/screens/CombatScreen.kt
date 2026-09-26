@@ -105,7 +105,7 @@ fun CombatScreen(gc: GameController) {
     var bracePipVisible by remember { mutableStateOf(false) }
     var bracePipProgress by remember { mutableStateOf(0f) }
     var softenPulse by remember { mutableStateOf(false) }
-    // v0.1.44-slashproof: player-visible combat-log echo of slash-light debug
+    // v0.1.45-slashscale: player-visible combat-log echo of slash-light debug
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
     if (state != null && displayedPlayerHp < 0) {
@@ -422,7 +422,8 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
-            // v0.1.38-fxaim: short slash on recipient bust only (Wake stays foe-aimed above)
+            // v0.1.45-slashscale: short slash on recipient bust; 180.dp so large
+            // bust-width crescent is not clipped to a blob (half-stage X clip unchanged)
             CombatStrokeOverlay(
                 stroke = strokeSpec,
                 visible = strokeVisible,
@@ -432,7 +433,7 @@ fun CombatScreen(gc: GameController) {
                 onSlashLightDebug = { line -> slashDebugLine = line },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .height(180.dp)
                     .align(Alignment.TopCenter)
             )
             CombatHitFlashOverlay(
@@ -497,7 +498,7 @@ fun CombatScreen(gc: GameController) {
                     while (recent.size > 5) recent.removeAt(0)
                 }
             }
-            // v0.1.44-slashproof: prove slash-light draw in player-visible combat log
+            // v0.1.45-slashscale: prove slash-light draw in player-visible combat log
             slashDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))

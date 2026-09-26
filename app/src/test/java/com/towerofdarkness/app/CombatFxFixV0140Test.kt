@@ -20,7 +20,7 @@ class CombatFxFixV0140Test {
 
     @Test
     fun tag_isFxfixV0140() {
-        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
+        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
     }
 
     @Test

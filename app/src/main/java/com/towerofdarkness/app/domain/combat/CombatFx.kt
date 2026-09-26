@@ -1,12 +1,12 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.44-slashproof (prove slash-light loaded + readable on busts).
+ * Shared combat FX kernel — v0.1.45-slashscale (scale slash overlay to bust width; color FREE).
  * Aim / clip / glow / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
  * CLEAVE sheets wire into existing stroke + play packet only — no new tiers / no kernel replace.
  * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow / spark-hit-flash helpers.
  * Compose renders tile flash / CLEAVE slash (or path fallback) / brace pips / hit-flash / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/slashproof-v0144.md + docs/fxfix-v0140.md.
+ * Never changes damage / Wake math / who gets FX. See docs/slashscale-v0145.md + docs/fxfix-v0140.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -124,7 +124,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.44-slashproof"
+    const val TAG = "v0.1.45-slashscale"
 
     /** logcat tag for slash-light debug (this tip only). */
     const val LOG_TAG_TOD_FX = "TodFx"

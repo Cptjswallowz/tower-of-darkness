@@ -42,8 +42,8 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.44-slashproof — prove CLEAVE slash-light loaded and
- * phone-readable on recipient bust (content crop + bust-diameter scale + role tint).
+ * Presentation layer for v0.1.45-slashscale — CLEAVE slash-light scaled to bust WIDTH
+ * (tight content crop + BUST_COVERAGE; color FREE — natural sheet, no forced SrcIn).
  * Canvas path fallback only if sheet decode fails. Wake slash stays in [WakeStageOverlay].
  * Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block.
@@ -146,7 +146,7 @@ private fun DrawScope.drawCleaveSlash(
     recipient: FxRecipient,
     tier: FxTier,
     frameIndex: Int,
-    tint: Color,
+    @Suppress("UNUSED_PARAMETER") tint: Color,
     alpha: Float
 ) {
     val w = size.width
@@ -155,9 +155,9 @@ private fun DrawScope.drawCleaveSlash(
         FxRecipient.YOU -> CombatFx.YOU_BUST_X * w
         FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
     }
-    // Bust sits in the portrait strip (~90–120.dp of 140.dp) — keep Y on bust, not mid-kit
+    // Bust sits in the portrait strip — keep Y on bust, not mid-kit / HP bar
     val cy = CombatFx.BUST_Y * h
-    // Bust-diameter scale (half-stage based) × BUST_COVERAGE — not shy min(w,h) alone
+    // Bust-WIDTH scale (half-stage × BUST_WIDTH_FRAC) × coverage / content-fill
     val base = CleaveKit.slashDrawPx(w, h, tier)
     val frames = CleaveKit.SLASH_PLAY_FRAMES
     val frame = frames.getOrElse(frameIndex.coerceIn(0, frames.lastIndex)) {
@@ -169,18 +169,8 @@ private fun DrawScope.drawCleaveSlash(
     val dstTop = cy - base * CleaveKit.SLASH_ANCHOR_Y
     val dst = base.toInt().coerceAtLeast(1)
     val a = alpha.coerceIn(0.2f, 1f)
-    // Brief un-tinted core so sheet silhouette survives heavy SrcIn role tint
-    drawImage(
-        image = sheet,
-        srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
-        srcSize = androidx.compose.ui.unit.IntSize(crop, crop),
-        dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
-        dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
-        alpha = (a * 0.40f).coerceIn(0.15f, 1f),
-        colorFilter = null,
-        filterQuality = FilterQuality.Low
-    )
-    // SrcIn: crescent reads as solid role color (gold/ember or dirty green/rust)
+    // Color FREE: natural sheet colors (painterly). No forced SrcIn gold/green
+    // that washed the crescent into a mono glow blob on 0.1.44.
     drawImage(
         image = sheet,
         srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
@@ -188,7 +178,7 @@ private fun DrawScope.drawCleaveSlash(
         dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
         dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
         alpha = a,
-        colorFilter = ColorFilter.tint(tint.copy(alpha = 1f), BlendMode.SrcIn),
+        colorFilter = null,
         filterQuality = FilterQuality.Low
     )
 }

@@ -16,55 +16,43 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.44-slashproof — prove fx_slash_light loaded and readable on busts.
- * BUST_COVERAGE 0.70–0.90 of bust diameter (half-stage); content crop; debug log;
- * peak 200ms; ≤500ms. Wake / Brace frozen. See docs/slashproof-v0144.md.
+ * v0.1.44-slashproof locks evolved under v0.1.45-slashscale TAG.
+ * Sheet / map / peak / debug still hold; crop+scale numbers live in SlashScaleV0145Test.
+ * See docs/slashscale-v0145.md.
  */
 class SlashProofV0144Test {
 
     @Test
     fun tag_isSlashProofV0144() {
-        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
-        assertEquals("v0.1.44-slashproof", CleaveKit.TAG)
+        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
+        assertEquals("v0.1.45-slashscale", CleaveKit.TAG)
     }
 
     @Test
     fun bustCoverage_in70to90_halfStageFormula() {
         assertTrue(CleaveKit.bustCoverageInLockRange())
-        assertEquals(0.82f, CleaveKit.BUST_COVERAGE, 0.001f)
         assertTrue(CleaveKit.BUST_COVERAGE in 0.70f..0.90f)
-        // Wide stage (phone strip): half-stage based diameter, not shy min(w,h) alone
         val stageW = 1080f
-        val stageH = 420f // 140.dp @3x
-        val bust = CleaveKit.bustDiameterPx(stageW, stageH)
+        val stageH = 540f // 180.dp @3x stroke overlay
+        val bust = CleaveKit.bustWidthPx(stageW)
         val halfStage = stageW * 0.5f
-        assertEquals(minOf(halfStage * CleaveKit.BUST_FROM_HALF_STAGE, stageH * CleaveKit.BUST_FROM_STAGE_H), bust, 0.01f)
+        assertEquals(halfStage * CleaveKit.BUST_WIDTH_FRAC, bust, 0.01f)
         val small = CleaveKit.slashDrawPx(stageW, stageH, FxTier.SMALL)
         val medium = CleaveKit.slashDrawPx(stageW, stageH, FxTier.MEDIUM)
-        assertEquals(bust * 0.82f, small, 0.01f)
-        assertEquals(bust * 0.82f * 1.3f, medium, 0.01f)
+        val opaque = CleaveKit.opaqueCrescentWidthPx(stageW, FxTier.SMALL)
+        assertEquals(bust * CleaveKit.BUST_COVERAGE, opaque, 0.01f)
         assertTrue(medium > small)
-        // Effective crescent ≈ dst (crop zooms past empty padding). Prior full-cell
-        // draw at min(w,h)*0.72 left only ~17–38% content visible (~50px). Cropped
-        // dst at bust*0.82 fills ~82% of bust diameter — phone-readable.
-        val contentFracPrior = 0.20f // peak-frame content width / 256
-        val priorVisible = stageH * 0.72f * contentFracPrior
-        assertTrue("cropped crescent must beat prior padded visible size", small > priorVisible * 2f)
-        assertTrue(small / bust in 0.70f..0.90f)
+        assertTrue(opaque / bust in 0.70f..0.90f)
     }
 
     @Test
     fun contentCrop_zoomsPastEmptyPadding() {
-        assertEquals(144, CleaveKit.SLASH_CROP_PX)
         assertTrue(CleaveKit.SLASH_CROP_PX < CleaveKit.SLASH_CELL_PX)
-        assertEquals(112, CleaveKit.SLASH_CROP_OX)
-        assertEquals(24, CleaveKit.SLASH_CROP_OY)
-        // Crop origin = cell origin + crop offset
+        assertTrue(CleaveKit.cropInsideCellWithFill())
         val (cx, cy) = CleaveKit.slashCellOrigin(6)
         val (ox, oy) = CleaveKit.slashCropOrigin(6)
         assertEquals(cx + CleaveKit.SLASH_CROP_OX, ox)
         assertEquals(cy + CleaveKit.SLASH_CROP_OY, oy)
-        // Crop stays inside cell
         assertTrue(CleaveKit.SLASH_CROP_OX + CleaveKit.SLASH_CROP_PX <= CleaveKit.SLASH_CELL_PX)
         assertTrue(CleaveKit.SLASH_CROP_OY + CleaveKit.SLASH_CROP_PX <= CleaveKit.SLASH_CELL_PX)
     }

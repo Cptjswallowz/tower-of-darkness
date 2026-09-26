@@ -30,8 +30,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun tag_isCleaveKitV0142() {
-        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
-        assertEquals("v0.1.44-slashproof", CleaveKit.TAG)
+        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
+        assertEquals("v0.1.45-slashscale", CleaveKit.TAG)
     }
 
     @Test

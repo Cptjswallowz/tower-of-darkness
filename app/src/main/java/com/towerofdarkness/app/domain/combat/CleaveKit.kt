@@ -1,17 +1,17 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * CLEAVE free-sampler atlas metadata — v0.1.44-slashproof.
+ * CLEAVE free-sampler atlas metadata — v0.1.45-slashscale.
  * Pure domain (frame / duration / scale helpers). Compose draws sheets.
  * Only slash-light + hit-flash (additive optional). No shield-block.
- * Phone-readable: bust coverage ~82% of bust diameter (half-stage based),
- * content crop zooms past empty atlas padding, Medium 1.3×, peak hold ~200ms,
- * total ≤500ms @1x. See docs/slashproof-v0144.md.
+ * Phone-readable: bust-WIDTH coverage ~85% (half-stage × BUST_WIDTH_FRAC),
+ * tight content crop on opaque union, Medium 1.3×, peak hold ~200ms,
+ * total ≤500ms @1x. Color FREE at draw (no forced SrcIn). See docs/slashscale-v0145.md.
  *
  * Aim / clip / who-gets-FX stay v0.1.40-fxfix. Does not replace Wake / Brace.
  */
 object CleaveKit {
-    const val TAG = "v0.1.44-slashproof"
+    const val TAG = "v0.1.45-slashscale"
 
     /** Android drawable basenames (underscores — no hyphens). */
     const val SLASH_DRAWABLE = "fx_slash_light"
@@ -27,19 +27,28 @@ object CleaveKit {
     const val SLASH_PEAK_FRAME = 6
     /**
      * Anchor within the **cropped** src (not the full 256 cell).
-     * Content sits right-of-center in atlas cells — see [SLASH_CROP_OX].
+     * Opaque union center in crop ~ (0.64, 0.50); peak a bit lower.
      */
     const val SLASH_ANCHOR_X = 0.62f
-    const val SLASH_ANCHOR_Y = 0.52f
+    const val SLASH_ANCHOR_Y = 0.55f
 
     /**
-     * Zoom crop inside each 256 cell. Atlas crescents occupy ~17–38% of the cell
-     * (heavy padding); drawing the full cell left Pike/Hostflint unreadably tiny.
-     * Crop covers union of play frames 4/6/8/10 content with margin.
+     * Tight zoom crop inside each 256 cell around play-frame opaque union
+     * `(153,30)-(255,163)` (~102×133) + small margin. Square src.
+     * Bbox-area fill ≈ 102×133 / 140² ≈ 0.69 (≥ ~0.65 lock). Prior 144@112,24
+     * left ~90% empty → 80dp dst showed a ~32dp crescent blob.
      */
-    const val SLASH_CROP_PX = 144
-    const val SLASH_CROP_OX = 112
-    const val SLASH_CROP_OY = 24
+    const val SLASH_CROP_PX = 140
+    const val SLASH_CROP_OX = 115
+    const val SLASH_CROP_OY = 26
+
+    /**
+     * Measured opaque-union width (px) inside a 256 cell for play frames 4/6/8/10.
+     * Used as content-fill so the **opaque** crescent (not empty dst padding)
+     * lands at [BUST_COVERAGE] of bust width.
+     */
+    const val OPAQUE_UNION_W = 102
+    const val OPAQUE_UNION_H = 133
 
     // --- hit-flash atlas (6×2, 12f@24, peak 2, additive) ---
     const val HIT_FLASH_FRAMES = 12
@@ -56,16 +65,23 @@ object CleaveKit {
     const val SMALL_SCALE = 1.0f
 
     /**
-     * Crescent dst size as fraction of **bust diameter** (not shy min(w,h) alone).
-     * Lock: 0.70–0.90 of bust. Prefer [bustDiameterPx] from half-stage width.
+     * Opaque crescent dst as fraction of **bust WIDTH** (WO lock 0.70–0.90).
+     * Prefer ~0.85. Applied after content-fill compensation.
      */
-    const val BUST_COVERAGE = 0.82f
+    const val BUST_COVERAGE = 0.85f
 
-    /** Half-stage width → bust diameter factor (portrait pack ≈ half of half-stage). */
-    const val BUST_FROM_HALF_STAGE = 0.55f
+    /**
+     * Half-stage width → bust WIDTH factor.
+     * Portraits: You 90.dp, trash 120, boss 160 on a ~360-wide stage →
+     * ~0.50–0.89 of half-stage; 0.78 matches typical foe / readable You oversize.
+     */
+    const val BUST_WIDTH_FRAC = 0.78f
 
-    /** Bust diameter also capped by overlay height (portraits sit in ~140.dp stage). */
-    const val BUST_FROM_STAGE_H = 0.72f
+    /**
+     * Content-fill of crop along WIDTH = [OPAQUE_UNION_W] / [SLASH_CROP_PX].
+     * Divide draw size by this so opaque crescent (not empty dst box) hits coverage.
+     */
+    val CONTENT_WIDTH_FRAC: Float get() = OPAQUE_UNION_W.toFloat() / SLASH_CROP_PX.toFloat()
 
     /** 1x slash budget must stay ≤ 500ms (WO). */
     const val MAX_SLASH_MS_1X = 500L
@@ -103,14 +119,18 @@ object CleaveKit {
     }
 
     /**
-     * Bust diameter in stage px — prefer half-stage width, clamp by stage height.
-     * Avoids shy `min(w,h)` that still reads tiny when width ≫ height (140.dp strip).
+     * Bust WIDTH in stage px — half-stage × [BUST_WIDTH_FRAC].
+     * WO sizes by WIDTH (not shy min(w,h) diameter).
      */
-    fun bustDiameterPx(stageW: Float, stageH: Float): Float {
-        val halfStage = stageW * 0.5f
-        return minOf(halfStage * BUST_FROM_HALF_STAGE, stageH * BUST_FROM_STAGE_H)
-            .coerceAtLeast(1f)
-    }
+    fun bustWidthPx(stageW: Float): Float =
+        (stageW * 0.5f * BUST_WIDTH_FRAC).coerceAtLeast(1f)
+
+    /**
+     * Legacy alias — same as [bustWidthPx] (diameter naming from 0.1.44; WO now WIDTH).
+     * [stageH] ignored; kept for call-site compat.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun bustDiameterPx(stageW: Float, stageH: Float): Float = bustWidthPx(stageW)
 
     /** Peak linger ms for this stroke hold (scales with 2x via already-halved [holdMs]). */
     fun peakHoldFor(holdMs: Long, tier: FxTier = FxTier.SMALL): Long {
@@ -163,10 +183,14 @@ object CleaveKit {
 
     /**
      * Draw size (px) for slash crescent given stage size and tier.
-     * = [bustDiameterPx] × [BUST_COVERAGE] × [slashScale].
+     * = [bustWidthPx] × [BUST_COVERAGE] / [CONTENT_WIDTH_FRAC] × [slashScale]
+     * so the **opaque** union width (not empty crop padding) ≈ coverage × bust width.
      */
-    fun slashDrawPx(stageW: Float, stageH: Float, tier: FxTier): Float =
-        bustDiameterPx(stageW, stageH) * BUST_COVERAGE * slashScale(tier)
+    @Suppress("UNUSED_PARAMETER")
+    fun slashDrawPx(stageW: Float, stageH: Float, tier: FxTier): Float {
+        val fill = CONTENT_WIDTH_FRAC.coerceAtLeast(0.01f)
+        return bustWidthPx(stageW) * BUST_COVERAGE / fill * slashScale(tier)
+    }
 
     /**
      * Legacy square-stage helper (tests / callers that only have min side).
@@ -174,6 +198,13 @@ object CleaveKit {
      */
     fun slashDrawPx(minSide: Float, tier: FxTier): Float =
         slashDrawPx(minSide, minSide, tier)
+
+    /**
+     * Expected opaque crescent width at draw for tests:
+     * slashDrawPx × CONTENT_WIDTH_FRAC ≈ bustWidth × BUST_COVERAGE × scale.
+     */
+    fun opaqueCrescentWidthPx(stageW: Float, tier: FxTier): Float =
+        bustWidthPx(stageW) * BUST_COVERAGE * slashScale(tier)
 
     /** Row-major cell origin (px) for [frame] in a cols×rows atlas. */
     fun cellOrigin(frame: Int, cols: Int, cellPx: Int = SLASH_CELL_PX): Pair<Int, Int> {
@@ -234,4 +265,15 @@ object CleaveKit {
     /** Bust coverage lock for tests (0.70–0.90). */
     fun bustCoverageInLockRange(): Boolean =
         BUST_COVERAGE in 0.70f..0.90f
+
+    /** Crop stays inside a 256 cell and bbox-area fill of opaque union ≥ ~0.65. */
+    fun cropInsideCellWithFill(): Boolean {
+        if (SLASH_CROP_OX < 0 || SLASH_CROP_OY < 0) return false
+        if (SLASH_CROP_OX + SLASH_CROP_PX > SLASH_CELL_PX) return false
+        if (SLASH_CROP_OY + SLASH_CROP_PX > SLASH_CELL_PX) return false
+        if (SLASH_CROP_PX <= 0) return false
+        val bboxArea = OPAQUE_UNION_W * OPAQUE_UNION_H
+        val cropArea = SLASH_CROP_PX * SLASH_CROP_PX
+        return bboxArea.toFloat() / cropArea.toFloat() >= 0.65f
+    }
 }
