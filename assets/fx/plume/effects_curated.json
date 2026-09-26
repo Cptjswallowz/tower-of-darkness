@@ -1,0 +1,103 @@
+{
+  "pack": "PLUME Free Sampler (interim)",
+  "source": "/workspace/tod-particle-packs/plume",
+  "note": "Garnish only. RGBA + additive. No zip/engine.",
+  "cell_px": 256,
+  "effects": [
+    {
+      "id": "footstep-puff",
+      "category": "Dust Puffs & Landings",
+      "index": 1,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.86
+      ],
+      "tileable_x": false,
+      "note": "spawn on every footfall",
+      "peak_frame": 10
+    },
+    {
+      "id": "thin-wisp",
+      "category": "Smoke Plumes & Columns",
+      "index": 7,
+      "frames": 32,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 4,
+      "cell_px": 256,
+      "loop": true,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.86
+      ],
+      "tileable_x": false,
+      "note": "perfect loop",
+      "peak_frame": 4
+    },
+    {
+      "id": "ground-fog",
+      "category": "Fog & Mist Banks",
+      "index": 25,
+      "frames": 32,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 4,
+      "cell_px": 256,
+      "loop": true,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.86
+      ],
+      "tileable_x": true,
+      "note": "perfect loop, tiles horizontally",
+      "peak_frame": 27
+    },
+    {
+      "id": "grinder-sparks",
+      "category": "Sparks & Embers",
+      "index": 31,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "additive",
+      "anchor_xy": [
+        0.26,
+        0.4
+      ],
+      "tileable_x": false,
+      "note": "",
+      "peak_frame": 5
+    },
+    {
+      "id": "sand-kick",
+      "category": "Sand & Ash Bursts",
+      "index": 37,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.86
+      ],
+      "tileable_x": false,
+      "note": "",
+      "peak_frame": 8
+    }
+  ]
+}
