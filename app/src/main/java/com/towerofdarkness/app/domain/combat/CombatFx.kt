@@ -1,12 +1,12 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.42-cleavekit (CLEAVE slash-light + spark hit-flash).
+ * Shared combat FX kernel — v0.1.43-slashread (phone-readable CLEAVE slash-light + contact hit-flash).
  * Aim / clip / glow / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
  * CLEAVE sheets wire into existing stroke + play packet only — no new tiers / no kernel replace.
  * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow / spark-hit-flash helpers.
  * Compose renders tile flash / CLEAVE slash (or path fallback) / brace pips / hit-flash / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/cleavekit-v0142.md + docs/fxfix-v0140.md.
+ * Never changes damage / Wake math / who gets FX. See docs/slashread-v0143.md + docs/fxfix-v0140.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -124,7 +124,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.42-cleavekit"
+    const val TAG = "v0.1.43-slashread"
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
@@ -457,6 +457,8 @@ object CombatFx {
             FxTier.WAKE -> SHAKE_WAKE_MS
             else -> 0L
         }
+        // Damage strokes (Small/Medium): contact hit-flash on recipient at cut (not Wake/Brace)
+        val contactFlash = tier == FxTier.SMALL || tier == FxTier.MEDIUM
         return FxBeatSpec(
             tier = tier,
             role = role,
@@ -468,7 +470,9 @@ object CombatFx {
             shakeMs = shakeMs,
             useWakeSlash = tier == FxTier.WAKE,
             // Wake aims at foe; damage slash recipient as above; NO_STROKE unused for slash
-            recipient = if (tier == FxTier.WAKE) FxRecipient.FOE else recipient
+            recipient = if (tier == FxTier.WAKE) FxRecipient.FOE else recipient,
+            useCleaveHitFlash = contactFlash,
+            hitFlashMs = if (contactFlash) CleaveKit.CONTACT_HIT_FLASH_MS else 0L
         )
     }
 

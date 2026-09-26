@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
+import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.combat.CleaveKit
 import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.FxRecipient
@@ -39,9 +41,10 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.42-cleavekit — CLEAVE slash-light on recipient bust
- * (half-stage clip + role tint) with Canvas path fallback; Brace Shield stamps unchanged.
- * Wake slash stays in [WakeStageOverlay]. Aim / clip locks from v0.1.40-fxfix.
+ * Presentation layer for v0.1.43-slashread — phone-readable CLEAVE slash-light on
+ * recipient bust (half-stage clip + role tint) with Canvas path fallback; Brace
+ * Shield stamps unchanged. Wake slash stays in [WakeStageOverlay].
+ * Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block.
  */
 @Composable
@@ -50,36 +53,50 @@ fun CombatStrokeOverlay(
     visible: Boolean,
     modifier: Modifier = Modifier,
     tier: FxTier = FxTier.SMALL,
-    /** Scaled hold (already 1x/2x); drives atlas frame progress. */
+    /** Scaled hold (already 1x/2x); drives atlas frame progress + peak linger. */
     holdMs: Long = CombatFx.STROKE_SMALL_MS
 ) {
-    if (!visible || stroke == null || stroke.thickness <= 0f) return
+    // Prefer CLEAVE sheet whenever stroke is present — do not skip on thickness quirks
+    if (!visible || stroke == null) return
     val color = Color(stroke.colorArgb)
     val recipient = stroke.recipient
     val context = LocalContext.current
+    // Compile-linked R.drawable — preferred path; fail-soft only if bitmap decode fails
     val slashSheet: ImageBitmap? = remember {
         try {
-            val id = context.resources.getIdentifier(
-                CleaveKit.SLASH_DRAWABLE, "drawable", context.packageName
-            )
-            if (id == 0) null else ImageBitmap.imageResource(context.resources, id)
+            ImageBitmap.imageResource(context.resources, R.drawable.fx_slash_light)
         } catch (_: Throwable) {
-            null
+            try {
+                val id = context.resources.getIdentifier(
+                    CleaveKit.SLASH_DRAWABLE, "drawable", context.packageName
+                )
+                if (id == 0) null else ImageBitmap.imageResource(context.resources, id)
+            } catch (_: Throwable) {
+                null
+            }
         }
     }
-    var progress by remember(visible, holdMs) { mutableFloatStateOf(0f) }
-    LaunchedEffect(visible, holdMs) {
+    var frameIndex by remember(visible, holdMs, tier) { mutableIntStateOf(0) }
+    var fadeAlpha by remember(visible, holdMs, tier) { mutableFloatStateOf(1f) }
+    LaunchedEffect(visible, holdMs, tier) {
         if (!visible) {
-            progress = 0f
+            frameIndex = 0
+            fadeAlpha = 1f
             return@LaunchedEffect
         }
         val frames = CleaveKit.SLASH_PLAY_FRAMES
-        val step = CleaveKit.frameStepMs(holdMs, frames.size)
+        val delays = CleaveKit.slashFrameDelaysMs(holdMs, tier)
+        val peakIdx = frames.indexOf(CleaveKit.SLASH_PEAK_FRAME).coerceAtLeast(0)
         for (i in frames.indices) {
-            progress = (i + 1).toFloat() / frames.size
-            delay(step)
+            frameIndex = i
+            // Full brightness through peak; fade after peak window
+            fadeAlpha = if (i <= peakIdx) 1f else {
+                val after = (i - peakIdx).toFloat() / (frames.size - peakIdx).coerceAtLeast(1)
+                (1f - after * 0.55f).coerceIn(0.35f, 1f)
+            }
+            delay(delays.getOrElse(i) { CleaveKit.frameStepMs(holdMs, frames.size) })
         }
-        progress = 1f
+        fadeAlpha = 0.35f
     }
     Canvas(modifier.fillMaxSize()) {
         val w = size.width
@@ -96,10 +113,11 @@ fun CombatStrokeOverlay(
                     sheet = slashSheet,
                     recipient = recipient,
                     tier = tier,
-                    progress = progress,
-                    tint = color
+                    frameIndex = frameIndex,
+                    tint = color,
+                    alpha = fadeAlpha
                 )
-            } else {
+            } else if (stroke.thickness > 0f) {
                 // Fail-soft: prior Canvas path stroke if sheet missing
                 drawPathFallback(stroke, tier, color)
             }
@@ -111,8 +129,9 @@ private fun DrawScope.drawCleaveSlash(
     sheet: ImageBitmap,
     recipient: FxRecipient,
     tier: FxTier,
-    progress: Float,
-    tint: Color
+    frameIndex: Int,
+    tint: Color,
+    alpha: Float
 ) {
     val w = size.width
     val h = size.height
@@ -121,20 +140,26 @@ private fun DrawScope.drawCleaveSlash(
         FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
     }
     val cy = CombatFx.BUST_Y * h
-    val scale = CleaveKit.slashScale(tier)
-    val base = min(w, h) * 0.44f * scale
-    val frame = CleaveKit.slashFrameAt(progress)
+    // Phone-readable: ~60–80% of bust / stage min side (BUST_COVERAGE * Medium scale)
+    val base = CleaveKit.slashDrawPx(min(w, h), tier)
+    val frames = CleaveKit.SLASH_PLAY_FRAMES
+    val frame = frames.getOrElse(frameIndex.coerceIn(0, frames.lastIndex)) {
+        CleaveKit.SLASH_PEAK_FRAME
+    }
     val (sx, sy) = CleaveKit.slashCellOrigin(frame)
     val dstLeft = cx - base * CleaveKit.SLASH_ANCHOR_X
     val dstTop = cy - base * CleaveKit.SLASH_ANCHOR_Y
+    val dst = base.toInt().coerceAtLeast(1)
+    // SrcIn: crescent reads as solid role color (gold/ember or dirty green/rust),
+    // not faint grey from Modulate wash-out on sampler alpha.
     drawImage(
         image = sheet,
         srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
         srcSize = androidx.compose.ui.unit.IntSize(CleaveKit.SLASH_CELL_PX, CleaveKit.SLASH_CELL_PX),
         dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
-        dstSize = androidx.compose.ui.unit.IntSize(base.toInt().coerceAtLeast(1), base.toInt().coerceAtLeast(1)),
-        alpha = 0.95f,
-        colorFilter = ColorFilter.tint(tint.copy(alpha = 0.92f), BlendMode.Modulate),
+        dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
+        alpha = (alpha * 0.98f).coerceIn(0.2f, 1f),
+        colorFilter = ColorFilter.tint(tint.copy(alpha = 1f), BlendMode.SrcIn),
         filterQuality = FilterQuality.Low
     )
 }
@@ -177,7 +202,7 @@ private fun DrawScope.drawPathFallback(
 }
 
 /**
- * Ashbrand SPARK contact — CLEAVE hit-flash (additive) on [recipient] bust only.
+ * Contact / Ashbrand SPARK — CLEAVE hit-flash (additive) on [recipient] bust only.
  * Not full-screen. Prefer additive sheet + [BlendMode.Plus]; fail-soft to RGBA atlas.
  */
 @Composable
@@ -186,23 +211,32 @@ fun CombatHitFlashOverlay(
     visible: Boolean,
     modifier: Modifier = Modifier,
     holdMs: Long = CleaveKit.HIT_FLASH_MS,
-    /** Gold/ember tint for Ashbrand spark. */
+    /** Role tint — gold/ember for You, dirty green/rust for enemy. */
     tintArgb: Long = CombatFx.COLOR_YOU
 ) {
     if (!visible || recipient == null) return
     val context = LocalContext.current
     val sheetOrNull = remember {
         try {
-            val additiveId = context.resources.getIdentifier(
-                CleaveKit.HIT_FLASH_ADDITIVE_DRAWABLE, "drawable", context.packageName
-            )
-            val rgbaId = context.resources.getIdentifier(
-                CleaveKit.HIT_FLASH_DRAWABLE, "drawable", context.packageName
-            )
-            val id = if (additiveId != 0) additiveId else rgbaId
-            if (id == 0) null else ImageBitmap.imageResource(context.resources, id)
+            // Prefer additive, then RGBA — compile-linked
+            try {
+                ImageBitmap.imageResource(context.resources, R.drawable.fx_hit_flash_additive)
+            } catch (_: Throwable) {
+                ImageBitmap.imageResource(context.resources, R.drawable.fx_hit_flash)
+            }
         } catch (_: Throwable) {
-            null
+            try {
+                val additiveId = context.resources.getIdentifier(
+                    CleaveKit.HIT_FLASH_ADDITIVE_DRAWABLE, "drawable", context.packageName
+                )
+                val rgbaId = context.resources.getIdentifier(
+                    CleaveKit.HIT_FLASH_DRAWABLE, "drawable", context.packageName
+                )
+                val id = if (additiveId != 0) additiveId else rgbaId
+                if (id == 0) null else ImageBitmap.imageResource(context.resources, id)
+            } catch (_: Throwable) {
+                null
+            }
         }
     }
     val sheet = sheetOrNull ?: return // fail-soft: no flash if sheet missing
@@ -236,7 +270,7 @@ fun CombatHitFlashOverlay(
                 FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
             }
             val cy = CombatFx.BUST_Y * h
-            val base = min(w, h) * 0.36f
+            val base = min(w, h) * 0.42f
             val frame = CleaveKit.hitFlashFrameAt(progress)
             val (sx, sy) = CleaveKit.hitFlashCellOrigin(frame)
             // Fade after peak window (~first 6–8 frames already in play list)
@@ -256,7 +290,7 @@ fun CombatHitFlashOverlay(
                     base.toInt().coerceAtLeast(1)
                 ),
                 alpha = fade * 0.95f,
-                colorFilter = ColorFilter.tint(tint.copy(alpha = 0.9f), BlendMode.Modulate),
+                colorFilter = ColorFilter.tint(tint.copy(alpha = 1f), BlendMode.SrcIn),
                 blendMode = BlendMode.Plus,
                 filterQuality = FilterQuality.Low
             )

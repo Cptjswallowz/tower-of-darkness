@@ -99,6 +99,7 @@ fun CombatScreen(gc: GameController) {
     var hitFlashVisible by remember { mutableStateOf(false) }
     var hitFlashRecipient by remember { mutableStateOf<FxRecipient?>(null) }
     var hitFlashHoldMs by remember { mutableStateOf(com.towerofdarkness.app.domain.combat.CleaveKit.HIT_FLASH_MS) }
+    var hitFlashTint by remember { mutableStateOf(CombatFx.COLOR_YOU) }
     var bracePipCount by remember { mutableStateOf(0) }
     var bracePipOwner by remember { mutableStateOf<FxRecipient?>(null) }
     var bracePipVisible by remember { mutableStateOf(false) }
@@ -168,27 +169,37 @@ fun CombatScreen(gc: GameController) {
             if (play != null) {
                 val spec = play.beat
                 // 1. Fired tile flash — skill / enemy tile only (not stage wash)
-                // Spark hit-flash skips tile flash (flashMs==0 / useCleaveHitFlash)
-                if (beat != null && spec.flashMs > 0L && !spec.useCleaveHitFlash) {
+                // Spark skips tile flash via flashMs==0; damage strokes still flash the tile
+                // even when contact hit-flash is on (v0.1.43).
+                if (beat != null && spec.flashMs > 0L) {
                     tileFlashColor = CombatFx.colorArgb(spec.role)
                     tileFlash = true
                     delay(CombatFx.fxHoldMs(spec.flashMs, speed))
                     tileFlash = false
                 }
                 // 2a. Recipient slash — CLEAVE slash-light (unless NO STROKE / Wake slash)
+                // Contact hit-flash overlaps stroke start (on the cut); SPARK is hit-flash only.
                 if (spec.stroke != null && !spec.useWakeSlash) {
                     strokeSpec = spec.stroke
                     strokeTier = spec.tier
                     strokeHoldMs = CombatFx.fxHoldMs(spec.strokeMs, speed)
                     strokeVisible = true
+                    if (spec.useCleaveHitFlash && spec.hitFlashMs > 0L) {
+                        hitFlashRecipient = spec.recipient
+                        hitFlashHoldMs = CombatFx.fxHoldMs(spec.hitFlashMs, speed)
+                        hitFlashTint = CombatFx.colorArgb(spec.role)
+                        hitFlashVisible = true
+                    }
                     delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
-                }
-                // 2a2. Ashbrand SPARK — CLEAVE hit-flash on foe bust (additive, not full-screen)
-                if (spec.useCleaveHitFlash) {
+                    hitFlashVisible = false
+                    hitFlashRecipient = null
+                } else if (spec.useCleaveHitFlash) {
+                    // 2a2. Ashbrand SPARK — CLEAVE hit-flash on foe bust (additive, not full-screen)
                     hitFlashRecipient = spec.recipient
                     hitFlashHoldMs = CombatFx.fxHoldMs(spec.hitFlashMs, speed)
+                    hitFlashTint = CombatFx.colorArgb(spec.role)
                     hitFlashVisible = true
                     delay(hitFlashHoldMs)
                     hitFlashVisible = false
@@ -414,7 +425,7 @@ fun CombatScreen(gc: GameController) {
                 recipient = hitFlashRecipient,
                 visible = hitFlashVisible,
                 holdMs = hitFlashHoldMs,
-                tintArgb = CombatFx.COLOR_YOU,
+                tintArgb = hitFlashTint,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)

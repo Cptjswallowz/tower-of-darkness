@@ -30,8 +30,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun tag_isCleaveKitV0142() {
-        assertEquals("v0.1.42-cleavekit", CombatFx.TAG)
-        assertEquals("v0.1.42-cleavekit", CleaveKit.TAG)
+        assertEquals("v0.1.43-slashread", CombatFx.TAG)
+        assertEquals("v0.1.43-slashread", CleaveKit.TAG)
     }
 
     @Test
@@ -68,8 +68,8 @@ class CleaveKitV0142Test {
         assertTrue(CleaveKit.hitFlashPeakInPlayWindow())
         assertTrue(CleaveKit.slashPlayWithinBudget())
         assertTrue(CombatFx.STROKE_SMALL_MS <= CleaveKit.MAX_SLASH_MS_1X)
-        assertEquals(1.2f, CleaveKit.MEDIUM_SCALE, 0.001f)
-        assertEquals(1.2f, CleaveKit.slashScale(FxTier.MEDIUM), 0.001f)
+        assertEquals(1.3f, CleaveKit.MEDIUM_SCALE, 0.001f)
+        assertEquals(1.3f, CleaveKit.slashScale(FxTier.MEDIUM), 0.001f)
         assertEquals(1.0f, CleaveKit.slashScale(FxTier.SMALL), 0.001f)
     }
 
@@ -91,7 +91,8 @@ class CleaveKitV0142Test {
         assertEquals(FxTier.SMALL, host.tier)
         assertEquals(FxRecipient.FOE, host.recipient)
         assertEquals(FxRecipient.FOE, host.stroke!!.recipient)
-        assertFalse(host.useCleaveHitFlash)
+        assertTrue(host.useCleaveHitFlash) // v0.1.43: contact hit-flash on damage cut
+        assertEquals(CleaveKit.CONTACT_HIT_FLASH_MS, host.hitFlashMs)
         assertFalse(CombatFx.slashCutGeom(host.recipient, host.tier).spansBothBusts())
 
         val hit = CombatFx.specForEnemy("hit", EnemyKind.GOBLIN)
@@ -102,12 +103,12 @@ class CleaveKitV0142Test {
     }
 
     @Test
-    fun towerPike_heavier1_2x_foeOnly() {
+    fun towerPike_heavier1_3x_foeOnly() {
         val pike = CombatFx.specForPlayer("tower_pike")
         assertEquals(FxTier.MEDIUM, pike.tier)
         assertEquals(FxRecipient.FOE, pike.recipient)
         assertEquals(CombatFx.THICK_MEDIUM, pike.stroke!!.thickness, 0.001f)
-        assertEquals(1.2f, CleaveKit.slashScale(pike.tier), 0.001f)
+        assertEquals(1.3f, CleaveKit.slashScale(pike.tier), 0.001f)
         assertFalse(CombatFx.slashCutGeom(pike.recipient, pike.tier).spansBothBusts())
         // Half-stage clip still FOE
         val clip = CombatFx.recipientClipXFrac(FxRecipient.FOE)

@@ -1,15 +1,16 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * CLEAVE free-sampler atlas metadata — v0.1.42-cleavekit.
+ * CLEAVE free-sampler atlas metadata — v0.1.43-slashread.
  * Pure domain (frame / duration / scale helpers). Compose draws sheets.
  * Only slash-light + hit-flash (additive optional). No shield-block.
- * See docs/cleavekit-v0142.md + docs/art-audio/CLEAVE_v0.1.42.md.
+ * Phone-readable: bust coverage ~72%, Medium 1.3×, peak hold ~200ms, total ≤500ms @1x.
+ * See docs/slashread-v0143.md + docs/cleavekit-v0142.md.
  *
  * Aim / clip / who-gets-FX stay v0.1.40-fxfix. Does not replace Wake / Brace.
  */
 object CleaveKit {
-    const val TAG = "v0.1.42-cleavekit"
+    const val TAG = "v0.1.43-slashread"
 
     /** Android drawable basenames (underscores — no hyphens). */
     const val SLASH_DRAWABLE = "fx_slash_light"
@@ -37,18 +38,37 @@ object CleaveKit {
     const val HIT_FLASH_ANCHOR_Y = 0.5f
 
     /** Player Medium / enemy Medium draw scale vs Small. */
-    const val MEDIUM_SCALE = 1.2f
+    const val MEDIUM_SCALE = 1.3f
     const val SMALL_SCALE = 1.0f
+
+    /**
+     * Crescent dst size as fraction of min(stage w,h) before [slashScale].
+     * Phone-readable lock: crescent covers ~60–80% of bust width (WO v0.1.43).
+     * Prior shy 0.44f left strokes unreadably small on busts.
+     */
+    const val BUST_COVERAGE = 0.72f
 
     /** 1x slash budget must stay ≤ 500ms (WO). */
     const val MAX_SLASH_MS_1X = 500L
 
-    /** Hit-flash hold @1x — first 6–8 frames then fade. */
+    /** Hold brightest (peak) frame @1x Small — then fade. Window 180–220ms. */
+    const val PEAK_HOLD_MS = 200L
+
+    /** Medium peak linger slightly longer than Small (still within Medium stroke ≤500). */
+    const val PEAK_HOLD_MEDIUM_MS = 220L
+
+    /** Hit-flash hold @1x — Ashbrand SPARK path (first 6–8 frames then fade). */
     const val HIT_FLASH_MS = 320L
 
     /**
+     * Contact hit-flash on damage stroke (Small/Medium) — short additive flash
+     * on recipient at cut contact; overlaps slash, not full-screen.
+     */
+    const val CONTACT_HIT_FLASH_MS = 200L
+
+    /**
      * Slash play list: every-other frames spanning the peak window (4–10).
-     * 4 frames × ~100ms fits inside STROKE_SMALL_MS (400) and ≤500ms @1x.
+     * Peak frame (6) lingers [PEAK_HOLD_MS]; total still ≤ [MAX_SLASH_MS_1X] @1x.
      */
     val SLASH_PLAY_FRAMES: IntArray = intArrayOf(4, 6, 8, 10)
 
@@ -62,6 +82,61 @@ object CleaveKit {
         FxTier.MEDIUM -> MEDIUM_SCALE
         else -> SMALL_SCALE
     }
+
+    /** Peak linger ms for this stroke hold (scales with 2x via already-halved [holdMs]). */
+    fun peakHoldFor(holdMs: Long, tier: FxTier = FxTier.SMALL): Long {
+        val base1x = when (tier) {
+            FxTier.MEDIUM -> PEAK_HOLD_MEDIUM_MS
+            else -> PEAK_HOLD_MS
+        }
+        val ref1x = when (tier) {
+            FxTier.MEDIUM -> CombatFx.STROKE_MEDIUM_MS
+            else -> CombatFx.STROKE_SMALL_MS
+        }
+        // Proportional when speedX halves holdMs; clamp to 40–65% of hold so rest can fade.
+        val scaled = (base1x * holdMs / ref1x.coerceAtLeast(1L)).coerceAtLeast(1L)
+        val lo = (holdMs * 40L / 100L).coerceAtLeast(1L)
+        val hi = (holdMs * 65L / 100L).coerceAtLeast(lo)
+        return scaled.coerceIn(lo, hi)
+    }
+
+    /**
+     * Per-play-frame delays that sum to [holdMs], with peak frame lingering longest.
+     */
+    fun slashFrameDelaysMs(holdMs: Long, tier: FxTier = FxTier.SMALL): LongArray {
+        val frames = SLASH_PLAY_FRAMES
+        if (frames.isEmpty()) return longArrayOf()
+        val peakIdx = frames.indexOf(SLASH_PEAK_FRAME).let { if (it >= 0) it else frames.size / 2 }
+        val peak = peakHoldFor(holdMs, tier).coerceAtMost(holdMs)
+        val rest = (holdMs - peak).coerceAtLeast(0L)
+        val otherCount = (frames.size - 1).coerceAtLeast(1)
+        val each = (rest / otherCount).coerceAtLeast(1L)
+        // Distribute remainder on last fade frame
+        var used = 0L
+        val out = LongArray(frames.size) { i ->
+            if (i == peakIdx) peak else each
+        }
+        used = out.sum()
+        if (used < holdMs) out[out.lastIndex] += holdMs - used
+        if (used > holdMs) {
+            // Trim from non-peak frames
+            var over = used - holdMs
+            for (i in out.indices.reversed()) {
+                if (i == peakIdx) continue
+                val cut = minOf(over, out[i] - 1L)
+                if (cut > 0) {
+                    out[i] -= cut
+                    over -= cut
+                }
+                if (over <= 0) break
+            }
+        }
+        return out
+    }
+
+    /** Draw size (px) for slash crescent given stage min side and tier. */
+    fun slashDrawPx(minSide: Float, tier: FxTier): Float =
+        minSide * BUST_COVERAGE * slashScale(tier)
 
     /** Row-major cell origin (px) for [frame] in a cols×rows atlas. */
     fun cellOrigin(frame: Int, cols: Int, cellPx: Int = SLASH_CELL_PX): Pair<Int, Int> {
@@ -100,8 +175,11 @@ object CleaveKit {
     /** True when 1x slash play duration stays within WO cap. */
     fun slashPlayWithinBudget(strokeMs1x: Long = CombatFx.STROKE_SMALL_MS): Boolean =
         strokeMs1x <= MAX_SLASH_MS_1X &&
+            CombatFx.STROKE_MEDIUM_MS <= MAX_SLASH_MS_1X &&
             SLASH_PLAY_FRAMES.isNotEmpty() &&
-            SLASH_PLAY_FRAMES.all { it in 0 until SLASH_FRAMES }
+            SLASH_PLAY_FRAMES.all { it in 0 until SLASH_FRAMES } &&
+            PEAK_HOLD_MS in 180L..220L &&
+            PEAK_HOLD_MEDIUM_MS in 180L..220L
 
     /** Peak frame is inside the play window (readability lock). */
     fun slashPeakInPlayWindow(): Boolean =
@@ -109,4 +187,8 @@ object CleaveKit {
 
     fun hitFlashPeakInPlayWindow(): Boolean =
         HIT_FLASH_PEAK_FRAME in HIT_FLASH_PLAY_FRAMES.min()..HIT_FLASH_PLAY_FRAMES.max()
+
+    /** Bust coverage lock for tests (0.60–0.80). */
+    fun bustCoverageInLockRange(): Boolean =
+        BUST_COVERAGE in 0.60f..0.80f
 }
