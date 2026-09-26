@@ -25,8 +25,8 @@ class StrokeFallbackV0146Test {
 
     @Test
     fun tag_isStrokeFallbackV0146() {
-        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
-        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
+        assertEquals("v0.1.49-plumegarnish", CombatFx.TAG)
+        assertEquals("v0.1.49-plumegarnish", CleaveKit.TAG)
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * CLEAVE free-sampler atlas metadata — v0.1.48-strokeboth.
+ * CLEAVE free-sampler atlas metadata — v0.1.49-plumegarnish.
  * Pure domain (frame / duration / scale helpers). Compose draws sheets.
  * Only slash-light + hit-flash (additive optional). No shield-block.
  * Phone-readable: bust-WIDTH coverage ~85% (half-stage × BUST_WIDTH_FRAC),
@@ -11,7 +11,7 @@ package com.towerofdarkness.app.domain.combat
  * Aim / clip / who-gets-FX stay v0.1.40-fxfix. Does not replace Wake / Brace.
  */
 object CleaveKit {
-    const val TAG = "v0.1.48-strokeboth"
+    const val TAG = "v0.1.49-plumegarnish"
 
     /** Android drawable basenames (underscores — no hyphens). */
     const val SLASH_DRAWABLE = "fx_slash_light"

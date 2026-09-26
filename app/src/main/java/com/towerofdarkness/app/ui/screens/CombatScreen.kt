@@ -43,6 +43,9 @@ import com.towerofdarkness.app.domain.combat.EnemySkillKind
 import com.towerofdarkness.app.domain.combat.FxRecipient
 import com.towerofdarkness.app.domain.combat.FxStrokeSpec
 import com.towerofdarkness.app.domain.combat.FxTier
+import com.towerofdarkness.app.domain.combat.GarnishKind
+import com.towerofdarkness.app.domain.combat.GarnishSpec
+import com.towerofdarkness.app.domain.combat.PlumeGarnishKit
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.domain.combat.BraceDrawSync
@@ -55,6 +58,7 @@ import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.CombatBracePipsOverlay
 import com.towerofdarkness.app.ui.components.CombatHitFlashOverlay
 import com.towerofdarkness.app.ui.components.CombatStrokeOverlay
+import com.towerofdarkness.app.ui.components.CombatParticleGarnishOverlay
 import com.towerofdarkness.app.ui.components.CombatTileFlash
 import com.towerofdarkness.app.ui.components.SkillGlyphIcon
 import com.towerofdarkness.app.ui.components.skillJobIsBrace
@@ -110,6 +114,21 @@ fun CombatScreen(gc: GameController) {
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
     var sparkStroke by remember { mutableStateOf(false) }
+    // v0.1.49-plumegarnish: tip spark / dust puff / Soften kenney / Brace flare
+    var tipGarnishSpec by remember { mutableStateOf<GarnishSpec?>(null) }
+    var tipGarnishVisible by remember { mutableStateOf(false) }
+    var tipGarnishRecipient by remember { mutableStateOf<FxRecipient?>(null) }
+    var tipGarnishHoldMs by remember { mutableStateOf(PlumeGarnishKit.EMBER_MS) }
+    var tipGarnishDebug by remember { mutableStateOf<String?>(null) }
+    var dustGarnishSpec by remember { mutableStateOf<GarnishSpec?>(null) }
+    var dustGarnishVisible by remember { mutableStateOf(false) }
+    var dustGarnishHoldMs by remember { mutableStateOf(PlumeGarnishKit.PUFF_MS) }
+    var dustGarnishDebug by remember { mutableStateOf<String?>(null) }
+    var braceFlareSpec by remember { mutableStateOf<GarnishSpec?>(null) }
+    var braceFlareVisible by remember { mutableStateOf(false) }
+    var braceFlareHoldMs by remember { mutableStateOf(PlumeGarnishKit.BRACE_FLARE_MS) }
+    var braceFlareDebug by remember { mutableStateOf<String?>(null) }
+    var softenGarnishDebug by remember { mutableStateOf<String?>(null) }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -216,6 +235,26 @@ fun CombatScreen(gc: GameController) {
                         hitFlashTint = CombatFx.colorArgb(spec.role)
                         hitFlashVisible = true
                     }
+                    // v0.1.49: tip spark / dust puff alongside locked stroke (TARGET bust / tip)
+                    val kinds = PlumeGarnishKit.kindsForAbility(fxId)
+                    if (GarnishKind.TIP_SPARK in kinds || sparkStroke) {
+                        val tip = if (sparkStroke || fxId == CombatFx.ID_ASHBRAND_SPARK) {
+                            PlumeGarnishKit.tipSparkSpec()
+                        } else {
+                            // optional hit-confirm: PLUME tip if sampler present else Kenney
+                            PlumeGarnishKit.tipSparkSpec()
+                        }
+                        tipGarnishSpec = tip
+                        tipGarnishRecipient = spec.stroke!!.recipient
+                        tipGarnishHoldMs = CombatFx.fxHoldMs(tip.holdMs, speed)
+                        tipGarnishVisible = true
+                    }
+                    if (GarnishKind.DUST_PUFF in kinds) {
+                        val dust = PlumeGarnishKit.dustPuffSpec(fxId ?: "dust_veil")
+                        dustGarnishSpec = dust
+                        dustGarnishHoldMs = CombatFx.fxHoldMs(dust.holdMs, speed)
+                        dustGarnishVisible = true
+                    }
                     delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
@@ -224,6 +263,13 @@ fun CombatScreen(gc: GameController) {
                     slashDebugLine = null
                     hitFlashVisible = false
                     hitFlashRecipient = null
+                    tipGarnishVisible = false
+                    tipGarnishSpec = null
+                    tipGarnishRecipient = null
+                    tipGarnishDebug = null
+                    dustGarnishVisible = false
+                    dustGarnishSpec = null
+                    dustGarnishDebug = null
                 } else if (spec.useCleaveHitFlash) {
                     // 2a2. Ashbrand SPARK — CLEAVE hit-flash on foe bust (additive, not full-screen)
                     hitFlashRecipient = spec.recipient
@@ -241,20 +287,37 @@ fun CombatScreen(gc: GameController) {
                     // First visible frame at progress 0 → full alpha via bracePipAlpha
                     bracePipProgress = 0f
                     bracePipVisible = true
+                    // v0.1.49: Brace GAIN flare only — does NOT replace floating pips
+                    val flare = PlumeGarnishKit.braceFlareSpec()
+                    braceFlareSpec = flare
+                    braceFlareHoldMs = CombatFx.fxHoldMs(flare.holdMs, speed)
+                    braceFlareVisible = true
                     val pipHold = CombatFx.fxHoldMs(CombatFx.BRACE_PIP_MS, speed)
                     val steps = 6
                     repeat(steps) { i ->
                         bracePipProgress = (i + 1).toFloat() / steps
                         delay((pipHold / steps).coerceAtLeast(1L))
+                        if (i == 2) {
+                            // Flare is shorter than pip hold — clear early
+                            braceFlareVisible = false
+                        }
                     }
                     bracePipVisible = false
                     bracePipCount = 0
                     bracePipOwner = null
                     bracePipProgress = 0f
+                    braceFlareVisible = false
+                    braceFlareSpec = null
+                    braceFlareDebug = null
                 }
                 // 2c. Soften red pip pulse on foe
                 if (play.softenPipPulse) {
                     softenPulse = true
+                    // Soften Kenney pip under foe HP (status-active overlay also draws while counterPenalty>0)
+                    softenGarnishDebug = PlumeGarnishKit.kenneyDebugLine(
+                        PlumeGarnishKit.softenPipSpec().sheetId,
+                        "foe"
+                    )
                     delay(CombatFx.fxHoldMs(CombatFx.SOFTEN_PULSE_MS, speed))
                     softenPulse = false
                 }
@@ -340,11 +403,25 @@ fun CombatScreen(gc: GameController) {
         for (step in WakeArt.stageSequence()) {
             wakeIconPhase = WakeArt.iconPhase(s, elapsed, speed)
             wakeStageFrame = step.frame
+            // v0.1.49: Wake tip spark (PLUME grinder-sparks additive) on IMPACT
+            if (step.frame == WakeStageFrame.IMPACT) {
+                val tip = PlumeGarnishKit.tipSparkSpec()
+                tipGarnishSpec = tip
+                tipGarnishRecipient = FxRecipient.FOE
+                tipGarnishHoldMs = CombatFx.fxHoldMs(tip.holdMs, speed)
+                tipGarnishVisible = true
+                slashDebugTarget = CombatFx.strokeTargetLabel(
+                    FxRecipient.FOE, s.enemy.kind.displayName
+                )
+            }
             val budget = WakeArt.holdMs(step.baseMs, speed)
             delay(budget)
             elapsed += budget
         }
         wakeStageFrame = WakeStageFrame.NONE
+        tipGarnishVisible = false
+        tipGarnishSpec = null
+        tipGarnishRecipient = null
         wakeIconPhase = WakeIconPhase.IDLE
     }
 
@@ -476,6 +553,68 @@ fun CombatScreen(gc: GameController) {
                     .height(140.dp)
                     .align(Alignment.TopCenter)
             )
+            // v0.1.49-plumegarnish: tip spark at stroke tip (PLUME grinder-sparks / Kenney spark)
+            CombatParticleGarnishOverlay(
+                spec = tipGarnishSpec,
+                recipient = tipGarnishRecipient,
+                visible = tipGarnishVisible,
+                holdMs = tipGarnishHoldMs,
+                debugTarget = slashDebugTarget,
+                atStrokeTip = true,
+                tier = strokeTier,
+                onDebug = { tipGarnishDebug = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .align(Alignment.TopCenter)
+            )
+            // Dust puff on TARGET bust only (Dust Veil / Ash Press / Cinder Step)
+            CombatParticleGarnishOverlay(
+                spec = dustGarnishSpec,
+                recipient = FxRecipient.FOE,
+                visible = dustGarnishVisible,
+                holdMs = dustGarnishHoldMs,
+                debugTarget = slashDebugTarget,
+                atStrokeTip = false,
+                onDebug = { dustGarnishDebug = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .align(Alignment.TopCenter)
+            )
+            // Brace GAIN flare on owner — alongside floating pips (not a replacement)
+            CombatParticleGarnishOverlay(
+                spec = braceFlareSpec,
+                recipient = bracePipOwner,
+                visible = braceFlareVisible,
+                holdMs = braceFlareHoldMs,
+                debugTarget = when (bracePipOwner) {
+                    FxRecipient.YOU -> "You"
+                    FxRecipient.FOE -> "foe"
+                    null -> "You"
+                },
+                atStrokeTip = false,
+                onDebug = { braceFlareDebug = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .align(Alignment.TopCenter)
+            )
+            // Soften Kenney circle under foe HP while Soften status active
+            CombatParticleGarnishOverlay(
+                spec = if (state.counterPenalty > 0) PlumeGarnishKit.softenPipSpec() else null,
+                recipient = FxRecipient.FOE,
+                visible = state.counterPenalty > 0,
+                holdMs = PlumeGarnishKit.SOFTEN_PIP_PULSE_MS,
+                debugTarget = "foe",
+                underHp = true,
+                atStrokeTip = false,
+                onDebug = { softenGarnishDebug = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .align(Alignment.TopCenter)
+            )
         }
 
         Box(Modifier.fillMaxWidth().height(36.dp), contentAlignment = Alignment.Center) {
@@ -520,6 +659,30 @@ fun CombatScreen(gc: GameController) {
             }
             // v0.1.48-strokeboth: prove drawn stroke (primary) + optional tip garnish
             strokeDebugLine?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            tipGarnishDebug?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            dustGarnishDebug?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            braceFlareDebug?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            softenGarnishDebug?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
                     while (recent.size > 5) recent.removeAt(0)

@@ -24,8 +24,8 @@ class SlashScaleV0145Test {
 
     @Test
     fun tag_isSlashScaleV0145() {
-        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
-        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
+        assertEquals("v0.1.49-plumegarnish", CombatFx.TAG)
+        assertEquals("v0.1.49-plumegarnish", CleaveKit.TAG)
     }
 
     @Test

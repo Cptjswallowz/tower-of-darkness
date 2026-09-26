@@ -34,15 +34,20 @@ import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.FxRecipient
 import com.towerofdarkness.app.domain.combat.FxStrokeSpec
 import com.towerofdarkness.app.domain.combat.FxTier
+import com.towerofdarkness.app.domain.combat.GarnishKind
+import com.towerofdarkness.app.domain.combat.GarnishSpec
+import com.towerofdarkness.app.domain.combat.PlumeGarnishKit
 import com.towerofdarkness.app.ui.theme.Moss
 import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.48-strokeboth — drawn Wake-family stroke PRIMARY.
+ * Presentation layer for v0.1.49-plumegarnish — drawn Wake-family stroke PRIMARY (LOCKED).
  * Filled crescent blade (outer+inner quadratic arcs; NOT StrokeCap.Round stadium pill)
  * with glow + core layers on recipient bust (same family as Wake arc language).
  * Optional CLEAVE slash-light tip garnish at stroke TIP only — never the slash.
+ * v0.1.49: PLUME/Kenney particle garnish overlays (tip spark / dust puff / Soften / Brace flare)
+ * share this file's drawImage engine — stroke width/path/peaks/colors untouched.
  * Wake gold arc stays in [WakeStageOverlay]. Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block;
  * another bust-coverage rescale of the CLEAVE sheet as the primary FX.
@@ -451,5 +456,179 @@ fun CombatBracePipsOverlay(
                 }
             }
         }
+    }
+}
+
+/**
+ * Resolve a drawable ImageBitmap by compile-linked R.drawable or getIdentifier fail-soft.
+ */
+@Composable
+private fun rememberGarnishSheet(drawable: String): ImageBitmap? {
+    val context = LocalContext.current
+    return remember(drawable) {
+        try {
+            val field = R.drawable::class.java.getField(drawable)
+            val id = field.getInt(null)
+            ImageBitmap.imageResource(context.resources, id)
+        } catch (_: Throwable) {
+            try {
+                val id = context.resources.getIdentifier(drawable, "drawable", context.packageName)
+                if (id == 0) null else ImageBitmap.imageResource(context.resources, id)
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    }
+}
+
+/**
+ * PLUME / Kenney particle garnish — one FX engine with CLEAVE (drawImage cell playback).
+ * Tip spark at stroke tip; dust puff centered on TARGET bust; Soften under foe HP;
+ * Brace flare on owner GAIN only. Half-stage clip. Stroke path untouched.
+ */
+@Composable
+fun CombatParticleGarnishOverlay(
+    spec: GarnishSpec?,
+    recipient: FxRecipient?,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    /** Scaled hold (already 1x/2x). */
+    holdMs: Long = 0L,
+    debugTarget: String = "foe",
+    /** Place Soften pip slightly below bust center (under HP chrome). */
+    underHp: Boolean = false,
+    /** Tip mode: anchor at stroke tip (end of slash geom) instead of bust center. */
+    atStrokeTip: Boolean = false,
+    tier: FxTier = FxTier.SMALL,
+    onDebug: ((String) -> Unit)? = null
+) {
+    if (!visible || spec == null || recipient == null) return
+    val sheet = rememberGarnishSheet(spec.drawable) ?: return
+    val hold = if (holdMs > 0L) holdMs else spec.holdMs
+    LaunchedEffect(visible, spec.drawable, debugTarget, spec.pack) {
+        if (visible) {
+            val line = PlumeGarnishKit.debugLine(spec, debugTarget)
+            Log.i(CombatFx.LOG_TAG_TOD_FX, line)
+            onDebug?.invoke(line)
+        }
+    }
+    var progress by remember(visible, hold, spec.drawable) { mutableFloatStateOf(0f) }
+    LaunchedEffect(visible, hold, spec.drawable) {
+        if (!visible) {
+            progress = 0f
+            return@LaunchedEffect
+        }
+        val steps = if (spec.atlas) {
+            PlumeGarnishKit.atlasPlayFrames(spec.atlasFrames, spec.atlasPeakFrame).size
+        } else {
+            6
+        }
+        val step = (hold / steps.coerceAtLeast(1)).coerceAtLeast(1L)
+        for (i in 1..steps) {
+            progress = i.toFloat() / steps
+            delay(step)
+        }
+        progress = 1f
+    }
+    val tint = Color(spec.tintArgb)
+    Canvas(modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val clip = CombatFx.recipientClipXFrac(recipient)
+        clipRect(
+            left = clip.start * w,
+            top = 0f,
+            right = clip.endInclusive * w,
+            bottom = h
+        ) {
+            drawParticleGarnish(
+                sheet = sheet,
+                spec = spec,
+                recipient = recipient,
+                progress = progress,
+                tint = tint,
+                underHp = underHp,
+                atStrokeTip = atStrokeTip,
+                tier = tier
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawParticleGarnish(
+    sheet: ImageBitmap,
+    spec: GarnishSpec,
+    recipient: FxRecipient,
+    progress: Float,
+    tint: Color,
+    underHp: Boolean,
+    atStrokeTip: Boolean,
+    tier: FxTier
+) {
+    val w = size.width
+    val h = size.height
+    val bustW = w * 0.5f * CombatFx.STROKE_BUST_WIDTH_FRAC
+    val drawPx = (bustW * spec.bustFrac).coerceAtLeast(12f)
+    val cx: Float
+    val cy: Float
+    if (atStrokeTip) {
+        val geom = CombatFx.slashCutGeom(recipient, tier)
+        cx = (geom.centerXFrac + geom.halfExtentXFrac) * w
+        cy = (geom.centerYFrac + geom.halfExtentYFrac) * h
+    } else {
+        cx = when (recipient) {
+            FxRecipient.YOU -> CombatFx.YOU_BUST_X * w
+            FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
+        }
+        val baseY = CombatFx.BUST_Y * h
+        cy = if (underHp) baseY + bustW * 0.42f else baseY
+    }
+    val fade = when {
+        progress < 0.15f -> (progress / 0.15f).coerceIn(0.2f, 1f)
+        progress > 0.75f -> (1f - (progress - 0.75f) / 0.25f).coerceIn(0.15f, 1f)
+        else -> 1f
+    }
+    val alpha = (fade * 0.92f).coerceIn(0.1f, 1f)
+    val blend = if (spec.additive) BlendMode.Plus else BlendMode.SrcOver
+    val filter = ColorFilter.tint(tint.copy(alpha = 1f), BlendMode.SrcIn)
+    if (spec.atlas) {
+        val play = PlumeGarnishKit.atlasPlayFrames(spec.atlasFrames, spec.atlasPeakFrame)
+        val frame = PlumeGarnishKit.frameAt(play, progress)
+        val (sx, sy) = PlumeGarnishKit.atlasCellOrigin(frame, spec.atlasCols, spec.atlasCellPx)
+        val cell = spec.atlasCellPx
+        val dstLeft = cx - drawPx * spec.anchorX
+        val dstTop = cy - drawPx * spec.anchorY
+        drawImage(
+            image = sheet,
+            srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
+            srcSize = androidx.compose.ui.unit.IntSize(cell, cell),
+            dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
+            dstSize = androidx.compose.ui.unit.IntSize(
+                drawPx.toInt().coerceAtLeast(1),
+                drawPx.toInt().coerceAtLeast(1)
+            ),
+            alpha = alpha,
+            colorFilter = filter,
+            blendMode = blend,
+            filterQuality = FilterQuality.Low
+        )
+    } else {
+        // Kenney single sprite — draw full bitmap scaled
+        val dstLeft = cx - drawPx * 0.5f
+        val dstTop = cy - drawPx * 0.5f
+        drawImage(
+            image = sheet,
+            srcOffset = androidx.compose.ui.unit.IntOffset(0, 0),
+            srcSize = androidx.compose.ui.unit.IntSize(sheet.width, sheet.height),
+            dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
+            dstSize = androidx.compose.ui.unit.IntSize(
+                drawPx.toInt().coerceAtLeast(1),
+                drawPx.toInt().coerceAtLeast(1)
+            ),
+            alpha = alpha,
+            colorFilter = filter,
+            blendMode = blend,
+            filterQuality = FilterQuality.Low
+        )
     }
 }
