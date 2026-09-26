@@ -1,11 +1,12 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.37-fx.
- * Pure domain maps + duration helpers; Compose renders flash/stroke/float/shake.
- * Never changes damage / Wake math. See docs/fx-v0137.md.
+ * Shared combat FX kernel — v0.1.38-fxaim (aim / paint fix on v0.1.37 maps).
+ * Pure domain maps + duration + recipient-slash / Brace-pip helpers.
+ * Compose renders flash / short recipient slash / brace pips / float / shake.
+ * Never changes damage / Wake math. See docs/fx-v0137.md + docs/fxaim-v0138.md.
  *
- * Kernel order on skill resolve: flash → stroke (unless NO STROKE) → float → shake → log+hold.
+ * Kernel order on skill resolve: flash → stroke|brace-pips → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
  * Fail-safe: [safeSpec] never throws; UI must still resolve+log if FX stubs.
  */
@@ -31,13 +32,23 @@ enum class FxStrokeDir {
 }
 
 /**
- * Presentation stroke spec (ARGB + relative thickness).
+ * Where a damage slash paints (recipient bust only — not attacker→target bar).
+ * Player dmg → FOE; enemy dmg → YOU.
+ */
+enum class FxRecipient {
+    YOU,
+    FOE
+}
+
+/**
+ * Presentation stroke spec (ARGB + relative thickness + recipient bust).
  * [thickness] 0 = no stroke; Small ~1; Medium ~2. Wake uses WakeStageOverlay instead.
  */
 data class FxStrokeSpec(
     val colorArgb: Long,
     val thickness: Float,
-    val dir: FxStrokeDir
+    val dir: FxStrokeDir,
+    val recipient: FxRecipient
 )
 
 data class FxShakeSpec(
@@ -61,14 +72,62 @@ data class FxBeatSpec(
     val floatMs: Long,
     val shakeMs: Long,
     /** When true, keep WakeStageOverlay slash; do not draw kernel stroke. */
-    val useWakeSlash: Boolean = false
+    val useWakeSlash: Boolean = false,
+    /** Recipient bust for damage slash (Wake also aims here — foe). */
+    val recipient: FxRecipient = FxRecipient.FOE
 )
 
+/**
+ * One-shot play packet for UI (v0.1.38) — beat + Brace shield pips + Soften pulse.
+ * Built from [CombatFx.playSpec]; never affects damage math.
+ */
+data class FxPlaySpec(
+    val beat: FxBeatSpec,
+    /** Tiny shield pips to float around owner; 0 = none. Cap 5. */
+    val bracePipCount: Int = 0,
+    /** Owner bust for Brace pips (You Brace → YOU; foe Hide → FOE). */
+    val braceOwner: FxRecipient? = null,
+    /** Soften apply: pulse red Soften pip on foe; no plate / no extra slash. */
+    val softenPipPulse: Boolean = false
+)
+
+/**
+ * Normalized short-cut geometry on one bust (fractions of stage width/height).
+ * Unit-testable; Compose mirrors these fracs. Must NOT span both busts.
+ */
+data class SlashCutGeom(
+    val recipient: FxRecipient,
+    val centerXFrac: Float,
+    val centerYFrac: Float,
+    /** Half horizontal extent — short cut (~bust diameter), not cross-stage. */
+    val halfExtentXFrac: Float,
+    val halfExtentYFrac: Float
+) {
+    val startXFrac: Float get() = centerXFrac - halfExtentXFrac
+    val endXFrac: Float get() = centerXFrac + halfExtentXFrac
+    val startYFrac: Float get() = centerYFrac - halfExtentYFrac
+    val endYFrac: Float get() = centerYFrac + halfExtentYFrac
+
+    /** True if this cut would look like a bust-to-bust bar (banned). */
+    fun spansBothBusts(): Boolean =
+        startXFrac <= CombatFx.YOU_BUST_X + 0.08f &&
+            endXFrac >= CombatFx.FOE_BUST_X - 0.08f
+}
+
 object CombatFx {
-    const val TAG = "v0.1.37-fx"
+    const val TAG = "v0.1.38-fxaim"
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
+
+    // --- Bust centers (stage width fracs) — You left, foe right ---
+    const val YOU_BUST_X = 0.18f
+    const val FOE_BUST_X = 0.82f
+    const val BUST_Y = 0.42f
+    /** Half-extent of short slash (~bust diameter); never reaches opposite bust. */
+    const val SLASH_HALF_X_SMALL = 0.055f
+    const val SLASH_HALF_X_MEDIUM = 0.07f
+    const val SLASH_HALF_Y_FACTOR = 0.65f
 
     // --- Colors (ARGB) — role stroke lock ---
     const val COLOR_YOU = 0xFFC9A227L          // gold ember
@@ -76,6 +135,7 @@ object CombatFx {
     const val COLOR_STURDY_ORC = 0xFFA05030L   // rust
     const val COLOR_SEAL_WARDEN = 0xFFB87333L  // copper
     const val COLOR_ASH_WARDEN = 0xFFC45A2DL   // coal orange
+    const val COLOR_SOFTEN_PIP = 0xFFE24A3BL  // red Soften pulse
 
     // --- 1x duration budgets (presentation only) ---
     const val FLASH_MS = 120L
@@ -84,12 +144,15 @@ object CombatFx {
     const val FLOAT_MS = 700L
     const val SHAKE_MEDIUM_MS = 240L
     const val SHAKE_WAKE_MS = 400L
+    const val BRACE_PIP_MS = 560L
+    const val SOFTEN_PULSE_MS = 420L
 
     const val THICK_SMALL = 1.5f
     const val THICK_MEDIUM = 3.0f
     const val SHAKE_SMALL_AMP = 0f
     const val SHAKE_MEDIUM_AMP = 4f
     const val SHAKE_WAKE_AMP = 12f
+    const val BRACE_PIP_CAP = 5
 
     /** Player SMALL ids (lock table). */
     val PLAYER_SMALL: Set<String> = setOf(
@@ -139,6 +202,48 @@ object CombatFx {
         FxRole.STURDY_ORC -> COLOR_STURDY_ORC
         FxRole.SEAL_WARDEN -> COLOR_SEAL_WARDEN
         FxRole.ASH_WARDEN -> COLOR_ASH_WARDEN
+    }
+
+    /** Damage slash recipient: player skills hit foe; enemy skills hit You. */
+    fun recipientFor(dir: FxStrokeDir): FxRecipient = when (dir) {
+        FxStrokeDir.YOU_TO_FOE -> FxRecipient.FOE
+        FxStrokeDir.FOE_TO_YOU -> FxRecipient.YOU
+    }
+
+    fun recipientForPlayer(player: Boolean): FxRecipient =
+        if (player) FxRecipient.FOE else FxRecipient.YOU
+
+    /** Brace shield-pip owner: You Brace → YOU; foe Hide/Guard → FOE. */
+    fun braceOwnerForPlayer(player: Boolean): FxRecipient =
+        if (player) FxRecipient.YOU else FxRecipient.FOE
+
+    /**
+     * Drawn Brace shield pip count = Brace gained, capped at [BRACE_PIP_CAP].
+     * Gain 0 → 0; gain 1 → 1; …; gain 6+ → 5.
+     */
+    fun bracePipCount(gained: Int): Int =
+        gained.coerceAtLeast(0).coerceAtMost(BRACE_PIP_CAP)
+
+    /**
+     * Short diagonal cut on [recipient] bust only.
+     * Guaranteed not to span You↔foe (see [SlashCutGeom.spansBothBusts]).
+     */
+    fun slashCutGeom(recipient: FxRecipient, tier: FxTier = FxTier.SMALL): SlashCutGeom {
+        val cx = when (recipient) {
+            FxRecipient.YOU -> YOU_BUST_X
+            FxRecipient.FOE -> FOE_BUST_X
+        }
+        val halfX = when (tier) {
+            FxTier.MEDIUM, FxTier.WAKE -> SLASH_HALF_X_MEDIUM
+            else -> SLASH_HALF_X_SMALL
+        }
+        return SlashCutGeom(
+            recipient = recipient,
+            centerXFrac = cx,
+            centerYFrac = BUST_Y,
+            halfExtentXFrac = halfX,
+            halfExtentYFrac = halfX * SLASH_HALF_Y_FACTOR
+        )
     }
 
     /**
@@ -201,14 +306,54 @@ object CombatFx {
         }
     }
 
+    /**
+     * Build UI play packet from a primary FX event + optional Brace/Soften presentation fields.
+     * Follow-up-only Brace/Soften (null fxId): pass [braceGained] / [softenApplied] with a synthetic
+     * NO_STROKE-ish beat via [playBraceOrSoftenOnly].
+     */
+    fun playSpec(
+        beat: FxBeatSpec,
+        braceGained: Int = 0,
+        softenApplied: Int = 0,
+        fxPlayer: Boolean = true
+    ): FxPlaySpec {
+        val pips = bracePipCount(braceGained)
+        return FxPlaySpec(
+            beat = beat,
+            bracePipCount = pips,
+            braceOwner = if (pips > 0) braceOwnerForPlayer(fxPlayer) else null,
+            softenPipPulse = softenApplied > 0
+        )
+    }
+
+    /**
+     * Follow-up Brace / Soften lines have null fxId — still need pips / red Soften pulse, no slash.
+     */
+    fun playBraceOrSoftenOnly(
+        braceGained: Int = 0,
+        softenApplied: Int = 0,
+        fxPlayer: Boolean = true
+    ): FxPlaySpec? {
+        val pips = bracePipCount(braceGained)
+        if (pips <= 0 && softenApplied <= 0) return null
+        val stub = buildSpec(FxTier.NO_STROKE, if (fxPlayer) FxRole.YOU else FxRole.WEAK_GOBLIN, fxPlayer)
+        return FxPlaySpec(
+            beat = stub,
+            bracePipCount = pips,
+            braceOwner = if (pips > 0) braceOwnerForPlayer(fxPlayer) else null,
+            softenPipPulse = softenApplied > 0
+        )
+    }
+
     private fun buildSpec(tier: FxTier, role: FxRole, player: Boolean): FxBeatSpec {
         val dir = if (player) FxStrokeDir.YOU_TO_FOE else FxStrokeDir.FOE_TO_YOU
+        val recipient = recipientFor(dir)
         val color = colorArgb(role)
         val stroke: FxStrokeSpec? = when (tier) {
-            FxTier.SMALL -> FxStrokeSpec(color, THICK_SMALL, dir)
-            FxTier.MEDIUM -> FxStrokeSpec(color, THICK_MEDIUM, dir)
+            FxTier.SMALL -> FxStrokeSpec(color, THICK_SMALL, dir, recipient)
+            FxTier.MEDIUM -> FxStrokeSpec(color, THICK_MEDIUM, dir, recipient)
             FxTier.NO_STROKE -> null
-            FxTier.WAKE -> null // Wake slash from WakeStageOverlay
+            FxTier.WAKE -> null // Wake slash from WakeStageOverlay (foe only)
         }
         val shake = when (tier) {
             FxTier.SMALL, FxTier.NO_STROKE -> FxShakeSpec(SHAKE_SMALL_AMP, 0)
@@ -234,7 +379,9 @@ object CombatFx {
             strokeMs = strokeMs,
             floatMs = FLOAT_MS,
             shakeMs = shakeMs,
-            useWakeSlash = tier == FxTier.WAKE
+            useWakeSlash = tier == FxTier.WAKE,
+            // Wake aims at foe; damage slash recipient as above; NO_STROKE unused for slash
+            recipient = if (tier == FxTier.WAKE) FxRecipient.FOE else recipient
         )
     }
 

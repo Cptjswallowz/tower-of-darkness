@@ -40,7 +40,9 @@ import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.EnemyKits
 import com.towerofdarkness.app.domain.combat.EnemySkill
 import com.towerofdarkness.app.domain.combat.EnemySkillKind
+import com.towerofdarkness.app.domain.combat.FxRecipient
 import com.towerofdarkness.app.domain.combat.FxStrokeSpec
+import com.towerofdarkness.app.domain.combat.FxTier
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.domain.combat.BraceDrawSync
@@ -50,6 +52,7 @@ import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.domain.combat.WakeStageFrame
 import androidx.compose.foundation.clickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
+import com.towerofdarkness.app.ui.components.CombatBracePipsOverlay
 import com.towerofdarkness.app.ui.components.CombatStrokeOverlay
 import com.towerofdarkness.app.ui.components.CombatTileFlash
 import com.towerofdarkness.app.ui.components.SkillGlyphIcon
@@ -85,11 +88,17 @@ fun CombatScreen(gc: GameController) {
     // v0.1.15: Wake icon + portrait crescent (FULL only); SPARK ember on icon
     var wakeIconPhase by remember { mutableStateOf(WakeIconPhase.IDLE) }
     var wakeStageFrame by remember { mutableStateOf(WakeStageFrame.NONE) }
-    // v0.1.37-fx: kernel flash / stroke (Wake slash stays in WakeStageOverlay)
+    // v0.1.38-fxaim: tile flash (skill tile only) / recipient slash / Brace pips / Soften pulse
     var tileFlash by remember { mutableStateOf(false) }
     var tileFlashColor by remember { mutableStateOf(CombatFx.COLOR_YOU) }
     var strokeSpec by remember { mutableStateOf<FxStrokeSpec?>(null) }
     var strokeVisible by remember { mutableStateOf(false) }
+    var strokeTier by remember { mutableStateOf(FxTier.SMALL) }
+    var bracePipCount by remember { mutableStateOf(0) }
+    var bracePipOwner by remember { mutableStateOf<FxRecipient?>(null) }
+    var bracePipVisible by remember { mutableStateOf(false) }
+    var bracePipProgress by remember { mutableStateOf(0f) }
+    var softenPulse by remember { mutableStateOf(false) }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -132,26 +141,69 @@ fun CombatScreen(gc: GameController) {
             }
             diceShake = 0f
         }
-        // Primary FX line in this delta (skill / enemy / Wake); follow-ups have null fxId
+        // Primary FX line in this delta (skill / enemy / Wake); follow-ups may carry Brace/Soften only
         val fxEvent = newEvents.lastOrNull { it.fxId != null } ?: last.takeIf { it.fxId != null }
+        val braceEv = newEvents.lastOrNull { it.braceGained > 0 }
+        val softenEv = newEvents.lastOrNull { it.softenApplied > 0 }
         try {
-            val spec = CombatFx.safeSpec(fxEvent?.fxId, fxEvent?.fxPlayer != false, s.enemy.kind)
-            if (spec != null) {
-                // 1. Fired tile flash
-                tileFlashColor = CombatFx.colorArgb(spec.role)
-                tileFlash = true
-                delay(CombatFx.fxHoldMs(spec.flashMs, speed))
-                tileFlash = false
-                // 2. Stroke You ↔ foe (unless NO STROKE / Wake slash)
+            val beat = CombatFx.safeSpec(fxEvent?.fxId, fxEvent?.fxPlayer != false, s.enemy.kind)
+            val play = when {
+                beat != null -> CombatFx.playSpec(
+                    beat = beat,
+                    braceGained = braceEv?.braceGained ?: fxEvent?.braceGained ?: 0,
+                    softenApplied = softenEv?.softenApplied ?: fxEvent?.softenApplied ?: 0,
+                    fxPlayer = fxEvent?.fxPlayer != false
+                )
+                else -> CombatFx.playBraceOrSoftenOnly(
+                    braceGained = braceEv?.braceGained ?: 0,
+                    softenApplied = softenEv?.softenApplied ?: 0,
+                    fxPlayer = (braceEv?.fxPlayer ?: softenEv?.fxPlayer) != false
+                )
+            }
+            if (play != null) {
+                val spec = play.beat
+                // 1. Fired tile flash — skill / enemy tile only (not stage wash)
+                if (beat != null) {
+                    tileFlashColor = CombatFx.colorArgb(spec.role)
+                    tileFlash = true
+                    delay(CombatFx.fxHoldMs(spec.flashMs, speed))
+                    tileFlash = false
+                }
+                // 2a. Recipient slash (unless NO STROKE / Wake slash)
                 if (spec.stroke != null && !spec.useWakeSlash) {
                     strokeSpec = spec.stroke
+                    strokeTier = spec.tier
                     strokeVisible = true
                     delay(CombatFx.fxHoldMs(spec.strokeMs, speed))
                     strokeVisible = false
                     strokeSpec = null
                 }
+                // 2b. Brace shield pips around owner (no slash for brace grant)
+                if (play.bracePipCount > 0 && play.braceOwner != null) {
+                    bracePipCount = play.bracePipCount
+                    bracePipOwner = play.braceOwner
+                    bracePipVisible = true
+                    val pipHold = CombatFx.fxHoldMs(CombatFx.BRACE_PIP_MS, speed)
+                    val steps = 6
+                    repeat(steps) { i ->
+                        bracePipProgress = (i + 1).toFloat() / steps
+                        delay((pipHold / steps).coerceAtLeast(1L))
+                    }
+                    bracePipVisible = false
+                    bracePipCount = 0
+                    bracePipOwner = null
+                    bracePipProgress = 0f
+                }
+                // 2c. Soften red pip pulse on foe
+                if (play.softenPipPulse) {
+                    softenPulse = true
+                    delay(CombatFx.fxHoldMs(CombatFx.SOFTEN_PULSE_MS, speed))
+                    softenPulse = false
+                }
                 // 3. Number float (damage and/or Brace)
-                val floatText = fxEvent?.floating?.text ?: last.floating?.text
+                val floatText = fxEvent?.floating?.text
+                    ?: braceEv?.floating?.text
+                    ?: last.floating?.text
                 if (floatText != null) {
                     floatMsg = floatText
                     delay(floatHold)
@@ -167,11 +219,9 @@ fun CombatScreen(gc: GameController) {
                         delay(pulseBudget.coerceAtLeast(1L))
                     }
                     shake.snapTo(0f)
-                } else if (last.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO && spec.useWakeSlash) {
-                    // Wake already shook above; nothing extra
                 }
             } else {
-                // No fxId — legacy float / rare anim only (Victory, follow-up Brace, etc.)
+                // No fx / brace / soften — legacy float / rare anim only
                 last.floating?.let {
                     floatMsg = it.text
                     delay(floatHold)
@@ -190,6 +240,9 @@ fun CombatScreen(gc: GameController) {
             tileFlash = false
             strokeVisible = false
             strokeSpec = null
+            bracePipVisible = false
+            bracePipCount = 0
+            softenPulse = false
             shake.snapTo(0f)
             last.floating?.let { floatMsg = it.text }
         }
@@ -288,7 +341,8 @@ fun CombatScreen(gc: GameController) {
                     // Soften / enemy Brace pips
                     StatusPipRow(
                         pips = StatusPips.forEnemy(state),
-                        onTerm = { gc.showGlossary(it) }
+                        onTerm = { gc.showGlossary(it) },
+                        softenPulse = softenPulse
                     )
                     // v0.1.32: 2 specials + Hit under enemy HP (smaller chrome; not a 5th bar)
                     Spacer(Modifier.height(4.dp))
@@ -297,12 +351,20 @@ fun CombatScreen(gc: GameController) {
                         modifier = Modifier.padding(horizontal = 2.dp)
                     ) {
                         EnemyKits.skillsFor(state.enemy).forEach { skill ->
-                            EnemyKitSlot(
-                                skill = skill,
-                                spent = skill.id in state.enemySpentIds,
-                                current = skill.id == state.enemyHighlightedId,
-                                onTap = { gc.showGlossary(skill.glossaryKey) }
-                            )
+                            val isCurrent = skill.id == state.enemyHighlightedId
+                            Box {
+                                EnemyKitSlot(
+                                    skill = skill,
+                                    spent = skill.id in state.enemySpentIds,
+                                    current = isCurrent,
+                                    onTap = { gc.showGlossary(skill.glossaryKey) }
+                                )
+                                CombatTileFlash(
+                                    visible = tileFlash && isCurrent && !fxFlashIsPlayer(state),
+                                    colorArgb = tileFlashColor,
+                                    modifier = Modifier.matchParentSize()
+                                )
+                            }
                         }
                     }
                 }
@@ -317,18 +379,21 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
-            // v0.1.37-fx: stroke across You↔foe (Wake slash stays above)
+            // v0.1.38-fxaim: short slash on recipient bust only (Wake stays foe-aimed above)
             CombatStrokeOverlay(
                 stroke = strokeSpec,
                 visible = strokeVisible,
+                tier = strokeTier,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
                     .align(Alignment.TopCenter)
             )
-            CombatTileFlash(
-                visible = tileFlash,
-                colorArgb = tileFlashColor,
+            CombatBracePipsOverlay(
+                count = bracePipCount,
+                owner = bracePipOwner,
+                visible = bracePipVisible,
+                progress = bracePipProgress,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
@@ -344,12 +409,21 @@ fun CombatScreen(gc: GameController) {
         Text("Skills", color = Bone.copy(0.7f), fontSize = 11.sp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             state.activeCards.take(5).forEach { card ->
-                SkillSlot(
-                    card = card,
-                    spent = card.id in state.spentIds,
-                    current = card.id == state.highlightedId,
-                    modifier = Modifier.weight(1f)
-                )
+                val isCurrent = card.id == state.highlightedId
+                Box(Modifier.weight(1f)) {
+                    SkillSlot(
+                        card = card,
+                        spent = card.id in state.spentIds,
+                        current = isCurrent,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // Fired tile flash — this skill tile only (not whole combat row)
+                    CombatTileFlash(
+                        visible = tileFlash && isCurrent && fxFlashIsPlayer(state),
+                        colorArgb = tileFlashColor,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -530,4 +604,10 @@ private fun HpBar(hp: Int, max: Int, color: androidx.compose.ui.graphics.Color) 
         LinearProgressIndicator(progress = { f }, modifier = Modifier.fillMaxWidth(0.4f).height(8.dp), color = color)
         Text("$hp / $max", color = Bone, fontSize = 11.sp)
     }
+}
+
+/** True when the current tile flash belongs on the player skill row (not enemy kit). */
+private fun fxFlashIsPlayer(state: com.towerofdarkness.app.domain.combat.CombatState): Boolean {
+    val lastFx = state.log.asReversed().firstOrNull { it.fxId != null } ?: return true
+    return lastFx.fxPlayer
 }

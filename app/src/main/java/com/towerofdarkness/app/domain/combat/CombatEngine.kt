@@ -37,7 +37,17 @@ data class CombatEvent(
      */
     val fxId: String? = null,
     /** True when [fxId] is a player skill / Wake; false for enemy kit. */
-    val fxPlayer: Boolean = true
+    val fxPlayer: Boolean = true,
+    /**
+     * Presentation only (v0.1.38): Brace granted on this line; 0 = none.
+     * Drives shield-pip count (capped at 5 in CombatFx.bracePipCount).
+     */
+    val braceGained: Int = 0,
+    /**
+     * Presentation only (v0.1.38): Soften amount applied on this line; 0 = none.
+     * Drives red Soften pip pulse on foe — no plate / no extra slash.
+     */
+    val softenApplied: Int = 0
 )
 
 data class CombatState(
@@ -145,7 +155,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 allEvents += CombatEvent(
                     "Brace +${ember.braceIfZeroBefore}",
                     FloatingText("BRACE", true), anim, "card_fire",
-                    glossaryHints = listOf("brace")
+                    glossaryHints = listOf("brace"),
+                    braceGained = ember.braceIfZeroBefore
                 )
             }
             if (ember.softenIfBeforeGte1 > 0 && pipsBefore >= 1) {
@@ -153,7 +164,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 allEvents += CombatEvent(
                     "Counter softened −${ember.softenIfBeforeGte1}",
                     sound = "ui",
-                    glossaryHints = listOf("soften")
+                    glossaryHints = listOf("soften"),
+                    softenApplied = ember.softenIfBeforeGte1
                 )
             }
             if (ember.titheSpendIfBeforeGte1 && pipsBefore >= 1) {
@@ -291,7 +303,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     sound = "ui",
                     glossaryHints = listOf(skill.glossaryKey, "brace"),
                     fxId = skill.id,
-                    fxPlayer = false
+                    fxPlayer = false,
+                    braceGained = gain
                 )
                 // Soften pip stays — Hide family does not consume Soften
             }
@@ -459,7 +472,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     events += CombatEvent(
                         "Brace +${e.brace}",
                         FloatingText("BRACE", true), anim, sound,
-                        glossaryHints = listOf("brace")
+                        glossaryHints = listOf("brace"),
+                        braceGained = e.brace
                     )
                 }
                 s = s.copy(brace = brace)
@@ -496,14 +510,16 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     events += CombatEvent(
                         "Brace +${e.braceGain}",
                         FloatingText("BRACE", true), anim, sound,
-                        glossaryHints = listOf("brace")
+                        glossaryHints = listOf("brace"),
+                        braceGained = e.braceGain
                     )
                 }
                 if (e.counterPenalty > 0) {
                     events += CombatEvent(
                         "Counter softened −${e.counterPenalty}",
                         sound = "ui",
-                        glossaryHints = listOf("soften")
+                        glossaryHints = listOf("soften"),
+                        softenApplied = e.counterPenalty
                     )
                 }
                 s = s.copy(brace = brace, counterPenalty = s.counterPenalty + e.counterPenalty)
@@ -515,7 +531,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     "${card.title}: Brace ${e.brace}",
                     FloatingText("BRACE ${e.brace}", true), anim, sound,
                     glossaryHints = listOf("brace"),
-                    fxId = card.id, fxPlayer = true
+                    fxId = card.id, fxPlayer = true,
+                    braceGained = e.brace
                 )
             }
             is Equipment.HealOrBrace -> {
@@ -526,7 +543,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                         "${card.title}: Brace ${e.braceIfFull}",
                         FloatingText("BRACE", true), anim, sound,
                         glossaryHints = listOf("brace"),
-                        fxId = card.id, fxPlayer = true
+                        fxId = card.id, fxPlayer = true,
+                        braceGained = e.braceIfFull
                     )
                 } else {
                     val nh = (s.playerHp + e.heal).coerceAtMost(s.playerMaxHp)
