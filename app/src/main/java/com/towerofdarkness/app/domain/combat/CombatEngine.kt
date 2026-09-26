@@ -249,7 +249,10 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 floating = null,
                 animStyle = CombatAnimStyle.QUICK,
                 sound = "card_fire",
-                goldLog = false
+                goldLog = false,
+                // v0.1.42: CLEAVE hit-flash on foe; icon ember stays WakeArt
+                fxId = CombatFx.ID_ASHBRAND_SPARK,
+                fxPlayer = true
             )
             s = s.copy(weapon = w)
         }

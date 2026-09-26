@@ -139,7 +139,7 @@ class CombatFxAimV0138Test {
         )
         assertEquals(setOf("tower_pike", "ruin_seal", "spark_tithe", "wake_echo"), CombatFx.PLAYER_MEDIUM)
         assertEquals(setOf("iron_mantle", "vow_plate"), CombatFx.PLAYER_NO_STROKE)
-        assertEquals(setOf("shiv", "nip", "hit"), CombatFx.ENEMY_SMALL)
+        assertEquals(setOf("shiv", "nip", "hit", "club", "gate_pulse"), CombatFx.ENEMY_SMALL)
         assertEquals(setOf("cleave", "seal_pulse", "coal_slam"), CombatFx.ENEMY_MEDIUM)
         assertEquals(setOf("hide", "rust_guard", "cinder_hide"), CombatFx.ENEMY_NO_STROKE)
         assertEquals(CombatFx.COLOR_YOU, CombatFx.colorArgb(com.towerofdarkness.app.domain.combat.FxRole.YOU))

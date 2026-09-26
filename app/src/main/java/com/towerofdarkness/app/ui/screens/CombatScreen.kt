@@ -53,6 +53,7 @@ import com.towerofdarkness.app.domain.combat.WakeStageFrame
 import androidx.compose.foundation.clickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.CombatBracePipsOverlay
+import com.towerofdarkness.app.ui.components.CombatHitFlashOverlay
 import com.towerofdarkness.app.ui.components.CombatStrokeOverlay
 import com.towerofdarkness.app.ui.components.CombatTileFlash
 import com.towerofdarkness.app.ui.components.SkillGlyphIcon
@@ -94,6 +95,10 @@ fun CombatScreen(gc: GameController) {
     var strokeSpec by remember { mutableStateOf<FxStrokeSpec?>(null) }
     var strokeVisible by remember { mutableStateOf(false) }
     var strokeTier by remember { mutableStateOf(FxTier.SMALL) }
+    var strokeHoldMs by remember { mutableStateOf(CombatFx.STROKE_SMALL_MS) }
+    var hitFlashVisible by remember { mutableStateOf(false) }
+    var hitFlashRecipient by remember { mutableStateOf<FxRecipient?>(null) }
+    var hitFlashHoldMs by remember { mutableStateOf(com.towerofdarkness.app.domain.combat.CleaveKit.HIT_FLASH_MS) }
     var bracePipCount by remember { mutableStateOf(0) }
     var bracePipOwner by remember { mutableStateOf<FxRecipient?>(null) }
     var bracePipVisible by remember { mutableStateOf(false) }
@@ -163,20 +168,31 @@ fun CombatScreen(gc: GameController) {
             if (play != null) {
                 val spec = play.beat
                 // 1. Fired tile flash — skill / enemy tile only (not stage wash)
-                if (beat != null) {
+                // Spark hit-flash skips tile flash (flashMs==0 / useCleaveHitFlash)
+                if (beat != null && spec.flashMs > 0L && !spec.useCleaveHitFlash) {
                     tileFlashColor = CombatFx.colorArgb(spec.role)
                     tileFlash = true
                     delay(CombatFx.fxHoldMs(spec.flashMs, speed))
                     tileFlash = false
                 }
-                // 2a. Recipient slash (unless NO STROKE / Wake slash)
+                // 2a. Recipient slash — CLEAVE slash-light (unless NO STROKE / Wake slash)
                 if (spec.stroke != null && !spec.useWakeSlash) {
                     strokeSpec = spec.stroke
                     strokeTier = spec.tier
+                    strokeHoldMs = CombatFx.fxHoldMs(spec.strokeMs, speed)
                     strokeVisible = true
-                    delay(CombatFx.fxHoldMs(spec.strokeMs, speed))
+                    delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
+                }
+                // 2a2. Ashbrand SPARK — CLEAVE hit-flash on foe bust (additive, not full-screen)
+                if (spec.useCleaveHitFlash) {
+                    hitFlashRecipient = spec.recipient
+                    hitFlashHoldMs = CombatFx.fxHoldMs(spec.hitFlashMs, speed)
+                    hitFlashVisible = true
+                    delay(hitFlashHoldMs)
+                    hitFlashVisible = false
+                    hitFlashRecipient = null
                 }
                 // 2b. Brace shield pips around owner (no slash for brace grant)
                 if (play.bracePipCount > 0 && play.braceOwner != null) {
@@ -242,6 +258,8 @@ fun CombatScreen(gc: GameController) {
             tileFlash = false
             strokeVisible = false
             strokeSpec = null
+            hitFlashVisible = false
+            hitFlashRecipient = null
             bracePipVisible = false
             bracePipCount = 0
             softenPulse = false
@@ -386,6 +404,17 @@ fun CombatScreen(gc: GameController) {
                 stroke = strokeSpec,
                 visible = strokeVisible,
                 tier = strokeTier,
+                holdMs = strokeHoldMs,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .align(Alignment.TopCenter)
+            )
+            CombatHitFlashOverlay(
+                recipient = hitFlashRecipient,
+                visible = hitFlashVisible,
+                holdMs = hitFlashHoldMs,
+                tintArgb = CombatFx.COLOR_YOU,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)

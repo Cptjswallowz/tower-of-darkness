@@ -1,13 +1,14 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.40-fxfix (no screen flash, shields back, target-only slash).
- * Aim from v0.1.38 + size/hold from v0.1.39; half-stage clip + tamed glow bloom.
- * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow helpers.
- * Compose renders flash / short recipient slash / brace pips / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/fxfix-v0140.md.
+ * Shared combat FX kernel — v0.1.42-cleavekit (CLEAVE slash-light + spark hit-flash).
+ * Aim / clip / glow / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
+ * CLEAVE sheets wire into existing stroke + play packet only — no new tiers / no kernel replace.
+ * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow / spark-hit-flash helpers.
+ * Compose renders tile flash / CLEAVE slash (or path fallback) / brace pips / hit-flash / float / shake.
+ * Never changes damage / Wake math / who gets FX. See docs/cleavekit-v0142.md + docs/fxfix-v0140.md.
  *
- * Kernel order on skill resolve: flash → stroke|brace-pips → float → shake → log+hold.
+ * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
  * Fail-safe: [safeSpec] never throws; UI must still resolve+log if FX stubs.
  */
@@ -75,7 +76,14 @@ data class FxBeatSpec(
     /** When true, keep WakeStageOverlay slash; do not draw kernel stroke. */
     val useWakeSlash: Boolean = false,
     /** Recipient bust for damage slash (Wake also aims here — foe). */
-    val recipient: FxRecipient = FxRecipient.FOE
+    val recipient: FxRecipient = FxRecipient.FOE,
+    /**
+     * Ashbrand SPARK only — CLEAVE hit-flash on [recipient] bust (additive, not full-screen).
+     * Does not replace Wake crescent or ashbrand_spark icon ember.
+     */
+    val useCleaveHitFlash: Boolean = false,
+    /** 1x hit-flash hold ms; scaled via [CombatFx.fxHoldMs]. */
+    val hitFlashMs: Long = 0L
 )
 
 /**
@@ -116,10 +124,13 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.40-fxfix"
+    const val TAG = "v0.1.42-cleavekit"
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
+
+    /** Special id for Ashbrand SPARK half — CLEAVE hit-flash on foe (not a card id). */
+    const val ID_ASHBRAND_SPARK = "ashbrand_spark"
 
     // --- Bust centers (stage width fracs) — You left, foe right ---
     const val YOU_BUST_X = 0.18f
@@ -187,7 +198,8 @@ object CombatFx {
     )
 
     /** Enemy SMALL. */
-    val ENEMY_SMALL: Set<String> = setOf("shiv", "nip", "hit")
+    /** Enemy SMALL — Club / Gate Pulse land as Small slash-light (v0.1.42; were fail-soft Small in 0.1.41). */
+    val ENEMY_SMALL: Set<String> = setOf("shiv", "nip", "hit", "club", "gate_pulse")
 
     /** Enemy MEDIUM. */
     val ENEMY_MEDIUM: Set<String> = setOf("cleave", "seal_pulse", "coal_slam")
@@ -197,6 +209,9 @@ object CombatFx {
 
     /** Wake tier is exclusive — only Ashbrand Wake. */
     fun isWakeExclusiveId(id: String): Boolean = id == ID_ASHBRAND_WAKE
+
+    /** SPARK half — hit-flash only; never Wake tier / never slash-light. */
+    fun isSparkId(id: String): Boolean = id == ID_ASHBRAND_SPARK
 
     fun roleForEnemy(kind: EnemyKind): FxRole = when (EnemyKitRole.fromKind(kind)) {
         EnemyKitRole.WEAK_GOBLIN -> FxRole.WEAK_GOBLIN
@@ -311,6 +326,7 @@ object CombatFx {
      */
     fun tierForPlayer(cardId: String): FxTier = when {
         cardId == ID_ASHBRAND_WAKE -> FxTier.WAKE
+        cardId == ID_ASHBRAND_SPARK -> FxTier.NO_STROKE
         cardId in PLAYER_NO_STROKE -> FxTier.NO_STROKE
         cardId in PLAYER_MEDIUM -> FxTier.MEDIUM
         cardId in PLAYER_SMALL -> FxTier.SMALL
@@ -343,6 +359,18 @@ object CombatFx {
         buildSpec(FxTier.WAKE, FxRole.YOU, player = true)
 
     /**
+     * Ashbrand SPARK — CLEAVE hit-flash on foe bust only (additive).
+     * No slash-light; icon ember ([WakeArt.SPARK_DRAWABLE]) stays separate.
+     */
+    fun specForSpark(): FxBeatSpec =
+        buildSpec(FxTier.NO_STROKE, FxRole.YOU, player = true).copy(
+            useCleaveHitFlash = true,
+            hitFlashMs = CleaveKit.HIT_FLASH_MS,
+            recipient = FxRecipient.FOE,
+            flashMs = 0L
+        )
+
+    /**
      * Resolve FX from an event hint. Returns null when event has no fxId (follow-up lines).
      * Never throws — on any unexpected id still returns a SMALL/You fail-safe when fxId set.
      */
@@ -355,6 +383,7 @@ object CombatFx {
         return try {
             when {
                 fxId == ID_ASHBRAND_WAKE -> specForWake()
+                fxId == ID_ASHBRAND_SPARK -> specForSpark()
                 fxPlayer -> specForPlayer(fxId)
                 else -> specForEnemy(fxId, enemyKind ?: EnemyKind.GOBLIN)
             }

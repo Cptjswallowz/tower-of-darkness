@@ -20,7 +20,7 @@ class CombatFxFixV0140Test {
 
     @Test
     fun tag_isFxfixV0140() {
-        assertEquals("v0.1.40-fxfix", CombatFx.TAG)
+        assertEquals("v0.1.42-cleavekit", CombatFx.TAG)
     }
 
     @Test

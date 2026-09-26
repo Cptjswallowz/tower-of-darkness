@@ -53,7 +53,7 @@ class CombatFxV0137Test {
 
     @Test
     fun enemyMaps_smallMediumNoStroke() {
-        assertEquals(setOf("shiv", "nip", "hit"), CombatFx.ENEMY_SMALL)
+        assertEquals(setOf("shiv", "nip", "hit", "club", "gate_pulse"), CombatFx.ENEMY_SMALL)
         assertEquals(setOf("cleave", "seal_pulse", "coal_slam"), CombatFx.ENEMY_MEDIUM)
         assertEquals(setOf("hide", "rust_guard", "cinder_hide"), CombatFx.ENEMY_NO_STROKE)
         CombatFx.ENEMY_SMALL.forEach { assertEquals(it, FxTier.SMALL, CombatFx.tierForEnemy(it)) }
