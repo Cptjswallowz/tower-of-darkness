@@ -105,6 +105,9 @@ fun CombatScreen(gc: GameController) {
     var bracePipVisible by remember { mutableStateOf(false) }
     var bracePipProgress by remember { mutableStateOf(0f) }
     var softenPulse by remember { mutableStateOf(false) }
+    // v0.1.44-slashproof: player-visible combat-log echo of slash-light debug
+    var slashDebugLine by remember { mutableStateOf<String?>(null) }
+    var slashDebugTarget by remember { mutableStateOf("foe") }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -183,6 +186,13 @@ fun CombatScreen(gc: GameController) {
                     strokeSpec = spec.stroke
                     strokeTier = spec.tier
                     strokeHoldMs = CombatFx.fxHoldMs(spec.strokeMs, speed)
+                    slashDebugTarget = CombatFx.slashLightTargetLabel(
+                        spec.stroke!!.recipient,
+                        if (spec.stroke!!.recipient == FxRecipient.FOE) {
+                            s.enemy.kind.displayName
+                        } else null
+                    )
+                    slashDebugLine = null // overlay will set via onSlashLightDebug
                     strokeVisible = true
                     if (spec.useCleaveHitFlash && spec.hitFlashMs > 0L) {
                         hitFlashRecipient = spec.recipient
@@ -193,6 +203,7 @@ fun CombatScreen(gc: GameController) {
                     delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
+                    slashDebugLine = null
                     hitFlashVisible = false
                     hitFlashRecipient = null
                 } else if (spec.useCleaveHitFlash) {
@@ -269,6 +280,7 @@ fun CombatScreen(gc: GameController) {
             tileFlash = false
             strokeVisible = false
             strokeSpec = null
+            slashDebugLine = null
             hitFlashVisible = false
             hitFlashRecipient = null
             bracePipVisible = false
@@ -416,6 +428,8 @@ fun CombatScreen(gc: GameController) {
                 visible = strokeVisible,
                 tier = strokeTier,
                 holdMs = strokeHoldMs,
+                debugTarget = slashDebugTarget,
+                onSlashLightDebug = { line -> slashDebugLine = line },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
@@ -480,6 +494,13 @@ fun CombatScreen(gc: GameController) {
             state.pinnedWakeLine?.let { pin ->
                 if (recent.none { it.message == pin }) {
                     recent.add(0, com.towerofdarkness.app.domain.combat.CombatEvent(pin, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
+            // v0.1.44-slashproof: prove slash-light draw in player-visible combat log
+            slashDebugLine?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
                     while (recent.size > 5) recent.removeAt(0)
                 }
             }

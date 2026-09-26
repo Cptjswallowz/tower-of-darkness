@@ -22,7 +22,7 @@ class CombatFxReadV0139Test {
     @Test
     fun tag_advancedToFxfixV0140() {
         // TAG advanced in v0.1.40-fxfix; readability locks in this class still hold
-        assertEquals("v0.1.43-slashread", CombatFx.TAG)
+        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
     }
 
     @Test

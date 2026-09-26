@@ -1,12 +1,12 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.43-slashread (phone-readable CLEAVE slash-light + contact hit-flash).
+ * Shared combat FX kernel — v0.1.44-slashproof (prove slash-light loaded + readable on busts).
  * Aim / clip / glow / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
  * CLEAVE sheets wire into existing stroke + play packet only — no new tiers / no kernel replace.
  * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow / spark-hit-flash helpers.
  * Compose renders tile flash / CLEAVE slash (or path fallback) / brace pips / hit-flash / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/slashread-v0143.md + docs/fxfix-v0140.md.
+ * Never changes damage / Wake math / who gets FX. See docs/slashproof-v0144.md + docs/fxfix-v0140.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -124,7 +124,13 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.43-slashread"
+    const val TAG = "v0.1.44-slashproof"
+
+    /** logcat tag for slash-light debug (this tip only). */
+    const val LOG_TAG_TOD_FX = "TodFx"
+
+    /** Exact combat-log / logcat line prefix — unit-tested. */
+    const val SLASH_LIGHT_DEBUG_FMT = "FX slash-light on "
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
@@ -475,6 +481,21 @@ object CombatFx {
             hitFlashMs = if (contactFlash) CleaveKit.CONTACT_HIT_FLASH_MS else 0L
         )
     }
+
+
+    /**
+     * Debug line for this tip only: `FX slash-light on <target>`.
+     * Target is `You` or foe display name / `foe`.
+     */
+    fun slashLightDebugLine(targetLabel: String): String =
+        SLASH_LIGHT_DEBUG_FMT + targetLabel
+
+    /** Label for slash-light debug: YOU → `You`; FOE → foe name or `foe`. */
+    fun slashLightTargetLabel(recipient: FxRecipient, foeName: String?): String =
+        when (recipient) {
+            FxRecipient.YOU -> "You"
+            FxRecipient.FOE -> foeName?.takeIf { it.isNotBlank() } ?: "foe"
+        }
 
     /** True when Wake Echo maps to a single Medium (combined damage line). */
     fun wakeEchoIsSingleMedium(): Boolean =

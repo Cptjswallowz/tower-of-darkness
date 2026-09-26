@@ -1,5 +1,6 @@
 package com.towerofdarkness.app.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -41,9 +42,9 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.43-slashread — phone-readable CLEAVE slash-light on
- * recipient bust (half-stage clip + role tint) with Canvas path fallback; Brace
- * Shield stamps unchanged. Wake slash stays in [WakeStageOverlay].
+ * Presentation layer for v0.1.44-slashproof — prove CLEAVE slash-light loaded and
+ * phone-readable on recipient bust (content crop + bust-diameter scale + role tint).
+ * Canvas path fallback only if sheet decode fails. Wake slash stays in [WakeStageOverlay].
  * Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block.
  */
@@ -54,7 +55,14 @@ fun CombatStrokeOverlay(
     modifier: Modifier = Modifier,
     tier: FxTier = FxTier.SMALL,
     /** Scaled hold (already 1x/2x); drives atlas frame progress + peak linger. */
-    holdMs: Long = CombatFx.STROKE_SMALL_MS
+    holdMs: Long = CombatFx.STROKE_SMALL_MS,
+    /**
+     * Debug target label (`You` / foe name / `foe`) — logs `FX slash-light on <target>`
+     * to logcat [CombatFx.LOG_TAG_TOD_FX] and optional combat-log callback when sheet draws.
+     */
+    debugTarget: String = "foe",
+    /** Invoked once per visible sheet draw with the exact debug line (combat log). */
+    onSlashLightDebug: ((String) -> Unit)? = null
 ) {
     // Prefer CLEAVE sheet whenever stroke is present — do not skip on thickness quirks
     if (!visible || stroke == null) return
@@ -74,6 +82,14 @@ fun CombatStrokeOverlay(
             } catch (_: Throwable) {
                 null
             }
+        }
+    }
+    // Prove the map: sheet present + stroke showing → one debug line (combat log + logcat)
+    LaunchedEffect(visible, slashSheet != null, debugTarget, tier) {
+        if (visible && slashSheet != null) {
+            val line = CombatFx.slashLightDebugLine(debugTarget)
+            Log.i(CombatFx.LOG_TAG_TOD_FX, line)
+            onSlashLightDebug?.invoke(line)
         }
     }
     var frameIndex by remember(visible, holdMs, tier) { mutableIntStateOf(0) }
@@ -139,26 +155,39 @@ private fun DrawScope.drawCleaveSlash(
         FxRecipient.YOU -> CombatFx.YOU_BUST_X * w
         FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
     }
+    // Bust sits in the portrait strip (~90–120.dp of 140.dp) — keep Y on bust, not mid-kit
     val cy = CombatFx.BUST_Y * h
-    // Phone-readable: ~60–80% of bust / stage min side (BUST_COVERAGE * Medium scale)
-    val base = CleaveKit.slashDrawPx(min(w, h), tier)
+    // Bust-diameter scale (half-stage based) × BUST_COVERAGE — not shy min(w,h) alone
+    val base = CleaveKit.slashDrawPx(w, h, tier)
     val frames = CleaveKit.SLASH_PLAY_FRAMES
     val frame = frames.getOrElse(frameIndex.coerceIn(0, frames.lastIndex)) {
         CleaveKit.SLASH_PEAK_FRAME
     }
-    val (sx, sy) = CleaveKit.slashCellOrigin(frame)
+    val (sx, sy) = CleaveKit.slashCropOrigin(frame)
+    val crop = CleaveKit.SLASH_CROP_PX
     val dstLeft = cx - base * CleaveKit.SLASH_ANCHOR_X
     val dstTop = cy - base * CleaveKit.SLASH_ANCHOR_Y
     val dst = base.toInt().coerceAtLeast(1)
-    // SrcIn: crescent reads as solid role color (gold/ember or dirty green/rust),
-    // not faint grey from Modulate wash-out on sampler alpha.
+    val a = alpha.coerceIn(0.2f, 1f)
+    // Brief un-tinted core so sheet silhouette survives heavy SrcIn role tint
     drawImage(
         image = sheet,
         srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
-        srcSize = androidx.compose.ui.unit.IntSize(CleaveKit.SLASH_CELL_PX, CleaveKit.SLASH_CELL_PX),
+        srcSize = androidx.compose.ui.unit.IntSize(crop, crop),
         dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
         dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
-        alpha = (alpha * 0.98f).coerceIn(0.2f, 1f),
+        alpha = (a * 0.40f).coerceIn(0.15f, 1f),
+        colorFilter = null,
+        filterQuality = FilterQuality.Low
+    )
+    // SrcIn: crescent reads as solid role color (gold/ember or dirty green/rust)
+    drawImage(
+        image = sheet,
+        srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
+        srcSize = androidx.compose.ui.unit.IntSize(crop, crop),
+        dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
+        dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
+        alpha = a,
         colorFilter = ColorFilter.tint(tint.copy(alpha = 1f), BlendMode.SrcIn),
         filterQuality = FilterQuality.Low
     )

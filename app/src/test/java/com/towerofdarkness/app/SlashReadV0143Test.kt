@@ -24,8 +24,8 @@ class SlashReadV0143Test {
 
     @Test
     fun tag_isSlashReadV0143() {
-        assertEquals("v0.1.43-slashread", CombatFx.TAG)
-        assertEquals("v0.1.43-slashread", CleaveKit.TAG)
+        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
+        assertEquals("v0.1.44-slashproof", CleaveKit.TAG)
     }
 
     @Test
@@ -39,13 +39,13 @@ class SlashReadV0143Test {
     @Test
     fun bustCoverage_in60to80() {
         assertTrue(CleaveKit.bustCoverageInLockRange())
-        assertEquals(0.72f, CleaveKit.BUST_COVERAGE, 0.001f)
-        assertTrue(CleaveKit.BUST_COVERAGE in 0.60f..0.80f)
+        assertEquals(0.82f, CleaveKit.BUST_COVERAGE, 0.001f)
+        assertTrue(CleaveKit.BUST_COVERAGE in 0.70f..0.90f)
         // Draw px: Medium > Small at same stage side
         val side = 400f
         assertTrue(CleaveKit.slashDrawPx(side, FxTier.MEDIUM) > CleaveKit.slashDrawPx(side, FxTier.SMALL))
-        assertEquals(side * 0.72f, CleaveKit.slashDrawPx(side, FxTier.SMALL), 0.01f)
-        assertEquals(side * 0.72f * 1.3f, CleaveKit.slashDrawPx(side, FxTier.MEDIUM), 0.01f)
+        assertEquals(CleaveKit.bustDiameterPx(side, side) * CleaveKit.BUST_COVERAGE, CleaveKit.slashDrawPx(side, FxTier.SMALL), 0.01f)
+        assertEquals(CleaveKit.bustDiameterPx(side, side) * CleaveKit.BUST_COVERAGE * 1.3f, CleaveKit.slashDrawPx(side, FxTier.MEDIUM), 0.01f)
     }
 
     @Test

@@ -30,8 +30,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun tag_isCleaveKitV0142() {
-        assertEquals("v0.1.43-slashread", CombatFx.TAG)
-        assertEquals("v0.1.43-slashread", CleaveKit.TAG)
+        assertEquals("v0.1.44-slashproof", CombatFx.TAG)
+        assertEquals("v0.1.44-slashproof", CleaveKit.TAG)
     }
 
     @Test
@@ -60,7 +60,7 @@ class CleaveKitV0142Test {
         assertEquals(24, CleaveKit.SLASH_FPS)
         assertEquals(256, CleaveKit.SLASH_CELL_PX)
         assertEquals(6, CleaveKit.SLASH_PEAK_FRAME)
-        assertEquals(0.46f, CleaveKit.SLASH_ANCHOR_X, 0.0001f)
+        assertEquals(0.62f, CleaveKit.SLASH_ANCHOR_X, 0.0001f)
         assertEquals(12, CleaveKit.HIT_FLASH_FRAMES)
         assertEquals(6, CleaveKit.HIT_FLASH_COLS)
         assertEquals(2, CleaveKit.HIT_FLASH_PEAK_FRAME)

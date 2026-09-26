@@ -1,16 +1,17 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * CLEAVE free-sampler atlas metadata — v0.1.43-slashread.
+ * CLEAVE free-sampler atlas metadata — v0.1.44-slashproof.
  * Pure domain (frame / duration / scale helpers). Compose draws sheets.
  * Only slash-light + hit-flash (additive optional). No shield-block.
- * Phone-readable: bust coverage ~72%, Medium 1.3×, peak hold ~200ms, total ≤500ms @1x.
- * See docs/slashread-v0143.md + docs/cleavekit-v0142.md.
+ * Phone-readable: bust coverage ~82% of bust diameter (half-stage based),
+ * content crop zooms past empty atlas padding, Medium 1.3×, peak hold ~200ms,
+ * total ≤500ms @1x. See docs/slashproof-v0144.md.
  *
  * Aim / clip / who-gets-FX stay v0.1.40-fxfix. Does not replace Wake / Brace.
  */
 object CleaveKit {
-    const val TAG = "v0.1.43-slashread"
+    const val TAG = "v0.1.44-slashproof"
 
     /** Android drawable basenames (underscores — no hyphens). */
     const val SLASH_DRAWABLE = "fx_slash_light"
@@ -24,8 +25,21 @@ object CleaveKit {
     const val SLASH_FPS = 24
     const val SLASH_CELL_PX = 256
     const val SLASH_PEAK_FRAME = 6
-    const val SLASH_ANCHOR_X = 0.46f
-    const val SLASH_ANCHOR_Y = 0.5f
+    /**
+     * Anchor within the **cropped** src (not the full 256 cell).
+     * Content sits right-of-center in atlas cells — see [SLASH_CROP_OX].
+     */
+    const val SLASH_ANCHOR_X = 0.62f
+    const val SLASH_ANCHOR_Y = 0.52f
+
+    /**
+     * Zoom crop inside each 256 cell. Atlas crescents occupy ~17–38% of the cell
+     * (heavy padding); drawing the full cell left Pike/Hostflint unreadably tiny.
+     * Crop covers union of play frames 4/6/8/10 content with margin.
+     */
+    const val SLASH_CROP_PX = 144
+    const val SLASH_CROP_OX = 112
+    const val SLASH_CROP_OY = 24
 
     // --- hit-flash atlas (6×2, 12f@24, peak 2, additive) ---
     const val HIT_FLASH_FRAMES = 12
@@ -42,11 +56,16 @@ object CleaveKit {
     const val SMALL_SCALE = 1.0f
 
     /**
-     * Crescent dst size as fraction of min(stage w,h) before [slashScale].
-     * Phone-readable lock: crescent covers ~60–80% of bust width (WO v0.1.43).
-     * Prior shy 0.44f left strokes unreadably small on busts.
+     * Crescent dst size as fraction of **bust diameter** (not shy min(w,h) alone).
+     * Lock: 0.70–0.90 of bust. Prefer [bustDiameterPx] from half-stage width.
      */
-    const val BUST_COVERAGE = 0.72f
+    const val BUST_COVERAGE = 0.82f
+
+    /** Half-stage width → bust diameter factor (portrait pack ≈ half of half-stage). */
+    const val BUST_FROM_HALF_STAGE = 0.55f
+
+    /** Bust diameter also capped by overlay height (portraits sit in ~140.dp stage). */
+    const val BUST_FROM_STAGE_H = 0.72f
 
     /** 1x slash budget must stay ≤ 500ms (WO). */
     const val MAX_SLASH_MS_1X = 500L
@@ -83,6 +102,16 @@ object CleaveKit {
         else -> SMALL_SCALE
     }
 
+    /**
+     * Bust diameter in stage px — prefer half-stage width, clamp by stage height.
+     * Avoids shy `min(w,h)` that still reads tiny when width ≫ height (140.dp strip).
+     */
+    fun bustDiameterPx(stageW: Float, stageH: Float): Float {
+        val halfStage = stageW * 0.5f
+        return minOf(halfStage * BUST_FROM_HALF_STAGE, stageH * BUST_FROM_STAGE_H)
+            .coerceAtLeast(1f)
+    }
+
     /** Peak linger ms for this stroke hold (scales with 2x via already-halved [holdMs]). */
     fun peakHoldFor(holdMs: Long, tier: FxTier = FxTier.SMALL): Long {
         val base1x = when (tier) {
@@ -111,7 +140,6 @@ object CleaveKit {
         val rest = (holdMs - peak).coerceAtLeast(0L)
         val otherCount = (frames.size - 1).coerceAtLeast(1)
         val each = (rest / otherCount).coerceAtLeast(1L)
-        // Distribute remainder on last fade frame
         var used = 0L
         val out = LongArray(frames.size) { i ->
             if (i == peakIdx) peak else each
@@ -119,7 +147,6 @@ object CleaveKit {
         used = out.sum()
         if (used < holdMs) out[out.lastIndex] += holdMs - used
         if (used > holdMs) {
-            // Trim from non-peak frames
             var over = used - holdMs
             for (i in out.indices.reversed()) {
                 if (i == peakIdx) continue
@@ -134,9 +161,19 @@ object CleaveKit {
         return out
     }
 
-    /** Draw size (px) for slash crescent given stage min side and tier. */
+    /**
+     * Draw size (px) for slash crescent given stage size and tier.
+     * = [bustDiameterPx] × [BUST_COVERAGE] × [slashScale].
+     */
+    fun slashDrawPx(stageW: Float, stageH: Float, tier: FxTier): Float =
+        bustDiameterPx(stageW, stageH) * BUST_COVERAGE * slashScale(tier)
+
+    /**
+     * Legacy square-stage helper (tests / callers that only have min side).
+     * Treats [minSide] as both w and h so half-stage = minSide/2.
+     */
     fun slashDrawPx(minSide: Float, tier: FxTier): Float =
-        minSide * BUST_COVERAGE * slashScale(tier)
+        slashDrawPx(minSide, minSide, tier)
 
     /** Row-major cell origin (px) for [frame] in a cols×rows atlas. */
     fun cellOrigin(frame: Int, cols: Int, cellPx: Int = SLASH_CELL_PX): Pair<Int, Int> {
@@ -148,6 +185,12 @@ object CleaveKit {
 
     fun slashCellOrigin(frame: Int): Pair<Int, Int> =
         cellOrigin(frame, SLASH_COLS, SLASH_CELL_PX)
+
+    /** Absolute src origin for zoomed crop inside the frame cell. */
+    fun slashCropOrigin(frame: Int): Pair<Int, Int> {
+        val (cx, cy) = slashCellOrigin(frame)
+        return cx + SLASH_CROP_OX to cy + SLASH_CROP_OY
+    }
 
     fun hitFlashCellOrigin(frame: Int): Pair<Int, Int> =
         cellOrigin(frame, HIT_FLASH_COLS, HIT_FLASH_CELL_PX)
@@ -188,7 +231,7 @@ object CleaveKit {
     fun hitFlashPeakInPlayWindow(): Boolean =
         HIT_FLASH_PEAK_FRAME in HIT_FLASH_PLAY_FRAMES.min()..HIT_FLASH_PLAY_FRAMES.max()
 
-    /** Bust coverage lock for tests (0.60–0.80). */
+    /** Bust coverage lock for tests (0.70–0.90). */
     fun bustCoverageInLockRange(): Boolean =
-        BUST_COVERAGE in 0.60f..0.80f
+        BUST_COVERAGE in 0.70f..0.90f
 }
