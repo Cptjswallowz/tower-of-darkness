@@ -17,7 +17,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.47-strokethick — fat canvas stroke WIDTH + bright colors + enemy→You proof.
+ * v0.1.48-strokeboth — fat canvas stroke WIDTH + bright colors + enemy→You proof.
  * Path length (half-extent) stayed OK in 0.1.46; hairline was thickness×3.2 ≈ 6.7px.
  * See docs/strokethick-v0147.md.
  */
@@ -25,8 +25,8 @@ class StrokeThickV0147Test {
 
     @Test
     fun tag_isStrokeThickV0147() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
-        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
     }
 
     @Test
@@ -63,8 +63,8 @@ class StrokeThickV0147Test {
 
     @Test
     fun peakHolds_player450to550_enemy350to450() {
-        assertTrue(CombatFx.STROKE_PLAYER_PEAK_MS in 450L..550L)
-        assertTrue(CombatFx.STROKE_ENEMY_PEAK_MS in 350L..450L)
+        assertTrue(CombatFx.STROKE_PLAYER_PEAK_MS in 450L..550L) // v0.1.48 = 500
+        assertTrue(CombatFx.STROKE_ENEMY_PEAK_MS in 350L..450L) // v0.1.48 = 450
         assertTrue(CombatFx.STROKE_SMALL_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)
         assertTrue(CombatFx.STROKE_ENEMY_SMALL_MS >= CombatFx.STROKE_ENEMY_PEAK_MS)
         val host = CombatFx.specForPlayer("hostflint")
@@ -118,7 +118,7 @@ class StrokeThickV0147Test {
 
     @Test
     fun colors_brightSteelEmberWhite_enemyDullerStillVisible() {
-        assertEquals(0xFFF2E6D0L, CombatFx.COLOR_STROKE_YOU)
+        assertEquals(0xFFFFF6E4L, CombatFx.COLOR_STROKE_YOU)
         assertEquals(0xFFC4B8A8L, CombatFx.COLOR_STROKE_ENEMY)
         assertEquals(0xFFD0B49AL, CombatFx.COLOR_STROKE_ENEMY_EMBER)
         assertEquals(0xFFFFF8ECL, CombatFx.COLOR_STROKE_CORE_HIGHLIGHT)

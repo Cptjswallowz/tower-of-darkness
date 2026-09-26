@@ -24,8 +24,8 @@ class SlashReadV0143Test {
 
     @Test
     fun tag_isSlashReadV0143() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
-        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
     }
 
     @Test
@@ -76,13 +76,14 @@ class SlashReadV0143Test {
         assertEquals(CombatFx.STROKE_SMALL_MS, smallDelays.sum())
         val peakIdx = CleaveKit.SLASH_PLAY_FRAMES.indexOf(CleaveKit.SLASH_PEAK_FRAME)
         assertTrue(peakIdx >= 0)
-        assertEquals(CleaveKit.PEAK_HOLD_MS, smallDelays[peakIdx])
+        assertEquals(CleaveKit.peakHoldFor(CombatFx.STROKE_SMALL_MS, FxTier.SMALL), smallDelays[peakIdx])
+        assertTrue(smallDelays[peakIdx] >= CleaveKit.PEAK_HOLD_MS)
         // Peak is the longest frame
         assertTrue(smallDelays[peakIdx] >= smallDelays.maxOrNull()!!)
 
         val medDelays = CleaveKit.slashFrameDelaysMs(CombatFx.STROKE_MEDIUM_MS, FxTier.MEDIUM)
         assertEquals(CombatFx.STROKE_MEDIUM_MS, medDelays.sum())
-        assertEquals(CleaveKit.PEAK_HOLD_MEDIUM_MS, medDelays[peakIdx])
+        assertEquals(CleaveKit.peakHoldFor(CombatFx.STROKE_MEDIUM_MS, FxTier.MEDIUM), medDelays[peakIdx])
         assertTrue(medDelays[peakIdx] > smallDelays[peakIdx])
     }
 

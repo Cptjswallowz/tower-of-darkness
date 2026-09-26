@@ -17,7 +17,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.47-strokethick — drawn Wake-family stroke is the readable cut (PRIMARY).
+ * v0.1.48-strokeboth — drawn Wake-family stroke is the readable cut (PRIMARY).
  * CLEAVE tip garnish optional; no CLEAVE rescale as the WO fix.
  * See docs/strokefallback-v0146.md.
  */
@@ -25,8 +25,8 @@ class StrokeFallbackV0146Test {
 
     @Test
     fun tag_isStrokeFallbackV0146() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
-        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
     }
 
     @Test
@@ -87,7 +87,7 @@ class StrokeFallbackV0146Test {
 
     @Test
     fun peakHolds_player400to500_enemy300to400() {
-        // v0.1.47 raised peaks; keep architecture locks (player > enemy; total >= peak)
+        // v0.1.48 peaks 500/450; keep architecture locks (player > enemy; total >= peak)
         assertTrue(CombatFx.STROKE_PLAYER_PEAK_MS in 450L..550L)
         assertTrue(CombatFx.STROKE_ENEMY_PEAK_MS in 350L..450L)
         assertTrue(CombatFx.STROKE_SMALL_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)

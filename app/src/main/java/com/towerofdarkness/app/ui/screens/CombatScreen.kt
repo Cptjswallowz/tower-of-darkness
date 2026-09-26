@@ -105,7 +105,7 @@ fun CombatScreen(gc: GameController) {
     var bracePipVisible by remember { mutableStateOf(false) }
     var bracePipProgress by remember { mutableStateOf(0f) }
     var softenPulse by remember { mutableStateOf(false) }
-    // v0.1.47-strokethick: combat-log echo of drawn stroke (primary) + optional tip garnish
+    // v0.1.48-strokeboth: combat-log echo of drawn stroke (primary) + optional tip garnish
     var strokeDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
@@ -440,7 +440,7 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
-            // v0.1.47-strokethick: drawn Wake-family stroke on recipient bust (primary).
+            // v0.1.48-strokeboth: drawn Wake-family stroke on recipient bust (primary).
             // 180.dp stage strip; half-stage X clip unchanged. Optional tip garnish only.
             CombatStrokeOverlay(
                 stroke = strokeSpec,
@@ -518,7 +518,7 @@ fun CombatScreen(gc: GameController) {
                     while (recent.size > 5) recent.removeAt(0)
                 }
             }
-            // v0.1.47-strokethick: prove drawn stroke (primary) + optional tip garnish
+            // v0.1.48-strokeboth: prove drawn stroke (primary) + optional tip garnish
             strokeDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))

@@ -17,15 +17,15 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * v0.1.47-strokethick — scale slash overlay to bust WIDTH; tight crop; color FREE.
+ * v0.1.48-strokeboth — scale slash overlay to bust WIDTH; tight crop; color FREE.
  * Same fx_slash_light sheet. See docs/slashscale-v0145.md.
  */
 class SlashScaleV0145Test {
 
     @Test
     fun tag_isSlashScaleV0145() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
-        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
     }
 
     @Test
@@ -110,7 +110,8 @@ class SlashScaleV0145Test {
         val delays = CleaveKit.slashFrameDelaysMs(CombatFx.STROKE_SMALL_MS, FxTier.SMALL)
         assertEquals(CombatFx.STROKE_SMALL_MS, delays.sum())
         val peakIdx = CleaveKit.SLASH_PLAY_FRAMES.indexOf(CleaveKit.SLASH_PEAK_FRAME)
-        assertEquals(CleaveKit.PEAK_HOLD_MS, delays[peakIdx])
+        assertEquals(CleaveKit.peakHoldFor(CombatFx.STROKE_SMALL_MS, FxTier.SMALL), delays[peakIdx])
+        assertTrue(delays[peakIdx] >= CleaveKit.PEAK_HOLD_MS)
     }
 
     @Test

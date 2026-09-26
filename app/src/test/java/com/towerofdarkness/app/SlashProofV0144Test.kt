@@ -16,7 +16,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.44-slashproof locks evolved under v0.1.47-strokethick TAG.
+ * v0.1.44-slashproof locks evolved under v0.1.48-strokeboth TAG.
  * Sheet / map / peak / debug still hold; crop+scale numbers live in SlashScaleV0145Test.
  * See docs/slashscale-v0145.md.
  */
@@ -24,8 +24,8 @@ class SlashProofV0144Test {
 
     @Test
     fun tag_isSlashProofV0144() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
-        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CleaveKit.TAG)
     }
 
     @Test
@@ -67,7 +67,9 @@ class SlashProofV0144Test {
         val delays = CleaveKit.slashFrameDelaysMs(CombatFx.STROKE_SMALL_MS, FxTier.SMALL)
         assertEquals(CombatFx.STROKE_SMALL_MS, delays.sum())
         val peakIdx = CleaveKit.SLASH_PLAY_FRAMES.indexOf(CleaveKit.SLASH_PEAK_FRAME)
-        assertEquals(CleaveKit.PEAK_HOLD_MS, delays[peakIdx])
+        // Tip-garnish peak scales with stroke hold (path primary may exceed 500); equals peakHoldFor
+        assertEquals(CleaveKit.peakHoldFor(CombatFx.STROKE_SMALL_MS, FxTier.SMALL), delays[peakIdx])
+        assertTrue(delays[peakIdx] >= CleaveKit.PEAK_HOLD_MS)
     }
 
     @Test

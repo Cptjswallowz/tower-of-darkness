@@ -1,15 +1,15 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.47-strokethick (fat Wake-family stroke PRIMARY).
+ * Shared combat FX kernel — v0.1.48-strokeboth (fat crescent blade BOTH sides).
  * Aim / clip / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
- * Readable cut = Canvas path (glow + thick core crescent) on recipient bust — NOT CLEAVE flipbook.
- * v0.1.47: canvas stroke WIDTH fattened (bust-frac core/glow); bright steel/ember-white;
- * enemy hits MUST stroke on You (`FX stroke on You`). Peak holds raised.
+ * Readable cut = filled crescent Path (outer+inner arc; NOT Round-cap stadium pill) on recipient bust.
+ * v0.1.48: stronger Wake-like bow; player peak 500ms / enemy 450ms; keep You-Shiv ENEMY core 0.10;
+ * player core ≥ enemy (0.14/0.18); outgoing Hostflint/Emberbrand still on foe; incoming Hit/Nip/Shiv.
  * Optional CLEAVE tip garnish at stroke tip only; never another bust-coverage rescale of the sheet.
  * Pure domain maps + duration + recipient-stroke / Brace-pip / clip / glow / spark helpers.
  * Compose: [CombatStrokeOverlay] draws path primary; Wake gold arc stays [WakeStageOverlay].
- * Never changes damage / Wake math / who gets FX. See docs/strokethick-v0147.md.
+ * Never changes damage / Wake math / who gets FX. See docs/strokeboth-v0148.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -127,7 +127,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.47-strokethick"
+    const val TAG = "v0.1.48-strokeboth"
 
     /** logcat tag for stroke / slash-light debug. */
     const val LOG_TAG_TOD_FX = "TodFx"
@@ -175,9 +175,9 @@ object CombatFx {
     const val COLOR_ASH_WARDEN = 0xFFC45A2DL   // coal orange
     const val COLOR_SOFTEN_PIP = 0xFFE24A3BL  // red Soften pulse
 
-    // --- Drawn stroke colors — bright steel / ember-white (pop on dark armor) ---
-    /** Player cut — bright steel / ember-white (was muddy 0xFFC9B8A0). */
-    const val COLOR_STROKE_YOU = 0xFFF2E6D0L
+    // --- Drawn stroke colors — bright steel / ember-white (pop on green goblin + dark cape) ---
+    /** Player cut — bright steel / ember-white (v0.1.48 brightened vs 0xFFF2E6D0 for goblin stills). */
+    const val COLOR_STROKE_YOU = 0xFFFFF6E4L
     /** Enemy cut on You — duller steel/ash but still visible (was 0xFF8A8680). */
     const val COLOR_STROKE_ENEMY = 0xFFC4B8A8L
     /** Warden enemy cut — dull ash-ember, still readable (was 0xFF9A8070). */
@@ -187,15 +187,15 @@ object CombatFx {
 
     // --- 1x duration budgets (presentation only) ---
     const val FLASH_MS = 120L
-    /** Player Small/Medium total hold @1x (peak + short fade); WO peak 450–550 then fade. */
-    const val STROKE_SMALL_MS = 500L
-    const val STROKE_MEDIUM_MS = 500L
-    /** Peak linger @1x for player drawn stroke (pass/fail lock 450–550). */
-    const val STROKE_PLAYER_PEAK_MS = 470L
-    /** Enemy hit stroke shorter — total / peak @1x (WO 350–450 peak). */
-    const val STROKE_ENEMY_SMALL_MS = 480L
-    const val STROKE_ENEMY_MEDIUM_MS = 500L
-    const val STROKE_ENEMY_PEAK_MS = 400L
+    /** Player Small/Medium total hold @1x (peak + short fade); WO peak 500 then fade → ≥560. */
+    const val STROKE_SMALL_MS = 580L
+    const val STROKE_MEDIUM_MS = 580L
+    /** Peak linger @1x for player drawn stroke (v0.1.48 lock = 500). */
+    const val STROKE_PLAYER_PEAK_MS = 500L
+    /** Enemy hit stroke — total / peak @1x (v0.1.48 peak = 450). */
+    const val STROKE_ENEMY_SMALL_MS = 520L
+    const val STROKE_ENEMY_MEDIUM_MS = 540L
+    const val STROKE_ENEMY_PEAK_MS = 450L
     /** Ashbrand SPARK non-Wake — short drawn stroke (+ optional tip spark). */
     const val STROKE_SPARK_MS = 280L
     const val STROKE_SPARK_PEAK_MS = 200L
@@ -252,6 +252,15 @@ object CombatFx {
     const val STROKE_GLOW_BUST_FRAC_PLAYER_SMALL = 0.30f
     const val STROKE_GLOW_BUST_FRAC_PLAYER_MEDIUM = 0.38f
     const val STROKE_GLOW_BUST_FRAC_ENEMY = 0.22f
+    /**
+     * v0.1.48 crescent shape — bow bulge as multiple of half-chord length.
+     * ≥1.0 → Wake-like curved blade; modest mid offset + StrokeCap.Round was the 0.1.47 pill.
+     */
+    const val STROKE_CRESCENT_BOW_MULT = 1.20f
+    /** Inner arc bow as fraction of outer bow (blade belly thickness; tips taper). */
+    const val STROKE_CRESCENT_INNER_BOW_FRAC = 0.38f
+    /** Overlay draws filled outer+inner crescent Path (not Round-cap stadium). */
+    const val STROKE_SHAPE_FILLED_CRESCENT = true
     /** Hairline core px @ ref (THICK_SMALL × STROKE_CORE_MULT) — FAIL baseline. */
     val HAIRLINE_CORE_PX_SMALL: Float get() = THICK_SMALL * STROKE_CORE_MULT
 
@@ -436,6 +445,22 @@ object CombatFx {
     /** Enemy core @ reference stage (slightly thinner than player Small). */
     fun strokeCoreWidthEnemyRef(): Float =
         strokeCoreWidthPx(FxRecipient.YOU, FxTier.SMALL, REF_BUST_WIDTH_PX)
+
+    /**
+     * Crescent bow distance (px) for a half-chord of length [halfChordPx].
+     * Must be ≥ halfChord so the cut reads as a curved blade, not a stadium pill.
+     */
+    fun crescentBowPx(halfChordPx: Float): Float =
+        halfChordPx.coerceAtLeast(1f) * STROKE_CRESCENT_BOW_MULT
+
+    /** Inner crescent bow (px) — closer to chord than outer; tips meet at ends. */
+    fun crescentInnerBowPx(outerBowPx: Float): Float =
+        (outerBowPx * STROKE_CRESCENT_INNER_BOW_FRAC).coerceAtLeast(1f)
+
+    /** True when player Small core frac ≥ enemy You-Shiv weight (PASS lock). */
+    fun playerCoreBeatsEnemyYouWeight(): Boolean =
+        STROKE_CORE_BUST_FRAC_PLAYER_SMALL >= STROKE_CORE_BUST_FRAC_ENEMY &&
+            STROKE_CORE_BUST_FRAC_PLAYER_MEDIUM >= STROKE_CORE_BUST_FRAC_ENEMY
 
     /**
      * Drawn Brace shield pip count = Brace gained, capped at [BRACE_PIP_CAP].
@@ -666,7 +691,7 @@ object CombatFx {
 
     /**
      * Proof helper — enemy damage skill produces drawn stroke on You + debug `FX stroke on You`.
-     * Used by StrokeThickV0147Test / CombatScreen wiring audit.
+     * Used by StrokeBothV0148Test / CombatScreen wiring audit.
      */
     fun enemyHitProducesYouStroke(skillId: String, kind: EnemyKind = EnemyKind.GOBLIN): Boolean {
         val beat = safeSpec(skillId, resolveFxPlayer(skillId, eventFxPlayer = true), kind)

@@ -22,9 +22,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -41,8 +39,9 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.47-strokethick — drawn Wake-family stroke PRIMARY.
- * Fat glow + core quadratic crescent (bust-frac canvas widths) on recipient bust (same family as Wake arc language).
+ * Presentation layer for v0.1.48-strokeboth — drawn Wake-family stroke PRIMARY.
+ * Filled crescent blade (outer+inner quadratic arcs; NOT StrokeCap.Round stadium pill)
+ * with glow + core layers on recipient bust (same family as Wake arc language).
  * Optional CLEAVE slash-light tip garnish at stroke TIP only — never the slash.
  * Wake gold arc stays in [WakeStageOverlay]. Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block;
@@ -147,8 +146,10 @@ fun CombatStrokeOverlay(
 }
 
 /**
- * Wake-family readable cut — glow + thick core quadratic crescent on recipient bust.
- * Path length from [CombatFx.slashCutGeom]; canvas WIDTH from strokeCoreWidthPx (v0.1.47 fat).
+ * Wake-family readable cut — filled crescent blade (outer + reverse inner arc) on recipient bust.
+ * v0.1.48: NOT StrokeCap.Round on a modest quadratic (that was the stadium/capsule pill).
+ * Path length from [CombatFx.slashCutGeom]; belly thickness from strokeCoreWidthPx (v0.1.47 fat kept).
+ * Bow bulge ≥ half-chord ([CombatFx.STROKE_CRESCENT_BOW_MULT]) so the cut reads as a curved blade.
  */
 private fun DrawScope.drawWakeFamilyStroke(
     stroke: FxStrokeSpec,
@@ -165,47 +166,74 @@ private fun DrawScope.drawWakeFamilyStroke(
     val ey = geom.halfExtentYFrac * h
     val start = Offset(cx - ex, cy - ey)
     val end = Offset(cx + ex, cy + ey)
-    val mid = Offset(cx + ex * 0.12f, cy - ey * 0.55f)
-    val path = Path().apply {
-        moveTo(start.x, start.y)
-        quadraticTo(mid.x, mid.y, end.x, end.y)
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val halfChord = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat() * 0.5f
+    val chordLen = (halfChord * 2f).coerceAtLeast(1f)
+    // Unit perpendicular; force upward bulge (Wake-like belly above the diagonal)
+    var nx = -dy / chordLen
+    var ny = dx / chordLen
+    if (ny > 0f) {
+        nx = -nx
+        ny = -ny
     }
+    val midX = (start.x + end.x) * 0.5f
+    val midY = (start.y + end.y) * 0.5f
     val bustW = w * 0.5f * CombatFx.STROKE_BUST_WIDTH_FRAC
     val coreW = CombatFx.strokeCoreWidthPx(stroke.recipient, tier, bustW)
     val glowW = CombatFx.strokeGlowWidthPx(stroke.recipient, tier, bustW)
     val a = alpha.coerceIn(0.15f, 1f)
+    val outerBow = CombatFx.crescentBowPx(halfChord)
+    // Belly thickness tracks coreW (bust-frac lock); frac is a floor so tips still taper
+    val innerFloor = CombatFx.crescentInnerBowPx(outerBow)
+    val innerBow = (outerBow - coreW).coerceAtLeast(innerFloor * 0.55f).coerceAtMost(outerBow * 0.92f)
+    // Soft glow crescent (wider than core)
+    val glowOuter = outerBow + glowW * 0.22f
+    val glowInner = (innerBow - glowW * 0.20f).coerceAtLeast(halfChord * 0.06f)
     drawPath(
-        path = path,
-        color = color.copy(alpha = 0.42f * a),
-        style = Stroke(
-            width = glowW * 1.15f,
-            cap = StrokeCap.Round
-        )
+        path = crescentBladePath(start, end, midX, midY, nx, ny, glowOuter, glowInner),
+        color = color.copy(alpha = 0.38f * a)
     )
     drawPath(
-        path = path,
-        color = color.copy(alpha = 0.62f * a),
-        style = Stroke(
-            width = glowW * 0.65f,
-            cap = StrokeCap.Round
-        )
+        path = crescentBladePath(start, end, midX, midY, nx, ny, outerBow + glowW * 0.08f, innerBow),
+        color = color.copy(alpha = 0.55f * a)
     )
+    // Core blade — filled crescent (tips taper; belly ≈ core width)
     drawPath(
-        path = path,
-        color = color.copy(alpha = 0.98f * a),
-        style = Stroke(
-            width = coreW,
-            cap = StrokeCap.Round
-        )
+        path = crescentBladePath(start, end, midX, midY, nx, ny, outerBow, innerBow),
+        color = color.copy(alpha = 0.98f * a)
     )
+    // Hot highlight — thinner inner crescent
+    val hiOuter = (outerBow + innerBow) * 0.5f + coreW * 0.08f
+    val hiInner = (innerBow + (innerBow * 0.55f)) * 0.5f
     drawPath(
-        path = path,
-        color = Color(CombatFx.COLOR_STROKE_CORE_HIGHLIGHT).copy(alpha = 0.65f * a),
-        style = Stroke(
-            width = coreW * 0.38f,
-            cap = StrokeCap.Round
-        )
+        path = crescentBladePath(start, end, midX, midY, nx, ny, hiOuter, hiInner.coerceAtMost(hiOuter * 0.92f)),
+        color = Color(CombatFx.COLOR_STROKE_CORE_HIGHLIGHT).copy(alpha = 0.62f * a)
     )
+}
+
+/**
+ * Filled crescent / blade Path: outer quadratic arc start→end, reverse inner arc end→start.
+ * Tips meet at [start]/[end] so the silhouette tapers like a Wake crescent — not a Round pill.
+ */
+private fun crescentBladePath(
+    start: Offset,
+    end: Offset,
+    midX: Float,
+    midY: Float,
+    nx: Float,
+    ny: Float,
+    outerBow: Float,
+    innerBow: Float
+): Path {
+    val outerMid = Offset(midX + nx * outerBow, midY + ny * outerBow)
+    val innerMid = Offset(midX + nx * innerBow, midY + ny * innerBow)
+    return Path().apply {
+        moveTo(start.x, start.y)
+        quadraticTo(outerMid.x, outerMid.y, end.x, end.y)
+        quadraticTo(innerMid.x, innerMid.y, start.x, start.y)
+        close()
+    }
 }
 
 /**

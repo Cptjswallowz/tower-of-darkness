@@ -20,7 +20,7 @@ class CombatFxFixV0140Test {
 
     @Test
     fun tag_isFxfixV0140() {
-        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
+        assertEquals("v0.1.48-strokeboth", CombatFx.TAG)
     }
 
     @Test

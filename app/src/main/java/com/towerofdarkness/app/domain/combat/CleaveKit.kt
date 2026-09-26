@@ -1,7 +1,7 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * CLEAVE free-sampler atlas metadata — v0.1.47-strokethick.
+ * CLEAVE free-sampler atlas metadata — v0.1.48-strokeboth.
  * Pure domain (frame / duration / scale helpers). Compose draws sheets.
  * Only slash-light + hit-flash (additive optional). No shield-block.
  * Phone-readable: bust-WIDTH coverage ~85% (half-stage × BUST_WIDTH_FRAC),
@@ -11,7 +11,7 @@ package com.towerofdarkness.app.domain.combat
  * Aim / clip / who-gets-FX stay v0.1.40-fxfix. Does not replace Wake / Brace.
  */
 object CleaveKit {
-    const val TAG = "v0.1.47-strokethick"
+    const val TAG = "v0.1.48-strokeboth"
 
     /** Android drawable basenames (underscores — no hyphens). */
     const val SLASH_DRAWABLE = "fx_slash_light"
@@ -83,13 +83,13 @@ object CleaveKit {
      */
     val CONTENT_WIDTH_FRAC: Float get() = OPAQUE_UNION_W.toFloat() / SLASH_CROP_PX.toFloat()
 
-    /** 1x slash budget must stay ≤ 500ms (WO). */
-    const val MAX_SLASH_MS_1X = 500L
+    /** 1x tip-garnish/slash budget — raised with stroke peak holds (v0.1.48 path primary). */
+    const val MAX_SLASH_MS_1X = 600L
 
     /** Hold brightest (peak) frame @1x Small — then fade. Window 180–220ms. */
     const val PEAK_HOLD_MS = 200L
 
-    /** Medium peak linger slightly longer than Small (still within Medium stroke ≤500). */
+    /** Medium peak linger slightly longer than Small (within Medium stroke hold). */
     const val PEAK_HOLD_MEDIUM_MS = 220L
 
     /** Hit-flash hold @1x — Ashbrand SPARK path (first 6–8 frames then fade). */
@@ -132,18 +132,22 @@ object CleaveKit {
     @Suppress("UNUSED_PARAMETER")
     fun bustDiameterPx(stageW: Float, stageH: Float): Float = bustWidthPx(stageW)
 
-    /** Peak linger ms for this stroke hold (scales with 2x via already-halved [holdMs]). */
+    /**
+     * Peak linger ms for tip-garnish schedule (scales with 2x via already-halved [holdMs]).
+     * Ref budget stays 500ms (historic slash lock) so path stroke holds >500 (v0.1.48) do not
+     * inflate tip peak beyond [PEAK_HOLD_MS] / [PEAK_HOLD_MEDIUM_MS].
+     */
     fun peakHoldFor(holdMs: Long, tier: FxTier = FxTier.SMALL): Long {
         val base1x = when (tier) {
             FxTier.MEDIUM -> PEAK_HOLD_MEDIUM_MS
             else -> PEAK_HOLD_MS
         }
-        val ref1x = when (tier) {
-            FxTier.MEDIUM -> CombatFx.STROKE_MEDIUM_MS
-            else -> CombatFx.STROKE_SMALL_MS
+        val ref1x = 500L
+        if (holdMs >= ref1x) {
+            return base1x.coerceAtMost(holdMs)
         }
         // Proportional when speedX halves holdMs; clamp to 40–65% of hold so rest can fade.
-        val scaled = (base1x * holdMs / ref1x.coerceAtLeast(1L)).coerceAtLeast(1L)
+        val scaled = (base1x * holdMs / ref1x).coerceAtLeast(1L)
         val lo = (holdMs * 40L / 100L).coerceAtLeast(1L)
         val hi = (holdMs * 65L / 100L).coerceAtLeast(lo)
         return scaled.coerceIn(lo, hi)
