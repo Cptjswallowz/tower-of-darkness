@@ -16,6 +16,10 @@ object Balance {
     const val BOSS_HP = 28
     /** Floor 2 Ash-Warden; Floor 1 Seal-Warden stays BOSS_HP. */
     const val BOSS_FLOOR2_HP = 32
+    /** Floor 3 Gate-Warden. */
+    const val BOSS_FLOOR3_HP = 36
+    /** Floor 3 Cave Troll hallway trash. */
+    const val CAVE_TROLL_HP = 28
 
     const val PLAYER_DMG_MIN = 4
     const val PLAYER_DMG_MAX = 8

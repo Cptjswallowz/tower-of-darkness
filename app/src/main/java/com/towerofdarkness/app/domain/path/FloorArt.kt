@@ -12,6 +12,9 @@ object FloorArt {
     /** Shared Floor 1 / Floor 2 path backdrop (drawable basename). Art-dimmed JPG. */
     const val BACKDROP_DRAWABLE = "floor_backdrop"
 
+    /** Floor 3 cave backdrop — darker teal/coal tint; F1/F2 keep [BACKDROP_DRAWABLE]. */
+    const val BACKDROP_CAVE_DRAWABLE = "floor_backdrop_cave"
+
     /** Node type token basenames — Art crops (`node_*.png`, 128×128 RGBA). */
     const val TOKEN_START = "node_start"
     const val TOKEN_COMBAT = "node_combat"
@@ -34,6 +37,12 @@ object FloorArt {
      * Combined with [SCRIM_ALPHA_FLOOR1] via layered scrim.
      */
     const val FLOOR2_EXTRA_DARK_ALPHA = 0.12f
+
+    /**
+     * Extra black overlay on Floor 3 (darker cave than Floor 2).
+     * Layered on top of Floor 1 scrim + Floor 2 extra when floor >= 3.
+     */
+    const val FLOOR3_EXTRA_DARK_ALPHA = 0.14f
 
     /** Token Image size inside the existing 52dp node circle. */
     const val TOKEN_SIZE_DP = 40
@@ -68,12 +77,21 @@ object FloorArt {
         }
     }
 
-    /** Floor 2 uses extra darkening over the shared backdrop. */
+    /** Floor 2+ uses F2 extra darkening over the shared backdrop. */
     fun floor2Darker(floor: Int): Boolean = floor >= 2
 
-    fun scrimAlpha(floor: Int): Float =
-        if (floor2Darker(floor)) SCRIM_ALPHA_FLOOR1 + FLOOR2_EXTRA_DARK_ALPHA
-        else SCRIM_ALPHA_FLOOR1
+    /** Floor 3+ uses Art cave plate ([BACKDROP_CAVE_DRAWABLE]); extra scrim still applies lightly. */
+    fun floor3Darker(floor: Int): Boolean = floor >= 3
+
+    fun backdropDrawableName(floor: Int): String =
+        if (floor >= 3) BACKDROP_CAVE_DRAWABLE else BACKDROP_DRAWABLE
+
+    fun scrimAlpha(floor: Int): Float {
+        var a = SCRIM_ALPHA_FLOOR1
+        if (floor2Darker(floor) && floor < 3) a += FLOOR2_EXTRA_DARK_ALPHA
+        // F3 plate is already Art-darkened; keep base scrim only (no stacked F2/F3 extras)
+        return a
+    }
 
     /**
      * Art drop detection. Override for tests; otherwise known set on disk under drawable/.
@@ -93,14 +111,18 @@ object FloorArt {
     fun anyTokenShipped(): Boolean =
         expectedTokenNames().any { tokenArtShipped(it) }
 
-    fun backdropShipped(): Boolean {
+    fun backdropShipped(): Boolean = backdropFileExists(BACKDROP_DRAWABLE)
+
+    fun caveBackdropShipped(): Boolean = backdropFileExists(BACKDROP_CAVE_DRAWABLE)
+
+    private fun backdropFileExists(drawableName: String): Boolean {
         val candidates = listOf(
-            "app/src/main/res/drawable/$BACKDROP_DRAWABLE.jpg",
-            "app/src/main/res/drawable/$BACKDROP_DRAWABLE.png",
-            "app/src/main/res/drawable/$BACKDROP_DRAWABLE.webp",
-            "src/main/res/drawable/$BACKDROP_DRAWABLE.jpg",
-            "src/main/res/drawable/$BACKDROP_DRAWABLE.png",
-            "src/main/res/drawable/$BACKDROP_DRAWABLE.webp"
+            "app/src/main/res/drawable/$drawableName.jpg",
+            "app/src/main/res/drawable/$drawableName.png",
+            "app/src/main/res/drawable/$drawableName.webp",
+            "src/main/res/drawable/$drawableName.jpg",
+            "src/main/res/drawable/$drawableName.png",
+            "src/main/res/drawable/$drawableName.webp"
         )
         return candidates.any { java.io.File(it).isFile }
     }

@@ -1,9 +1,12 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Enemy live kits — v0.1.32-enemykit.
+ * Enemy live kits — v0.1.32-enemykit + v0.1.41-floor3 Cave Troll / Gate-Warden.
  * Same weight / exhaust / grey machine as the player bar.
- * Looks are cosmetic; kit is per role. See docs/enemykit-v0132.md.
+ * Looks are cosmetic; kit is per role. See docs/enemykit-v0132.md + docs/floor3-v0141.md.
+ *
+ * FX frozen at 0.1.40 — Club MEDIUM / Gate Pulse tier map deferred (ids fall through
+ * CombatFx fail-safe SMALL). Hide / Rust Guard keep existing NO_STROKE ids.
  */
 enum class EnemySkillKind {
     /** Soften reduces; Soften pip clears after. */
@@ -40,21 +43,20 @@ enum class EnemyKitRole {
     WEAK_GOBLIN,
     STURDY_ORC,
     SEAL_WARDEN,
-    ASH_WARDEN;
+    ASH_WARDEN,
+    CAVE_TROLL,
+    GATE_WARDEN;
 
     companion object {
-        fun fromEnemy(enemy: Enemy): EnemyKitRole = when (enemy.kind) {
-            EnemyKind.GOBLIN -> WEAK_GOBLIN
-            EnemyKind.ORC, EnemyKind.TROLL, EnemyKind.SPIDER -> STURDY_ORC
-            EnemyKind.DRAGON -> SEAL_WARDEN
-            EnemyKind.ASH_WARDEN -> ASH_WARDEN
-        }
+        fun fromEnemy(enemy: Enemy): EnemyKitRole = fromKind(enemy.kind)
 
         fun fromKind(kind: EnemyKind): EnemyKitRole = when (kind) {
             EnemyKind.GOBLIN -> WEAK_GOBLIN
             EnemyKind.ORC, EnemyKind.TROLL, EnemyKind.SPIDER -> STURDY_ORC
             EnemyKind.DRAGON -> SEAL_WARDEN
             EnemyKind.ASH_WARDEN -> ASH_WARDEN
+            EnemyKind.CAVE_TROLL -> CAVE_TROLL
+            EnemyKind.GATE_WARDEN -> GATE_WARDEN
         }
     }
 }
@@ -110,11 +112,39 @@ object EnemyKits {
         )
     )
 
+    /** Floor 3 hallway — Club 8 MEDIUM (FX map deferred), Hide Brace4 no-slash, Hit 7–9 SMALL. */
+    val caveTroll: List<EnemySkill> = listOf(
+        EnemySkill("club", "Club", 2, EnemySkillKind.DAMAGE, damage = 8, glossaryKey = "club"),
+        EnemySkill("hide", "Hide", 2, EnemySkillKind.BRACE, braceGain = 4, glossaryKey = "hide"),
+        EnemySkill(
+            "hit", "Hit", 5, EnemySkillKind.DAMAGE,
+            damageMin = 7, damageMax = 9, glossaryKey = "hit"
+        )
+    )
+
+    /** Floor 3 boss — Gate Pulse 7 / Rust Guard Brace4 / Hit 6–9 (Elliott lock v0.1.41). */
+    val gateWarden: List<EnemySkill> = listOf(
+        EnemySkill(
+            "gate_pulse", "Gate Pulse", 2, EnemySkillKind.DAMAGE,
+            damage = 7, glossaryKey = "gate pulse"
+        ),
+        EnemySkill(
+            "rust_guard", "Rust Guard", 2, EnemySkillKind.BRACE,
+            braceGain = 4, glossaryKey = "rust guard"
+        ),
+        EnemySkill(
+            "hit", "Hit", 5, EnemySkillKind.DAMAGE,
+            damageMin = 6, damageMax = 9, glossaryKey = "hit"
+        )
+    )
+
     fun skillsFor(role: EnemyKitRole): List<EnemySkill> = when (role) {
         EnemyKitRole.WEAK_GOBLIN -> weakGoblin
         EnemyKitRole.STURDY_ORC -> sturdyOrc
         EnemyKitRole.SEAL_WARDEN -> sealWarden
         EnemyKitRole.ASH_WARDEN -> ashWarden
+        EnemyKitRole.CAVE_TROLL -> caveTroll
+        EnemyKitRole.GATE_WARDEN -> gateWarden
     }
 
     fun skillsFor(enemy: Enemy): List<EnemySkill> = skillsFor(EnemyKitRole.fromEnemy(enemy))

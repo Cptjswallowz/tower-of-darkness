@@ -26,11 +26,12 @@ class Floor2Test {
             BossWinNav.FLOOR_BREAK,
             GameController.afterBossWinNav(1)
         )
+        // v0.1.41: Ash-Warden win advances to Floor 3
         assertEquals(
-            BossWinNav.SUMMARY_VICTORY,
+            BossWinNav.FLOOR_BREAK,
             GameController.afterBossWinNav(2)
         )
-        // No Floor 3 — floor 3+ still summary
+        // Gate-Warden win → Hub (no Floor 4)
         assertEquals(
             BossWinNav.SUMMARY_VICTORY,
             GameController.afterBossWinNav(3)
@@ -142,19 +143,23 @@ class Floor2Test {
     }
 
     @Test
-    fun f2BossWin_summaryVictoryTitle_noFloor3() {
+    fun f2BossWin_advancesToFloor3_notSummary() {
+        assertEquals(
+            BossWinNav.FLOOR_BREAK,
+            GameController.afterBossWinNav(2)
+        )
         val summary = RunSummaryData(
             won = true,
-            nodesCleared = 12,
-            remnantsEarned = 40,
-            floorReached = 2,
+            nodesCleared = 18,
+            remnantsEarned = 50,
+            floorReached = 3,
             nearMiss = false
         )
         assertEquals("Victory — The seal breaks.", summary.title)
-        assertEquals(2, summary.floorReached)
+        assertEquals(3, summary.floorReached)
         assertEquals(
             BossWinNav.SUMMARY_VICTORY,
-            GameController.afterBossWinNav(2)
+            GameController.afterBossWinNav(3)
         )
     }
 

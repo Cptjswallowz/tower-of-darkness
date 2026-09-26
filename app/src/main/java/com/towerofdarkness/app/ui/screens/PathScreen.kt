@@ -53,15 +53,25 @@ fun PathScreen(gc: GameController) {
                 Text("HP ${gc.playerHp} · ${gc.runWallet} rem", color = Bone, fontSize = 13.sp)
             }
             Text(
-                if (gc.loadoutLocked) "Loadout locked" else "Loadout editable",
+                when {
+                    gc.loadoutLocked && (path?.floor ?: 1) >= 3 -> "Loadout locked for Floor ${path?.floor}"
+                    gc.loadoutLocked -> "Loadout locked"
+                    else -> "Loadout editable"
+                },
                 color = Bone.copy(0.6f), fontSize = 12.sp
             )
             Spacer(Modifier.height(8.dp))
             if (!gc.loadoutLocked) {
                 OutlinedButton(onClick = { gc.openLoadout() }) {
                     Text(
-                        if (gc.loadout.isEmpty()) "Set Loadout (required before nodes)"
-                        else "Edit Loadout (${gc.loadout.size})"
+                        when {
+                            (path?.floor ?: 1) >= 3 && gc.loadout.isEmpty() ->
+                                "Pick Floor Loadout (5 + weapon)"
+                            (path?.floor ?: 1) >= 3 ->
+                                "Confirm Floor Loadout (${gc.loadout.size}/5)"
+                            gc.loadout.isEmpty() -> "Set Loadout (required before nodes)"
+                            else -> "Edit Loadout (${gc.loadout.size})"
+                        }
                     )
                 }
             }
@@ -115,17 +125,50 @@ fun PathScreen(gc: GameController) {
                 }
             }
         }
+        if (gc.showF3Explainer) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.72f))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1A1520), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .padding(20.dp)
+                ) {
+                    Text("Floor loadout", color = Gold, fontSize = 20.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "On Floor 3+, pick 5 skills + weapon once. " +
+                            "Confirm locks them for every fight on this floor. " +
+                            "Map and rumors come first.",
+                        color = Bone,
+                        fontSize = 14.sp
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    Button(
+                        onClick = { gc.dismissF3Explainer() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Got it") }
+                }
+            }
+        }
     }
 }
 
 /**
- * Shared floor plate behind the path map. Same asset both floors;
- * Floor 2 adds ~10–15% extra dark scrim ([FloorArt.FLOOR2_EXTRA_DARK_ALPHA]).
+ * Path map backdrop: F1/F2 [R.drawable.floor_backdrop]; F3 [R.drawable.floor_backdrop_cave].
+ * Floor 2 adds ~10–15% extra dark scrim on the shared hall plate.
+ * F3 Art cave plate is already darkened — base scrim only. Tokens reused.
  */
 @Composable
 private fun FloorBackdrop(floor: Int) {
+    val backdropRes = if (floor >= 3) R.drawable.floor_backdrop_cave else R.drawable.floor_backdrop
     Image(
-        painter = painterResource(R.drawable.floor_backdrop),
+        painter = painterResource(backdropRes),
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier
@@ -138,7 +181,7 @@ private fun FloorBackdrop(floor: Int) {
             .fillMaxSize()
             .background(Color.Black.copy(alpha = FloorArt.SCRIM_ALPHA_FLOOR1))
     )
-    if (FloorArt.floor2Darker(floor)) {
+    if (FloorArt.floor2Darker(floor) && floor < 3) {
         Box(
             Modifier
                 .fillMaxSize()

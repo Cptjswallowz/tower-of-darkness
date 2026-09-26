@@ -84,6 +84,7 @@ private fun TitleTealCircle() {
 private fun bossPortraitResId(kind: EnemyKind): Int? = when (BodyArt.enemyPortraitDrawableName(kind)) {
     BodyArt.ASH_WARDEN_DRAWABLE -> R.drawable.portrait_ash_warden
     BodyArt.SEAL_WARDEN_DRAWABLE -> R.drawable.portrait_seal_warden
+    BodyArt.GATE_WARDEN_DRAWABLE -> R.drawable.portrait_gate_warden
     else -> null
 }
 
@@ -95,6 +96,9 @@ private fun packPortraitResId(look: EnemyLook?): Int? = when (look) {
     EnemyLook.AXE -> R.drawable.portrait_sturdy_orc_axe
     EnemyLook.CLEAVER -> R.drawable.portrait_sturdy_orc_cleaver
     EnemyLook.HAMMER -> R.drawable.portrait_sturdy_orc_hammer
+    EnemyLook.CAVE_TROLL_A -> R.drawable.portrait_cave_troll_a
+    EnemyLook.CAVE_TROLL_B -> R.drawable.portrait_cave_troll_b
+    EnemyLook.CAVE_TROLL_C -> R.drawable.portrait_cave_troll_c
     null -> null
 }
 
@@ -102,7 +106,8 @@ private fun packPortraitResId(look: EnemyLook?): Int? = when (look) {
  * Enemy portrait slot (combat only).
  * Ash-Warden (F2) → [R.drawable.portrait_ash_warden] (+ volume bake).
  * Seal-Warden / [EnemyKind.DRAGON] (F1) → [R.drawable.portrait_seal_warden] (no volume).
- * Hallway packs (v0.1.26): look → portrait_weak_goblin_* / portrait_sturdy_orc_* (no plate).
+ * Gate-Warden (F3) → [R.drawable.portrait_gate_warden] (Seal + colder copper; no volume).
+ * Hallway packs: goblin/orc looks + Cave Troll A/B/C (no plate).
  * v0.1.23-nobg: PNG = no plate / fill / tint / ring under still.
  */
 @Composable

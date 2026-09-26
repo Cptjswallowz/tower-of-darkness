@@ -125,6 +125,9 @@ object PathGenerator {
      * Shared depth prevents empty/skipped tiers when branches previously differed.
      */
     fun generate(floor: Int = 1, rng: Random = Random.Default): TowerPath {
+        // v0.1.41-floor3: F3 uses fixed 3-branch / 5-mid-row shape; F1/F2 unchanged.
+        if (floor >= 3) return generateFloor3(floor, rng)
+
         val nodes = mutableListOf<PathNode>()
         val edges = mutableListOf<PathEdge>()
         val start = PathNode("start", NodeType.START, 0, 1, "The climb begins.", revealed = true)
@@ -143,6 +146,69 @@ object PathGenerator {
             for (d in 1..depth) {
                 val id = "b${b}_r$d"
                 // No Rest on run start: row 1 (direct from Start) cannot be REST
+                val type = if (d == 1) {
+                    row1Pool[(b + rng.nextInt(row1Pool.size)) % row1Pool.size]
+                } else {
+                    laterPool[(b * 3 + d + rng.nextInt(3)) % laterPool.size]
+                }
+                val (pk, pl) = packFieldsForType(type, floor, rng)
+                val node = PathNode(
+                    id = id, type = type, row = d, col = b,
+                    rumor = RumorPools.forType(type, rng),
+                    revealed = d == 1,
+                    packKind = pk,
+                    packLook = pl
+                )
+                nodes += node
+                edges += PathEdge(prev, id)
+                prev = id
+            }
+            branchEnds += prev
+        }
+
+        val mergeId = "merge"
+        val mergeType = listOf(NodeType.COMBAT, NodeType.REST, NodeType.EVENT).random(rng)
+        val (mergePk, mergePl) = packFieldsForType(mergeType, floor, rng)
+        nodes += PathNode(
+            mergeId, mergeType, row = depth + 1, col = 1,
+            rumor = RumorPools.forType(mergeType, rng),
+            packKind = mergePk,
+            packLook = mergePl
+        )
+        branchEnds.forEach { edges += PathEdge(it, mergeId) }
+
+        val boss = PathNode(
+            "boss", NodeType.BOSS, row = depth + 2, col = 1,
+            rumor = RumorPools.forType(NodeType.BOSS, rng)
+        )
+        nodes += boss
+        edges += PathEdge(mergeId, boss.id)
+
+        return enforceFloorRules(TowerPath(floor, nodes, edges, start.id), rng)
+    }
+
+    /**
+     * Floor 3: exactly 3 mid paths, 5 node-rows after Start, then Boss.
+     * Branch depth 4 → merge at row 5 (pre-boss Rest via enforce) → Boss row 6.
+     */
+    private fun generateFloor3(floor: Int, rng: Random): TowerPath {
+        val nodes = mutableListOf<PathNode>()
+        val edges = mutableListOf<PathEdge>()
+        val start = PathNode("start", NodeType.START, 0, 1, "The climb begins.", revealed = true)
+        nodes += start
+
+        val branchCount = 3
+        val depth = 4 // rows 1..4; merge = row 5 → 5 mid rows total
+        val row1Pool = listOf(NodeType.COMBAT, NodeType.EVENT, NodeType.TREASURE, NodeType.SHOP)
+        val laterPool = listOf(
+            NodeType.COMBAT, NodeType.SHOP, NodeType.REST, NodeType.EVENT, NodeType.TREASURE, NodeType.COMBAT
+        )
+
+        val branchEnds = mutableListOf<String>()
+        for (b in 0 until branchCount) {
+            var prev = start.id
+            for (d in 1..depth) {
+                val id = "b${b}_r$d"
                 val type = if (d == 1) {
                     row1Pool[(b + rng.nextInt(row1Pool.size)) % row1Pool.size]
                 } else {
@@ -230,11 +296,18 @@ object PathGenerator {
         }
 
         // v0.1.7: every S→B has COMBAT on an earlier-than-last mid node (not the pre-boss slot).
-        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor)
+        // v0.1.41 F3: ≥2 COMBAT before Rest on every route.
+        val minCombat = if (path.floor >= 3) 2 else 1
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor, minCombat)
         // v0.1.10-bossrest: last non-boss on every S→B is REST
         ensureLastNonBossIsRest(nodes, path.edges, rng, path.floor)
         // Re-check combat after REST conversion (merge may have been the only fight).
-        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor)
+        ensureCombatBeforePreBossRest(nodes, path.edges, rng, path.floor, minCombat)
+
+        // v0.1.41 F3: ≥1 Treasure|Shop somewhere on the floor
+        if (path.floor >= 3) {
+            ensureTreasureOrShop(nodes, rng, path.floor)
+        }
 
         return path.copy(nodes = nodes)
     }
@@ -248,7 +321,8 @@ object PathGenerator {
         nodes: MutableList<PathNode>,
         edges: List<PathEdge>,
         rng: Random,
-        floor: Int
+        floor: Int,
+        minCombat: Int = 1
     ) {
         fun idx(id: String) = nodes.indexOfFirst { it.id == id }
         fun replaceType(at: Int, type: NodeType) {
@@ -265,12 +339,39 @@ object PathGenerator {
             if (midOnPath.isEmpty()) continue
             val earlier = midOnPath.dropLast(1)
             val combatPool = if (earlier.isNotEmpty()) earlier else midOnPath
-            if (combatPool.any { nodes[idx(it)].type == NodeType.COMBAT }) continue
-
-            val candidateId = combatPool.firstOrNull { nodes[idx(it)].type != NodeType.EVENT }
-                ?: combatPool.last()
-            replaceType(idx(candidateId), NodeType.COMBAT)
+            var combatCount = combatPool.count { nodes[idx(it)].type == NodeType.COMBAT }
+            while (combatCount < minCombat) {
+                val candidateId = combatPool.firstOrNull {
+                    nodes[idx(it)].type != NodeType.COMBAT && nodes[idx(it)].type != NodeType.EVENT
+                } ?: combatPool.firstOrNull { nodes[idx(it)].type != NodeType.COMBAT }
+                if (candidateId == null) break
+                replaceType(idx(candidateId), NodeType.COMBAT)
+                combatCount++
+            }
         }
+    }
+
+    /** Floor 3: ensure ≥1 TREASURE or SHOP on the floor (prefer non-EVENT, non-merge-REST). */
+    private fun ensureTreasureOrShop(
+        nodes: MutableList<PathNode>,
+        rng: Random,
+        floor: Int
+    ) {
+        fun idx(id: String) = nodes.indexOfFirst { it.id == id }
+        fun replaceType(at: Int, type: NodeType) {
+            val n = nodes[at]
+            val (pk, pl) = packFieldsForType(type, floor, rng)
+            nodes[at] = n.copy(type = type, rumor = RumorPools.forType(type, rng), packKind = pk, packLook = pl)
+        }
+        val has = nodes.any { it.type == NodeType.TREASURE || it.type == NodeType.SHOP }
+        if (has) return
+        val candidate = nodes.firstOrNull {
+            it.type != NodeType.START && it.type != NodeType.BOSS &&
+                it.type != NodeType.REST && it.id != "merge" && it.type != NodeType.EVENT
+        } ?: nodes.firstOrNull {
+            it.type != NodeType.START && it.type != NodeType.BOSS && it.type != NodeType.REST
+        } ?: return
+        replaceType(idx(candidate.id), listOf(NodeType.TREASURE, NodeType.SHOP).random(rng))
     }
 
     /** Convert each S→B path's last non-boss node to REST (do not touch boss). */

@@ -203,6 +203,9 @@ object CombatFx {
         EnemyKitRole.STURDY_ORC -> FxRole.STURDY_ORC
         EnemyKitRole.SEAL_WARDEN -> FxRole.SEAL_WARDEN
         EnemyKitRole.ASH_WARDEN -> FxRole.ASH_WARDEN
+        // v0.1.41: reuse existing colors — no new FxRole / no retune (FX frozen 0.1.40)
+        EnemyKitRole.CAVE_TROLL -> FxRole.STURDY_ORC
+        EnemyKitRole.GATE_WARDEN -> FxRole.SEAL_WARDEN
     }
 
     fun roleForEnemy(role: EnemyKitRole): FxRole = when (role) {
@@ -210,6 +213,8 @@ object CombatFx {
         EnemyKitRole.STURDY_ORC -> FxRole.STURDY_ORC
         EnemyKitRole.SEAL_WARDEN -> FxRole.SEAL_WARDEN
         EnemyKitRole.ASH_WARDEN -> FxRole.ASH_WARDEN
+        EnemyKitRole.CAVE_TROLL -> FxRole.STURDY_ORC
+        EnemyKitRole.GATE_WARDEN -> FxRole.SEAL_WARDEN
     }
 
     fun colorArgb(role: FxRole): Long = when (role) {

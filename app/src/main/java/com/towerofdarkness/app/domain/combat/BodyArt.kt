@@ -15,6 +15,9 @@ object BodyArt {
     /** Floor-1 Seal-Warden boss ([EnemyKind.DRAGON]) only. */
     const val SEAL_WARDEN_DRAWABLE = "portrait_seal_warden"
 
+    /** Floor-3 Gate-Warden — Seal still + colder copper tint. */
+    const val GATE_WARDEN_DRAWABLE = "portrait_gate_warden"
+
     /** Expected Art drop-in MD5s (PNG bytes) — contract with prep_portraits_v0121. */
     const val PLAYER_MD5 = "ed5064c12745ad7f149f9a313b673819"
     const val ASH_WARDEN_MD5 = "4694b96d0f5355c878f7acebdb0141a6"
@@ -27,6 +30,11 @@ object BodyArt {
     const val ORC_AXE_MD5 = "a1d972dfe6d220420119159652a5a868"
     const val ORC_CLEAVER_MD5 = "6fc981b9e7dff416b6183def2c704c75"
     const val ORC_HAMMER_MD5 = "bc61505abd0a37a89f504e844804169a"
+    // v0.1.41 Cave Troll — filled after prep_cave_trolls_v0141
+    const val CAVE_TROLL_A_MD5 = "f7ec3d9fed9b3c456fc83e5d5338274e"
+    const val CAVE_TROLL_B_MD5 = "29d035f3851ac6889acc1fad603f7c7a"
+    const val CAVE_TROLL_C_MD5 = "2c45971f8199105257c704522739315d"
+    const val GATE_WARDEN_MD5 = "cfa1b5b973bf16a70c1096fd27986c6e"
 
     /** Combat player portrait slot height (dp) — under frames / pips. */
     const val PLAYER_SLOT_DP = 90
@@ -57,12 +65,14 @@ object BodyArt {
     fun enemyPortraitDrawableName(kind: EnemyKind, look: EnemyLook? = null): String? = when (kind) {
         EnemyKind.ASH_WARDEN -> ASH_WARDEN_DRAWABLE
         EnemyKind.DRAGON -> SEAL_WARDEN_DRAWABLE
+        EnemyKind.GATE_WARDEN -> GATE_WARDEN_DRAWABLE
         else -> look?.let { HallwayPacks.drawableName(it) }
     }
 
     fun usesPlaceholderSilhouette(kind: EnemyKind, look: EnemyLook? = null): Boolean {
         val name = enemyPortraitDrawableName(kind, look) ?: return true
-        if (kind == EnemyKind.ASH_WARDEN || kind == EnemyKind.DRAGON) return false
+        if (kind == EnemyKind.ASH_WARDEN || kind == EnemyKind.DRAGON ||
+            kind == EnemyKind.GATE_WARDEN) return false
         return !packArtShipped(name)
     }
 
@@ -72,7 +82,21 @@ object BodyArt {
     fun hallwayEnemyUsesPlaceholder(): Boolean = !anyPackArtShipped()
 
     /** Shipped pack basenames (Art READY v0.1.26). */
-    fun packDrawableNames(): Set<String> = HallwayPacks.allDrawableNames()
+    /** Classic F1/F2 pack basenames (Cave Troll is F3-only — see caveTrollDrawableNames). */
+    fun packDrawableNames(): Set<String> = setOf(
+        HallwayPacks.drawableName(EnemyLook.KNIFE),
+        HallwayPacks.drawableName(EnemyLook.BOTTLE),
+        HallwayPacks.drawableName(EnemyLook.SPIKES),
+        HallwayPacks.drawableName(EnemyLook.AXE),
+        HallwayPacks.drawableName(EnemyLook.CLEAVER),
+        HallwayPacks.drawableName(EnemyLook.HAMMER)
+    )
+
+    fun caveTrollDrawableNames(): Set<String> = setOf(
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_A),
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_B),
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_C)
+    )
 
     fun packMd5ByDrawable(): Map<String, String> = mapOf(
         HallwayPacks.drawableName(EnemyLook.KNIFE) to GOBLIN_KNIFE_MD5,
@@ -81,6 +105,12 @@ object BodyArt {
         HallwayPacks.drawableName(EnemyLook.AXE) to ORC_AXE_MD5,
         HallwayPacks.drawableName(EnemyLook.CLEAVER) to ORC_CLEAVER_MD5,
         HallwayPacks.drawableName(EnemyLook.HAMMER) to ORC_HAMMER_MD5
+    )
+
+    fun caveTrollMd5ByDrawable(): Map<String, String> = mapOf(
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_A) to CAVE_TROLL_A_MD5,
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_B) to CAVE_TROLL_B_MD5,
+        HallwayPacks.drawableName(EnemyLook.CAVE_TROLL_C) to CAVE_TROLL_C_MD5
     )
 
     /**
@@ -92,6 +122,7 @@ object BodyArt {
     fun packArtShipped(drawableName: String): Boolean {
         packArtPresentOverride?.let { return drawableName in it }
         if (drawableName in packDrawableNames()) return true
+        if (drawableName in caveTrollDrawableNames()) return true
         val candidates = listOf(
             "app/src/main/res/drawable/$drawableName.png",
             "src/main/res/drawable/$drawableName.png"
@@ -100,5 +131,5 @@ object BodyArt {
     }
 
     fun anyPackArtShipped(): Boolean =
-        HallwayPacks.allDrawableNames().any { packArtShipped(it) }
+        packDrawableNames().any { packArtShipped(it) }
 }

@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.towerofdarkness.app.data.MetaStore
 import com.towerofdarkness.app.data.MidRunAshbrand
+import com.towerofdarkness.app.data.MidRunFloorLoadout
 import com.towerofdarkness.app.data.MidRunLoadout
 import com.towerofdarkness.app.data.MidRunResume
 import com.towerofdarkness.app.data.MidRunShopVisit
@@ -53,7 +54,7 @@ data class RunSummaryData(
     val floorReached: Int,
     val nearMiss: Boolean
 ) {
-    /** Floor 2 clear is the only victory path; title locked for v0.1.9. */
+    /** Floor 3 Gate-Warden clear is the victory path (v0.1.41); title kept. */
     val title: String
         get() = if (won) "Victory — The seal breaks." else "Defeat"
 }
@@ -105,6 +106,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
     var equippedWeapon by mutableStateOf(WeaponRuntime(WeaponCatalog.default()))
         private set
     var loadoutLocked by mutableStateOf(false)
+        private set
+    /** F3+ floor-scoped lock; null on F1/F2. */
+    var floorLoadout by mutableStateOf<MidRunFloorLoadout?>(null)
+        private set
+    /** First-F3 explainer dismissed this climb. */
+    var seenF3Explainer by mutableStateOf(false)
+        private set
+    /** UI: show one-shot F3 loadout explainer sheet. */
+    var showF3Explainer by mutableStateOf(false)
         private set
     var pendingNodeId by mutableStateOf<String?>(null)
         private set
@@ -281,6 +291,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         // this-run weapon level resets; keep Ashbrand (or last selected def) at Lv1
         equippedWeapon = WeaponRuntime(equippedWeapon.def, level = 1, charge = 0)
         loadoutLocked = false
+        floorLoadout = null
+        seenF3Explainer = false
+        showF3Explainer = false
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -327,6 +340,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         path = PathGenerator.generate(1, Random(MidRunSlot.floorSeed(runRngSeed, 1)))
         pathLayoutId = "floor1_$runRngSeed"
         loadoutLocked = false
+        floorLoadout = null
+        seenF3Explainer = false
+        showF3Explainer = false
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -353,6 +369,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         path = PathGenerator.generate(1, Random(MidRunSlot.floorSeed(runRngSeed, 1)))
         pathLayoutId = "floor1_$runRngSeed"
         loadoutLocked = false
+        floorLoadout = null
+        seenF3Explainer = false
+        showF3Explainer = false
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -389,6 +408,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // stay in tutorial until complete/skip
             if (nav == NavState.Tutorial) return
         }
+        val floor = path?.floor ?: 1
+        if (usesFloorLockedLoadout(floor)) {
+            // F3+: Confirm locks five + weapon for all combats on this floor
+            loadoutLocked = true
+            floorLoadout = MidRunFloorLoadout(
+                floor = floor,
+                locked = true,
+                cardIds = selected.map { it.id },
+                weaponId = equippedWeapon.def.id
+            )
+            showF3Explainer = false
+        }
         val pending = pendingNodeId
         if (pending != null && path != null) {
             enterNode(pending)
@@ -397,6 +428,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // Loadout confirm on Path — persist selection (lock write follows first resolve leave).
             persistMidRun(pendingStair = false, resume = MidRunResume.Path)
         }
+    }
+
+    fun dismissF3Explainer() {
+        seenF3Explainer = true
+        showF3Explainer = false
+        persistMidRun(pendingStair = false, resume = MidRunResume.Path)
     }
 
     // --- Path ---
@@ -424,8 +461,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         path = p.moveTo(nodeId)
         pendingNodeId = null
         var justLocked = false
-        if (!loadoutLocked && node.type != NodeType.START) {
-            loadoutLocked = true // CoS: lock on first leave Path into resolve
+        val floorNow = path?.floor ?: 1
+        if (!loadoutLocked && node.type != NodeType.START && !usesFloorLockedLoadout(floorNow)) {
+            loadoutLocked = true // CoS F1/F2: lock on first leave Path into resolve
             justLocked = true
         }
         if (justLocked) {
@@ -611,9 +649,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
             return (baseMs / x).coerceAtLeast(1L)
         }
 
-        /** Floor 1 boss win → stair beat; Floor 2+ boss win → run summary (no Floor 3). */
+        /** F1/F2 boss win → stair; F3 Gate-Warden win → Hub summary (no Floor 4). */
         fun afterBossWinNav(floor: Int): BossWinNav =
-            if (floor < 2) BossWinNav.FLOOR_BREAK else BossWinNav.SUMMARY_VICTORY
+            if (floor < 3) BossWinNav.FLOOR_BREAK else BossWinNav.SUMMARY_VICTORY
+
+        /** F3+ uses floor-locked loadout; F1/F2 keep per-fight / climb lock behavior. */
+        fun usesFloorLockedLoadout(floor: Int): Boolean = floor >= 3
 
         /** Rest Heal → MAX HP; Deep Breath never stacks past max. */
         fun applyRestHealToMax(maxHp: Int): Int = maxHp
@@ -916,19 +957,35 @@ class GameController(app: Application) : AndroidViewModel(app) {
      */
     fun continueAfterFloorBreak() {
         if (nav != NavState.FloorBreak) return
-        // Persist: playerHp, runWallet, loadout, loadoutLocked, equippedWeapon, unlocked-this-run
-        path = PathGenerator.generate(2, Random(MidRunSlot.floorSeed(runRngSeed, 2)))
-        pathLayoutId = "floor2_$runRngSeed"
+        // Persist: playerHp, runWallet, loadout, Ashbrand, unlocks — no heal
+        val fromFloor = path?.floor ?: 1
+        val nextFloor = fromFloor + 1
+        path = PathGenerator.generate(nextFloor, Random(MidRunSlot.floorSeed(runRngSeed, nextFloor)))
+        pathLayoutId = "floor${nextFloor}_$runRngSeed"
         pendingNodeId = null
         combatState = null
         treasureSwapLoseId = null
         treasureSwapGainId = null
         shopOffers = emptyList()
         summary = null
-        // v0.1.28-hubkeep: FloorBreak → F2 adds baseline 1 + Extra stack
+        // v0.1.28-hubkeep: FloorBreak → next floor adds baseline 1 + Extra stack
         rumorRerolls += HubOffers.rumorRerollsOnFloorAdvance(unlockedCards)
-        nav = NavState.Path
-        // Dual write #2: stair Continue → F2 path, clear pending
+        if (usesFloorLockedLoadout(nextFloor)) {
+            // F3+: unlock for fresh floor pick; map/rumors first, then Loadout
+            loadoutLocked = false
+            floorLoadout = MidRunFloorLoadout(
+                floor = nextFloor,
+                locked = false,
+                cardIds = loadout.map { it.id },
+                weaponId = equippedWeapon.def.id
+            )
+            showF3Explainer = !seenF3Explainer
+            nav = NavState.Path
+        } else {
+            // F1→F2: loadout stays locked (v0.1.9)
+            nav = NavState.Path
+        }
+        // Dual write #2: stair Continue → next path, clear pending
         persistMidRun(pendingStair = false, resume = MidRunResume.Path)
     }
 
@@ -1259,7 +1316,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
             combatSpeed2x = combatSpeedX >= 2,
             unlocksThisRun = unlocksThisRun.toList(),
             shopVisits = shopVisits,
-            resume = resume
+            resume = resume,
+            seenF3Explainer = seenF3Explainer,
+            floorLoadout = floorLoadout
         )
     }
 
@@ -1274,7 +1333,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
         nodesCleared = slot.nodesCleared
         loadout = slot.loadout.cardIds.mapNotNull { CardCatalog.byId(it) }
         loadoutLocked = slot.loadout.locked
-        val weaponDef = WeaponCatalog.byId(slot.ashbrand.weaponId) ?: WeaponCatalog.default()
+        floorLoadout = slot.floorLoadout
+        seenF3Explainer = slot.seenF3Explainer
+        showF3Explainer = false
+        // F3+ locked floor loadout is authoritative for the five + weapon
+        slot.floorLoadout?.takeIf { it.locked && it.floor == slot.floor }?.let { fl ->
+            loadout = fl.cardIds.mapNotNull { CardCatalog.byId(it) }
+            loadoutLocked = true
+        }
+        val weaponDef = WeaponCatalog.byId(
+            slot.floorLoadout?.takeIf { it.locked }?.weaponId ?: slot.ashbrand.weaponId
+        ) ?: WeaponCatalog.default()
         equippedWeapon = WeaponRuntime(
             def = weaponDef,
             level = slot.ashbrand.level.coerceIn(1, 3),

@@ -86,3 +86,7 @@ Engineer wires via `HallwayPacks.drawableName` + `getIdentifier` when files land
 ---
 
 **Related:** v0.1.32-enemykit — role kits (Weak Goblin / Sturdy Orc / Wardens); looks still cosmetic. See `enemykit-v0132.md`.
+
+---
+
+**Supersession (F3):** Hallway F3 weights + Cave Troll pack → `floor3-v0141.md`. F1/F2 tables above unchanged.

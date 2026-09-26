@@ -28,6 +28,8 @@ object Glossary {
         "shiv" to "A quick goblin stab.",
         "nip" to "Small cut. Soften does not reduce this hit.",
         "cleave" to "A heavy orc swing.",
+        "club" to "A heavy troll swing.",
+        "gate pulse" to "A sealed strike from the Gate-Warden.",
         "hide" to BRACE_DEF,
         "seal pulse" to "A sealed strike from the Warden.",
         "rust guard" to BRACE_DEF,

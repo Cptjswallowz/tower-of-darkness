@@ -33,6 +33,8 @@ class PacksV0126Test {
         assertEquals("Sturdy Orc", EnemyKind.TROLL.displayName)
         assertEquals("Seal-Warden", EnemyKind.DRAGON.displayName)
         assertEquals("Ash-Warden", EnemyKind.ASH_WARDEN.displayName)
+        assertEquals("Cave Troll", EnemyKind.CAVE_TROLL.displayName)
+        assertEquals("Gate-Warden", EnemyKind.GATE_WARDEN.displayName)
     }
 
     @Test
@@ -79,6 +81,7 @@ class PacksV0126Test {
             when (HallwayPacks.rollRole(1, Random(i.toLong() * 17))) {
                 HallwayRole.WEAK_GOBLIN -> goblin++
                 HallwayRole.STURDY_ORC -> orc++
+                HallwayRole.CAVE_TROLL -> error("no troll on F1")
             }
         }
         val gPct = goblin * 100.0 / n
@@ -97,6 +100,7 @@ class PacksV0126Test {
             when (HallwayPacks.rollRole(2, Random(i.toLong() * 31))) {
                 HallwayRole.WEAK_GOBLIN -> goblin++
                 HallwayRole.STURDY_ORC -> orc++
+                HallwayRole.CAVE_TROLL -> error("no troll on F2")
             }
         }
         assertTrue("F2 goblin pct ${goblin * 100.0 / n} ~30", abs(goblin * 100.0 / n - 30.0) < 4.0)
@@ -219,7 +223,8 @@ class PacksV0126Test {
 
     @Test
     fun packArtShipped_sixLooksWired_md5Contract() {
-        val names = HallwayPacks.allDrawableNames()
+        // Classic F1/F2 packs only — Cave Troll is F3 (Floor3V0141Test)
+        val names = com.towerofdarkness.app.domain.combat.BodyArt.packDrawableNames()
         assertEquals(6, names.size)
         assertTrue(names.contains("portrait_weak_goblin_knife"))
         assertTrue(names.contains("portrait_sturdy_orc_hammer"))

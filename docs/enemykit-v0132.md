@@ -113,3 +113,7 @@ Hub (`hub-v0127` / hubkeep / hubmore), path math, Wake math, 2x, portraits, map 
 ---
 
 **Related:** v0.1.37-fx — enemy stroke tiers/colors; Hide/Rust/Cinder NO STROKE. See `fx-v0137.md`.
+
+---
+
+**Supersession (F3):** Cave Troll kit + Gate-Warden boss stub → `floor3-v0141.md`. Soften/Hide/Rust Guard rules above still apply.

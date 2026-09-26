@@ -98,3 +98,7 @@ Ash-Warden = same combat kit/behavior as Seal-Warden; distinct nameplate / HP on
 ---
 
 **Superseded (hallway pack weights):** v0.1.26-packs — F2 hallway **30% Weak Goblin / 70% Sturdy Orc** (not spider/troll preference). HP/counters unchanged. See `packs-v0126.md`.
+
+---
+
+**Supersession:** Floor 3 climb + Gate-Warden → `floor3-v0141.md` (this note’s “No Floor 3” / F2-clear-ends-climb is obsolete). F1/F2 graph depth unchanged.

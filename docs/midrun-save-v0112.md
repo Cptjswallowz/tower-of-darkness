@@ -186,6 +186,7 @@ No economy number changes in this WO.
 | 2026-09-23 | Full schema vs Architect `save-v0112.md` + `floor2-v019.md`; drop mid-combat snapshot |
 | 2026-09-23 | Architect: pending stair → FloorBreak (not Path CTA) |
 | 2026-09-23 | CoS lock: FloorBreak resume; rng_seed required; dual F1-boss write |
+| 2026-09-26 | F3+ floor loadout + `seen_f3_explainer`: see `floor3-save-v0141.md` |
 
 ---
 

@@ -23,6 +23,14 @@ data class MidRunLoadout(
     val cardIds: List<String>
 )
 
+/** F3+ floor-scoped lock — null on F1/F2. See docs/floor3-save-v0141.md. */
+data class MidRunFloorLoadout(
+    val floor: Int,
+    val locked: Boolean,
+    val cardIds: List<String>,
+    val weaponId: String
+)
+
 data class MidRunShopVisit(
     val nodeId: String,
     val floor: Int,
@@ -79,7 +87,11 @@ data class MidRunSlot(
     val combatSpeed2x: Boolean,
     val unlocksThisRun: List<String>,
     val shopVisits: List<MidRunShopVisit>,
-    val resume: MidRunResume
+    val resume: MidRunResume,
+    /** v0.1.41 — first F3 explainer dismissed this climb. */
+    val seenF3Explainer: Boolean = false,
+    /** v0.1.41 — floor-locked five + weapon; null on F1/F2. */
+    val floorLoadout: MidRunFloorLoadout? = null
 ) {
     companion object {
         const val SCHEMA = "v0.1.12"
@@ -137,10 +149,13 @@ data class MidRunSlot(
         }
 
         fun resumeNav(slot: MidRunSlot): NavState =
-            if (slot.pendingStairContinue || slot.resume == MidRunResume.FloorBreak) {
-                NavState.FloorBreak
-            } else {
-                NavState.Path
+            when {
+                slot.pendingStairContinue || slot.resume == MidRunResume.FloorBreak ->
+                    NavState.FloorBreak
+                // F3+ re-pick window: unlock → Loadout, not Path with a stale lock
+                slot.floor >= 3 && (slot.floorLoadout == null || !slot.floorLoadout.locked) ->
+                    NavState.Loadout
+                else -> NavState.Path
             }
 
         fun isActiveClimb(slot: MidRunSlot?): Boolean = slot != null
@@ -189,6 +204,21 @@ data class MidRunSlot(
             raw("unlocks_this_run", encodeStringList(slot.unlocksThisRun))
             raw("shop_visits", encodeShopVisits(slot.shopVisits))
             str("resume", slot.resume.name)
+            bool("seen_f3_explainer", slot.seenF3Explainer)
+            val fl = slot.floorLoadout
+            if (fl != null) {
+                raw(
+                    "floor_loadout",
+                    "{" +
+                        "\"floor\":${fl.floor}," +
+                        "\"locked\":${fl.locked}," +
+                        "\"card_ids\":${encodeStringList(fl.cardIds)}," +
+                        "\"weapon_id\":${jsonString(fl.weaponId)}" +
+                        "}"
+                )
+            } else {
+                raw("floor_loadout", "null")
+            }
             sb.append('}')
             return sb.toString()
         }
@@ -211,6 +241,8 @@ data class MidRunSlot(
                     "FloorBreak" -> MidRunResume.FloorBreak
                     else -> MidRunResume.Path
                 }
+                val seenF3 = o.bool("seen_f3_explainer") ?: false
+                val floorLoadout = decodeFloorLoadout(o.obj("floor_loadout"))
                 MidRunSlot(
                     schema = schema,
                     runId = runId,
@@ -237,11 +269,22 @@ data class MidRunSlot(
                     combatSpeed2x = o.bool("combat_speed_2x") ?: false,
                     unlocksThisRun = o.strList("unlocks_this_run"),
                     shopVisits = decodeShopVisits(o.arr("shop_visits")),
-                    resume = resume
+                    resume = resume,
+                    seenF3Explainer = seenF3,
+                    floorLoadout = floorLoadout
                 )
             } catch (_: Exception) {
                 null
             }
+        }
+
+        private fun decodeFloorLoadout(o: JsonObj?): MidRunFloorLoadout? {
+            if (o == null) return null
+            val floor = o.int("floor") ?: return null
+            val locked = o.bool("locked") ?: false
+            val cards = o.strList("card_ids")
+            val weapon = o.str("weapon_id") ?: "ashbrand"
+            return MidRunFloorLoadout(floor, locked, cards, weapon)
         }
 
         private fun encodePath(p: MidRunPathSnap): String {

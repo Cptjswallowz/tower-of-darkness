@@ -15,7 +15,9 @@ enum class EnemyKind(
     TROLL("Sturdy Orc", "enemies/enemy_troll.png", 7, 9),
     SPIDER("Sturdy Orc", "enemies/enemy_spider.png", 7, 9),
     DRAGON("Seal-Warden", "portrait_seal_warden", 6, 9), // Floor 1 boss; v0.1.21 Seal-Warden still
-    ASH_WARDEN("Ash-Warden", "portrait_ash_warden", 6, 9) // Floor 2 boss; v0.1.18 body still
+    ASH_WARDEN("Ash-Warden", "portrait_ash_warden", 6, 9), // Floor 2 boss; v0.1.18 body still
+    CAVE_TROLL("Cave Troll", "portrait_cave_troll_a", 7, 9), // Floor 3 hallway; v0.1.41
+    GATE_WARDEN("Gate-Warden", "portrait_gate_warden", 6, 9) // Floor 3 boss; Seal still + colder copper
 }
 
 data class Enemy(
@@ -32,7 +34,10 @@ data class Enemy(
             floor: Int = 1,
             look: EnemyLook? = EnemyLook.defaultFor(kind)
         ): Enemy {
-            val hp = trashHpForFloor(floor)
+            val hp = when (kind) {
+                EnemyKind.CAVE_TROLL -> Balance.CAVE_TROLL_HP
+                else -> trashHpForFloor(floor)
+            }
             val resolvedLook = when {
                 HallwayPacks.isBossKind(kind) -> null
                 look != null -> look
@@ -43,18 +48,25 @@ data class Enemy(
 
         fun boss(floor: Int = 1): Enemy {
             val hp = bossHpForFloor(floor)
-            val kind = if (floor >= 2) EnemyKind.ASH_WARDEN else EnemyKind.DRAGON
+            val kind = when {
+                floor >= 3 -> EnemyKind.GATE_WARDEN
+                floor >= 2 -> EnemyKind.ASH_WARDEN
+                else -> EnemyKind.DRAGON
+            }
             return Enemy(kind, hp, hp, true, look = null)
         }
 
         fun trashHpForFloor(floor: Int): Int =
             if (floor >= 2) Balance.ENEMY_FLOOR2_HP else Balance.ENEMY_BASE_HP
 
-        fun bossHpForFloor(floor: Int): Int =
-            if (floor >= 2) Balance.BOSS_FLOOR2_HP else Balance.BOSS_HP
+        fun bossHpForFloor(floor: Int): Int = when {
+            floor >= 3 -> Balance.BOSS_FLOOR3_HP
+            floor >= 2 -> Balance.BOSS_FLOOR2_HP
+            else -> Balance.BOSS_HP
+        }
 
         /**
-         * Hallway trash pick — v0.1.26-packs weighted 2-role table + look 1/3.
+         * Hallway trash pick — v0.1.26-packs weighted table + look 1/3.
          * [index] seeds a deterministic RNG for tests (not a cycling kind table).
          */
         fun forFloorCombat(index: Int, floor: Int = 1): Enemy {
