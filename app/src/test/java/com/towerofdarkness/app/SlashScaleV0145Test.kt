@@ -17,15 +17,15 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * v0.1.46-strokefallback — scale slash overlay to bust WIDTH; tight crop; color FREE.
+ * v0.1.47-strokethick — scale slash overlay to bust WIDTH; tight crop; color FREE.
  * Same fx_slash_light sheet. See docs/slashscale-v0145.md.
  */
 class SlashScaleV0145Test {
 
     @Test
     fun tag_isSlashScaleV0145() {
-        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
-        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
+        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
+        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
     }
 
     @Test
@@ -164,7 +164,7 @@ class SlashScaleV0145Test {
 
     @Test
     fun speed2x_halvesHolds() {
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(CombatFx.STROKE_SMALL_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
         assertEquals(100L, CombatFx.fxHoldMs(CleaveKit.PEAK_HOLD_MS, 2))
     }
 }

@@ -105,7 +105,7 @@ fun CombatScreen(gc: GameController) {
     var bracePipVisible by remember { mutableStateOf(false) }
     var bracePipProgress by remember { mutableStateOf(0f) }
     var softenPulse by remember { mutableStateOf(false) }
-    // v0.1.46-strokefallback: combat-log echo of drawn stroke (primary) + optional tip garnish
+    // v0.1.47-strokethick: combat-log echo of drawn stroke (primary) + optional tip garnish
     var strokeDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
@@ -157,18 +157,28 @@ fun CombatScreen(gc: GameController) {
         val braceEv = newEvents.lastOrNull { it.braceGained > 0 }
         val softenEv = newEvents.lastOrNull { it.softenApplied > 0 }
         try {
-            val beat = CombatFx.safeSpec(fxEvent?.fxId, fxEvent?.fxPlayer != false, s.enemy.kind)
+            // Harden fxPlayer: enemy kit ids always FOE_TO_YOU / recipient YOU
+            // (avoids `fxPlayer != false` defaulting enemy hits onto the foe bust).
+            val fxId = fxEvent?.fxId
+            val fxPlayerResolved = CombatFx.resolveFxPlayer(
+                fxId,
+                fxEvent?.fxPlayer ?: true
+            )
+            val beat = CombatFx.safeSpec(fxId, fxPlayerResolved, s.enemy.kind)
             val play = when {
                 beat != null -> CombatFx.playSpec(
                     beat = beat,
                     braceGained = braceEv?.braceGained ?: fxEvent?.braceGained ?: 0,
                     softenApplied = softenEv?.softenApplied ?: fxEvent?.softenApplied ?: 0,
-                    fxPlayer = fxEvent?.fxPlayer != false
+                    fxPlayer = fxPlayerResolved
                 )
                 else -> CombatFx.playBraceOrSoftenOnly(
                     braceGained = braceEv?.braceGained ?: 0,
                     softenApplied = softenEv?.softenApplied ?: 0,
-                    fxPlayer = (braceEv?.fxPlayer ?: softenEv?.fxPlayer) != false
+                    fxPlayer = CombatFx.resolveFxPlayer(
+                        null,
+                        (braceEv?.fxPlayer ?: softenEv?.fxPlayer) ?: true
+                    )
                 )
             }
             if (play != null) {
@@ -188,14 +198,16 @@ fun CombatScreen(gc: GameController) {
                     strokeSpec = spec.stroke
                     strokeTier = spec.tier
                     strokeHoldMs = CombatFx.fxHoldMs(spec.strokeMs, speed)
-                    sparkStroke = CombatFx.isSparkId(fxEvent?.fxId ?: "")
+                    sparkStroke = CombatFx.isSparkId(fxId ?: "")
                     slashDebugTarget = CombatFx.strokeTargetLabel(
                         spec.stroke!!.recipient,
                         if (spec.stroke!!.recipient == FxRecipient.FOE) {
                             s.enemy.kind.displayName
                         } else null
                     )
-                    strokeDebugLine = null // overlay sets via onStrokeDebug
+                    // Sync combat-log proof immediately (enemy You / player foe).
+                    // Overlay also logs via onStrokeDebug — keep both paths.
+                    strokeDebugLine = CombatFx.strokeDebugLine(slashDebugTarget)
                     slashDebugLine = null // tip garnish only
                     strokeVisible = true
                     if (spec.useCleaveHitFlash && spec.hitFlashMs > 0L) {
@@ -428,7 +440,7 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
-            // v0.1.46-strokefallback: drawn Wake-family stroke on recipient bust (primary).
+            // v0.1.47-strokethick: drawn Wake-family stroke on recipient bust (primary).
             // 180.dp stage strip; half-stage X clip unchanged. Optional tip garnish only.
             CombatStrokeOverlay(
                 stroke = strokeSpec,
@@ -506,7 +518,7 @@ fun CombatScreen(gc: GameController) {
                     while (recent.size > 5) recent.removeAt(0)
                 }
             }
-            // v0.1.46-strokefallback: prove drawn stroke (primary) + optional tip garnish
+            // v0.1.47-strokethick: prove drawn stroke (primary) + optional tip garnish
             strokeDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))

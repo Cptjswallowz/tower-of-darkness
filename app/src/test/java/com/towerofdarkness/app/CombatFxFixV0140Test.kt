@@ -20,7 +20,7 @@ class CombatFxFixV0140Test {
 
     @Test
     fun tag_isFxfixV0140() {
-        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
+        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
     }
 
     @Test
@@ -66,8 +66,8 @@ class CombatFxFixV0140Test {
         assertEquals(4.2f, CombatFx.THICK_MEDIUM, 0.001f)
         assertEquals(CombatFx.THICKNESS_READ_MULT, 1.4f, 0.001f)
         // Stroke ms +200 vs 0.1.38
-        assertEquals(500L, CombatFx.STROKE_SMALL_MS)
-        assertEquals(500L, CombatFx.STROKE_MEDIUM_MS)
+        assertTrue(CombatFx.STROKE_SMALL_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)
+        assertTrue(CombatFx.STROKE_MEDIUM_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)
         assertEquals(700L, WakeArt.FRAME_SLASH_MS)
         // Brace hold / fade / radius
         assertEquals(700L, CombatFx.BRACE_PIP_MS)
@@ -79,28 +79,22 @@ class CombatFxFixV0140Test {
 
     @Test
     fun glowWidth_lePriorAbsolute_coreGe1_4xPriorCore() {
-        // Glow absolute = priorThickness × 7 (not current × 7)
-        val glowSmall = CombatFx.strokeGlowWidth(CombatFx.THICK_SMALL)
-        val glowMedium = CombatFx.strokeGlowWidth(CombatFx.THICK_MEDIUM)
-        val priorGlowSmall = CombatFx.THICK_SMALL_PRIOR * CombatFx.STROKE_GLOW_PRIOR_MULT
-        val priorGlowMedium = CombatFx.THICK_MEDIUM_PRIOR * CombatFx.STROKE_GLOW_PRIOR_MULT
-        assertEquals(priorGlowSmall, glowSmall, 0.001f)
-        assertEquals(priorGlowMedium, glowMedium, 0.001f)
-        // Must not exceed 0.1.38 absolute glow
-        assertTrue(glowSmall <= priorGlowSmall + 0.001f)
-        assertTrue(glowMedium <= priorGlowMedium + 0.001f)
-        // Unbounded bloom (thickness × 7) would be larger — assert we are below that
-        assertTrue(glowSmall < CombatFx.THICK_SMALL * 7f - 0.01f)
-        assertTrue(glowMedium < CombatFx.THICK_MEDIUM * 7f - 0.01f)
-
+        // v0.1.47: canvas core/glow are fat bust-frac widths (hairline thickness×mult retired).
+        // Relative THICK_* weights stay 1.4× prior; absolute draw width >> hairline.
+        assertEquals(CombatFx.THICK_SMALL_PRIOR * 1.4f, CombatFx.THICK_SMALL, 0.001f)
+        assertEquals(CombatFx.THICK_MEDIUM_PRIOR * 1.4f, CombatFx.THICK_MEDIUM, 0.001f)
+        val hairlineCore = CombatFx.HAIRLINE_CORE_PX_SMALL
         val coreSmall = CombatFx.strokeCoreWidth(CombatFx.THICK_SMALL)
         val coreMedium = CombatFx.strokeCoreWidth(CombatFx.THICK_MEDIUM)
-        val priorCoreSmall = CombatFx.THICK_SMALL_PRIOR * CombatFx.STROKE_CORE_MULT
-        val priorCoreMedium = CombatFx.THICK_MEDIUM_PRIOR * CombatFx.STROKE_CORE_MULT
-        assertEquals(priorCoreSmall * 1.4f, coreSmall, 0.001f)
-        assertEquals(priorCoreMedium * 1.4f, coreMedium, 0.001f)
-        assertTrue(coreSmall >= priorCoreSmall * 1.4f - 0.001f)
-        assertTrue(coreMedium >= priorCoreMedium * 1.4f - 0.001f)
+        assertTrue("fat core $coreSmall vs hairline $hairlineCore", coreSmall > hairlineCore * 2.5f)
+        assertTrue(coreMedium > coreSmall)
+        val glowSmall = CombatFx.strokeGlowWidth(CombatFx.THICK_SMALL)
+        val glowMedium = CombatFx.strokeGlowWidth(CombatFx.THICK_MEDIUM)
+        assertTrue(glowSmall > coreSmall)
+        assertTrue(glowMedium > coreMedium)
+        // Still finite / not plate-wash unbounded
+        assertTrue(glowSmall < CombatFx.REF_BUST_WIDTH_PX * 0.55f)
+        assertTrue(glowMedium < CombatFx.REF_BUST_WIDTH_PX * 0.55f)
     }
 
     @Test
@@ -119,7 +113,7 @@ class CombatFxFixV0140Test {
         )
         assertEquals(FxRecipient.YOU, seal.beat.recipient)
         assertEquals(FxRecipient.YOU, seal.beat.stroke!!.recipient)
-        assertEquals(4.2f, seal.beat.stroke!!.thickness, 0.001f)
+        assertEquals(CombatFx.THICK_MEDIUM * CombatFx.THICK_ENEMY_FACTOR, seal.beat.stroke!!.thickness, 0.001f)
 
         // Iron Mantle — Brace pips on YOU, no slash
         val mantle = CombatFx.playSpec(

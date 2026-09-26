@@ -41,8 +41,8 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.46-strokefallback — drawn Wake-family stroke PRIMARY.
- * Thick glow + core quadratic crescent on recipient bust (same family as Wake arc language).
+ * Presentation layer for v0.1.47-strokethick — drawn Wake-family stroke PRIMARY.
+ * Fat glow + core quadratic crescent (bust-frac canvas widths) on recipient bust (same family as Wake arc language).
  * Optional CLEAVE slash-light tip garnish at stroke TIP only — never the slash.
  * Wake gold arc stays in [WakeStageOverlay]. Aim / clip locks from v0.1.40-fxfix.
  * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block;
@@ -148,7 +148,7 @@ fun CombatStrokeOverlay(
 
 /**
  * Wake-family readable cut — glow + thick core quadratic crescent on recipient bust.
- * Width from [CombatFx.slashCutGeom] (player ~70–90% bust, enemy ~60%).
+ * Path length from [CombatFx.slashCutGeom]; canvas WIDTH from strokeCoreWidthPx (v0.1.47 fat).
  */
 private fun DrawScope.drawWakeFamilyStroke(
     stroke: FxStrokeSpec,
@@ -170,36 +170,39 @@ private fun DrawScope.drawWakeFamilyStroke(
         moveTo(start.x, start.y)
         quadraticTo(mid.x, mid.y, end.x, end.y)
     }
+    val bustW = w * 0.5f * CombatFx.STROKE_BUST_WIDTH_FRAC
+    val coreW = CombatFx.strokeCoreWidthPx(stroke.recipient, tier, bustW)
+    val glowW = CombatFx.strokeGlowWidthPx(stroke.recipient, tier, bustW)
     val a = alpha.coerceIn(0.15f, 1f)
     drawPath(
         path = path,
-        color = color.copy(alpha = 0.38f * a),
+        color = color.copy(alpha = 0.42f * a),
         style = Stroke(
-            width = CombatFx.strokeGlowWidth(stroke.thickness) * 1.15f,
+            width = glowW * 1.15f,
             cap = StrokeCap.Round
         )
     )
     drawPath(
         path = path,
-        color = color.copy(alpha = 0.55f * a),
+        color = color.copy(alpha = 0.62f * a),
         style = Stroke(
-            width = CombatFx.strokeGlowWidth(stroke.thickness) * 0.65f,
+            width = glowW * 0.65f,
             cap = StrokeCap.Round
         )
     )
     drawPath(
         path = path,
-        color = color.copy(alpha = 0.95f * a),
+        color = color.copy(alpha = 0.98f * a),
         style = Stroke(
-            width = CombatFx.strokeCoreWidth(stroke.thickness),
+            width = coreW,
             cap = StrokeCap.Round
         )
     )
     drawPath(
         path = path,
-        color = Color(0xFFE8E0D0).copy(alpha = 0.55f * a),
+        color = Color(CombatFx.COLOR_STROKE_CORE_HIGHLIGHT).copy(alpha = 0.65f * a),
         style = Stroke(
-            width = CombatFx.strokeCoreWidth(stroke.thickness) * 0.35f,
+            width = coreW * 0.38f,
             cap = StrokeCap.Round
         )
     )

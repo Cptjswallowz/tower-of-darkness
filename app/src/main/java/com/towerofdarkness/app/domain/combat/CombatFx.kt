@@ -1,13 +1,15 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.46-strokefallback (drawn Wake-family stroke PRIMARY).
+ * Shared combat FX kernel — v0.1.47-strokethick (fat Wake-family stroke PRIMARY).
  * Aim / clip / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
  * Readable cut = Canvas path (glow + thick core crescent) on recipient bust — NOT CLEAVE flipbook.
+ * v0.1.47: canvas stroke WIDTH fattened (bust-frac core/glow); bright steel/ember-white;
+ * enemy hits MUST stroke on You (`FX stroke on You`). Peak holds raised.
  * Optional CLEAVE tip garnish at stroke tip only; never another bust-coverage rescale of the sheet.
  * Pure domain maps + duration + recipient-stroke / Brace-pip / clip / glow / spark helpers.
  * Compose: [CombatStrokeOverlay] draws path primary; Wake gold arc stays [WakeStageOverlay].
- * Never changes damage / Wake math / who gets FX. See docs/strokefallback-v0146.md.
+ * Never changes damage / Wake math / who gets FX. See docs/strokethick-v0147.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -125,7 +127,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.46-strokefallback"
+    const val TAG = "v0.1.47-strokethick"
 
     /** logcat tag for stroke / slash-light debug. */
     const val LOG_TAG_TOD_FX = "TodFx"
@@ -173,22 +175,27 @@ object CombatFx {
     const val COLOR_ASH_WARDEN = 0xFFC45A2DL   // coal orange
     const val COLOR_SOFTEN_PIP = 0xFFE24A3BL  // red Soften pulse
 
-    // --- Drawn stroke colors — steel / ash / ember (NOT forced green/gold SrcIn) ---
-    const val COLOR_STROKE_YOU = 0xFFC9B8A0L       // steel ash ember
-    const val COLOR_STROKE_ENEMY = 0xFF8A8680L     // dull steel ash
-    const val COLOR_STROKE_ENEMY_EMBER = 0xFF9A8070L // dull ash-ember (warden)
+    // --- Drawn stroke colors — bright steel / ember-white (pop on dark armor) ---
+    /** Player cut — bright steel / ember-white (was muddy 0xFFC9B8A0). */
+    const val COLOR_STROKE_YOU = 0xFFF2E6D0L
+    /** Enemy cut on You — duller steel/ash but still visible (was 0xFF8A8680). */
+    const val COLOR_STROKE_ENEMY = 0xFFC4B8A8L
+    /** Warden enemy cut — dull ash-ember, still readable (was 0xFF9A8070). */
+    const val COLOR_STROKE_ENEMY_EMBER = 0xFFD0B49AL
+    /** Hot core highlight along the cut (overlay tip stripe). */
+    const val COLOR_STROKE_CORE_HIGHLIGHT = 0xFFFFF8ECL
 
     // --- 1x duration budgets (presentation only) ---
     const val FLASH_MS = 120L
-    /** Player Small/Medium total hold @1x (peak + short fade); WO peak 400–500 then fade. */
+    /** Player Small/Medium total hold @1x (peak + short fade); WO peak 450–550 then fade. */
     const val STROKE_SMALL_MS = 500L
     const val STROKE_MEDIUM_MS = 500L
-    /** Peak linger @1x for player drawn stroke (pass/fail lock). */
-    const val STROKE_PLAYER_PEAK_MS = 420L
-    /** Enemy hit stroke shorter — total / peak @1x (WO 300–400 peak). */
-    const val STROKE_ENEMY_SMALL_MS = 360L
-    const val STROKE_ENEMY_MEDIUM_MS = 380L
-    const val STROKE_ENEMY_PEAK_MS = 320L
+    /** Peak linger @1x for player drawn stroke (pass/fail lock 450–550). */
+    const val STROKE_PLAYER_PEAK_MS = 470L
+    /** Enemy hit stroke shorter — total / peak @1x (WO 350–450 peak). */
+    const val STROKE_ENEMY_SMALL_MS = 480L
+    const val STROKE_ENEMY_MEDIUM_MS = 500L
+    const val STROKE_ENEMY_PEAK_MS = 400L
     /** Ashbrand SPARK non-Wake — short drawn stroke (+ optional tip spark). */
     const val STROKE_SPARK_MS = 280L
     const val STROKE_SPARK_PEAK_MS = 200L
@@ -200,8 +207,15 @@ object CombatFx {
     const val BRACE_PIP_FADE_MS = 200L
     const val SOFTEN_PULSE_MS = 420L
 
+    /**
+     * Relative thickness weights in [FxStrokeSpec] (unchanged vs 0.1.46).
+     * Canvas px width is NOT thickness×[STROKE_CORE_MULT] anymore — that was the hairline bug
+     * (~6.7px on a ~360 stage). See [STROKE_CORE_BUST_FRAC_*] / [strokeCoreWidthPx].
+     */
     const val THICK_SMALL = 2.1f
     const val THICK_MEDIUM = 4.2f
+    /** Enemy stroke relative factor vs player same-tier (slightly thinner). */
+    const val THICK_ENEMY_FACTOR = 0.78f
     const val SHAKE_SMALL_AMP = 0f
     const val SHAKE_MEDIUM_AMP = 4f
     const val SHAKE_WAKE_AMP = 12f
@@ -215,10 +229,31 @@ object CombatFx {
     const val THICK_MEDIUM_PRIOR = 3.0f
     /** v0.1.39 readability multiplier on core stroke thickness. */
     const val THICKNESS_READ_MULT = 1.4f
-    /** v0.1.38 glow multiplier applied to *prior* thickness (absolute glow lock). */
+    /** v0.1.38 glow multiplier applied to *prior* thickness (hairline absolute glow lock). */
     const val STROKE_GLOW_PRIOR_MULT = 7f
-    /** Core stroke width = thickness × this (heavier cut keeps full 1.4×). */
+    /**
+     * Hairline core multiplier (v0.1.46 FAIL): thickness × 3.2 ≈ 6.7px @ THICK_SMALL.
+     * Kept for docs / fat-vs-hairline tests; draw path uses bust-frac instead.
+     */
     const val STROKE_CORE_MULT = 3.2f
+    /** Reference stage width for absolute px locks in unit tests / docs. */
+    const val REF_STAGE_WIDTH_PX = 360f
+    /** bustWidthPx @ ref = stage × 0.5 × [STROKE_BUST_WIDTH_FRAC] ≈ 140.4. */
+    val REF_BUST_WIDTH_PX: Float get() = REF_STAGE_WIDTH_PX * 0.5f * STROKE_BUST_WIDTH_FRAC
+    /**
+     * v0.1.47 fat lock — core stroke width as fraction of bust WIDTH.
+     * Player Small ~0.14 → ~20px @360; Medium ~0.18 → ~25px; enemy ~0.10 → ~14px.
+     * Target: player readable ~1/3–1/2 Wake fatness; core ~18–28px at stage scale.
+     */
+    const val STROKE_CORE_BUST_FRAC_PLAYER_SMALL = 0.14f
+    const val STROKE_CORE_BUST_FRAC_PLAYER_MEDIUM = 0.18f
+    const val STROKE_CORE_BUST_FRAC_ENEMY = 0.10f
+    /** Glow halo as fraction of bust WIDTH (soft outer ring; still < Wake). */
+    const val STROKE_GLOW_BUST_FRAC_PLAYER_SMALL = 0.30f
+    const val STROKE_GLOW_BUST_FRAC_PLAYER_MEDIUM = 0.38f
+    const val STROKE_GLOW_BUST_FRAC_ENEMY = 0.22f
+    /** Hairline core px @ ref (THICK_SMALL × STROKE_CORE_MULT) — FAIL baseline. */
+    val HAIRLINE_CORE_PX_SMALL: Float get() = THICK_SMALL * STROKE_CORE_MULT
 
     /** Player SMALL ids (lock table). */
     val PLAYER_SMALL: Set<String> = setOf(
@@ -355,15 +390,52 @@ object CombatFx {
     }
 
     /**
-     * Absolute glow stroke width ≈ v0.1.38 (priorThickness × [STROKE_GLOW_PRIOR_MULT]),
-     * not unbounded with 1.4× core thickness. Prefer `(thickness / 1.4f) * 7f`.
-     * Core still uses full thickness × [STROKE_CORE_MULT] (heavier cut, no plate wash).
+     * Canvas glow width in px for [recipient]/[tier] given measured [bustWidthPx].
+     * Fat lock (v0.1.47) — fraction of bust, not hairline thickness×mult.
      */
-    fun strokeGlowWidth(thickness: Float): Float =
-        (thickness / THICKNESS_READ_MULT) * STROKE_GLOW_PRIOR_MULT
+    fun strokeGlowWidthPx(recipient: FxRecipient, tier: FxTier, bustWidthPx: Float): Float {
+        val frac = when {
+            recipient == FxRecipient.YOU -> STROKE_GLOW_BUST_FRAC_ENEMY
+            tier == FxTier.MEDIUM || tier == FxTier.WAKE -> STROKE_GLOW_BUST_FRAC_PLAYER_MEDIUM
+            else -> STROKE_GLOW_BUST_FRAC_PLAYER_SMALL
+        }
+        return (bustWidthPx * frac).coerceAtLeast(1f)
+    }
 
-    /** Core stroke width for Canvas (full 1.4× readability thickness). */
-    fun strokeCoreWidth(thickness: Float): Float = thickness * STROKE_CORE_MULT
+    /**
+     * Canvas core stroke width in px for [recipient]/[tier] given measured [bustWidthPx].
+     * Player Small/Medium in ~18–28px @360-stage; enemy slightly thinner.
+     */
+    fun strokeCoreWidthPx(recipient: FxRecipient, tier: FxTier, bustWidthPx: Float): Float {
+        val frac = when {
+            recipient == FxRecipient.YOU -> STROKE_CORE_BUST_FRAC_ENEMY
+            tier == FxTier.MEDIUM || tier == FxTier.WAKE -> STROKE_CORE_BUST_FRAC_PLAYER_MEDIUM
+            else -> STROKE_CORE_BUST_FRAC_PLAYER_SMALL
+        }
+        return (bustWidthPx * frac).coerceAtLeast(1f)
+    }
+
+    /**
+     * Absolute glow @ reference stage (compat). Fat lock — much wider than hairline
+     * `(thickness / 1.4) * 7`. Prefer [strokeGlowWidthPx] when stage size is known.
+     */
+    fun strokeGlowWidth(thickness: Float): Float {
+        val tier = if (thickness >= THICK_MEDIUM * 0.95f) FxTier.MEDIUM else FxTier.SMALL
+        return strokeGlowWidthPx(FxRecipient.FOE, tier, REF_BUST_WIDTH_PX)
+    }
+
+    /**
+     * Absolute core @ reference stage (compat). Fat lock — replaces hairline
+     * `thickness × [STROKE_CORE_MULT]`. Prefer [strokeCoreWidthPx] when stage size known.
+     */
+    fun strokeCoreWidth(thickness: Float): Float {
+        val tier = if (thickness >= THICK_MEDIUM * 0.95f) FxTier.MEDIUM else FxTier.SMALL
+        return strokeCoreWidthPx(FxRecipient.FOE, tier, REF_BUST_WIDTH_PX)
+    }
+
+    /** Enemy core @ reference stage (slightly thinner than player Small). */
+    fun strokeCoreWidthEnemyRef(): Float =
+        strokeCoreWidthPx(FxRecipient.YOU, FxTier.SMALL, REF_BUST_WIDTH_PX)
 
     /**
      * Drawn Brace shield pip count = Brace gained, capped at [BRACE_PIP_CAP].
@@ -529,9 +601,11 @@ object CombatFx {
         val dir = if (player) FxStrokeDir.YOU_TO_FOE else FxStrokeDir.FOE_TO_YOU
         val recipient = recipientFor(dir)
         val color = strokeColorArgb(role)
+        val thickSmall = if (player) THICK_SMALL else THICK_SMALL * THICK_ENEMY_FACTOR
+        val thickMedium = if (player) THICK_MEDIUM else THICK_MEDIUM * THICK_ENEMY_FACTOR
         val stroke: FxStrokeSpec? = when (tier) {
-            FxTier.SMALL -> FxStrokeSpec(color, THICK_SMALL, dir, recipient)
-            FxTier.MEDIUM -> FxStrokeSpec(color, THICK_MEDIUM, dir, recipient)
+            FxTier.SMALL -> FxStrokeSpec(color, thickSmall, dir, recipient)
+            FxTier.MEDIUM -> FxStrokeSpec(color, thickMedium, dir, recipient)
             FxTier.NO_STROKE -> null
             FxTier.WAKE -> null // Wake slash from WakeStageOverlay (foe only)
         }
@@ -569,6 +643,41 @@ object CombatFx {
         )
     }
 
+
+    /** True when [id] is an enemy kit skill (Small/Medium/NoStroke sets). */
+    fun isEnemyKitFxId(id: String): Boolean =
+        id in ENEMY_SMALL || id in ENEMY_MEDIUM || id in ENEMY_NO_STROKE
+
+    /** True when [id] is a known player card / Wake / Spark id. */
+    fun isPlayerFxId(id: String): Boolean =
+        id == ID_ASHBRAND_WAKE || id == ID_ASHBRAND_SPARK ||
+            id in PLAYER_SMALL || id in PLAYER_MEDIUM || id in PLAYER_NO_STROKE
+
+    /**
+     * Harden fxPlayer for UI: enemy kit ids always false; player/Wake/Spark always true.
+     * Fixes CombatScreen `fxEvent?.fxPlayer != false` defaulting enemy→player when flag wrong.
+     */
+    fun resolveFxPlayer(fxId: String?, eventFxPlayer: Boolean): Boolean {
+        if (fxId.isNullOrBlank()) return eventFxPlayer
+        if (isEnemyKitFxId(fxId)) return false
+        if (isPlayerFxId(fxId)) return true
+        return eventFxPlayer
+    }
+
+    /**
+     * Proof helper — enemy damage skill produces drawn stroke on You + debug `FX stroke on You`.
+     * Used by StrokeThickV0147Test / CombatScreen wiring audit.
+     */
+    fun enemyHitProducesYouStroke(skillId: String, kind: EnemyKind = EnemyKind.GOBLIN): Boolean {
+        val beat = safeSpec(skillId, resolveFxPlayer(skillId, eventFxPlayer = true), kind)
+            ?: return false
+        val stroke = beat.stroke ?: return false
+        if (beat.recipient != FxRecipient.YOU) return false
+        if (stroke.recipient != FxRecipient.YOU) return false
+        if (stroke.dir != FxStrokeDir.FOE_TO_YOU) return false
+        val label = strokeTargetLabel(FxRecipient.YOU, foeName = null)
+        return strokeDebugLine(label) == "FX stroke on You"
+    }
 
     /**
      * Debug line for drawn path stroke: `FX stroke on <target>`.

@@ -24,8 +24,8 @@ class SlashReadV0143Test {
 
     @Test
     fun tag_isSlashReadV0143() {
-        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
-        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
+        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
+        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
     }
 
     @Test
@@ -178,8 +178,8 @@ class SlashReadV0143Test {
 
     @Test
     fun speed2x_halvesHolds() {
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
+        assertEquals(CombatFx.STROKE_SMALL_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(CombatFx.STROKE_MEDIUM_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
         assertEquals(100L, CombatFx.fxHoldMs(CleaveKit.CONTACT_HIT_FLASH_MS, 2))
         assertEquals(160L, CombatFx.fxHoldMs(CleaveKit.HIT_FLASH_MS, 2))
     }

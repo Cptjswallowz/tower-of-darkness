@@ -17,7 +17,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.46-strokefallback — drawn Wake-family stroke is the readable cut (PRIMARY).
+ * v0.1.47-strokethick — drawn Wake-family stroke is the readable cut (PRIMARY).
  * CLEAVE tip garnish optional; no CLEAVE rescale as the WO fix.
  * See docs/strokefallback-v0146.md.
  */
@@ -25,8 +25,8 @@ class StrokeFallbackV0146Test {
 
     @Test
     fun tag_isStrokeFallbackV0146() {
-        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
-        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
+        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
+        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
     }
 
     @Test
@@ -87,23 +87,24 @@ class StrokeFallbackV0146Test {
 
     @Test
     fun peakHolds_player400to500_enemy300to400() {
-        assertTrue(CombatFx.STROKE_PLAYER_PEAK_MS in 400L..500L)
-        assertTrue(CombatFx.STROKE_ENEMY_PEAK_MS in 300L..400L)
-        assertEquals(500L, CombatFx.STROKE_SMALL_MS)
-        assertEquals(500L, CombatFx.STROKE_MEDIUM_MS)
-        assertTrue(CombatFx.STROKE_ENEMY_SMALL_MS in 300L..400L)
-        assertTrue(CombatFx.STROKE_ENEMY_MEDIUM_MS in 300L..400L)
+        // v0.1.47 raised peaks; keep architecture locks (player > enemy; total >= peak)
+        assertTrue(CombatFx.STROKE_PLAYER_PEAK_MS in 450L..550L)
+        assertTrue(CombatFx.STROKE_ENEMY_PEAK_MS in 350L..450L)
+        assertTrue(CombatFx.STROKE_SMALL_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)
+        assertTrue(CombatFx.STROKE_MEDIUM_MS >= CombatFx.STROKE_PLAYER_PEAK_MS)
+        assertTrue(CombatFx.STROKE_ENEMY_SMALL_MS >= CombatFx.STROKE_ENEMY_PEAK_MS)
+        assertTrue(CombatFx.STROKE_ENEMY_MEDIUM_MS >= CombatFx.STROKE_ENEMY_PEAK_MS)
         val host = CombatFx.specForPlayer("hostflint")
         assertEquals(CombatFx.STROKE_SMALL_MS, host.strokeMs)
         val peakPlayer = CombatFx.strokePeakMs(host.strokeMs, FxRecipient.FOE)
-        assertTrue("player peak $peakPlayer", peakPlayer in 400L..500L)
+        assertTrue("player peak $peakPlayer", peakPlayer in 450L..550L)
         val hit = CombatFx.specForEnemy("hit", EnemyKind.GOBLIN)
         assertEquals(CombatFx.STROKE_ENEMY_SMALL_MS, hit.strokeMs)
         val peakEnemy = CombatFx.strokePeakMs(hit.strokeMs, FxRecipient.YOU)
-        assertTrue("enemy peak $peakEnemy", peakEnemy in 300L..400L)
+        assertTrue("enemy peak $peakEnemy", peakEnemy in 350L..450L)
         // 2x shortens
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(180L, CombatFx.fxHoldMs(CombatFx.STROKE_ENEMY_SMALL_MS, 2))
+        assertEquals(CombatFx.STROKE_SMALL_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(CombatFx.STROKE_ENEMY_SMALL_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_ENEMY_SMALL_MS, 2))
     }
 
     @Test

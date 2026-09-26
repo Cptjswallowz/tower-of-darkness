@@ -30,8 +30,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun tag_isCleaveKitV0142() {
-        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
-        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
+        assertEquals("v0.1.47-strokethick", CombatFx.TAG)
+        assertEquals("v0.1.47-strokethick", CleaveKit.TAG)
     }
 
     @Test
@@ -207,8 +207,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun speed2x_halvesSlashAndHitFlash() {
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
+        assertEquals(CombatFx.STROKE_SMALL_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(CombatFx.STROKE_MEDIUM_MS / 2, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
         assertEquals(160L, CombatFx.fxHoldMs(CleaveKit.HIT_FLASH_MS, 2))
         assertEquals(350L, CombatFx.fxHoldMs(CombatFx.BRACE_PIP_MS, 2))
     }
@@ -225,7 +225,7 @@ class CleaveKitV0142Test {
         assertEquals(FxTier.SMALL, club.tier)
         assertEquals(FxRecipient.YOU, club.recipient)
         assertNotNull(club.stroke)
-        assertEquals(CombatFx.THICK_SMALL, club.stroke!!.thickness, 0.001f)
+        assertEquals(CombatFx.THICK_SMALL * CombatFx.THICK_ENEMY_FACTOR, club.stroke!!.thickness, 0.001f)
         val gate = CombatFx.specForEnemy("gate_pulse", EnemyKitRole.GATE_WARDEN)
         assertEquals(FxTier.SMALL, gate.tier)
         assertEquals(FxRecipient.YOU, gate.recipient)
@@ -242,7 +242,9 @@ class CleaveKitV0142Test {
         assertEquals(0.5f, CombatFx.recipientClipXFrac(FxRecipient.FOE).start, 0.0001f)
         // Glow tame
         val glow = CombatFx.strokeGlowWidth(CombatFx.THICK_SMALL)
-        assertEquals(CombatFx.THICK_SMALL_PRIOR * CombatFx.STROKE_GLOW_PRIOR_MULT, glow, 0.001f)
-        assertTrue(glow < CombatFx.THICK_SMALL * 7f - 0.01f)
+        val core = CombatFx.strokeCoreWidth(CombatFx.THICK_SMALL)
+        assertTrue(glow > core)
+        assertTrue(core > CombatFx.HAIRLINE_CORE_PX_SMALL * 2.5f)
+        assertTrue(glow < CombatFx.REF_BUST_WIDTH_PX * 0.55f)
     }
 }
