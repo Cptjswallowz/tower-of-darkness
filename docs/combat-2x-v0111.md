@@ -62,3 +62,7 @@ Persist the active rate **for combat**. Run-scoped persist is OK if cheap (same 
 - [x] Persist for combat (run OK if cheap)
 - [x] No 3x; no skip-animations; no damage / weight / Wake **rule** changes
 - [x] Leave frozen systems untouched
+
+---
+
+**Related:** v0.1.37-fx — FX durations halve at 2x with holds. See `fx-v0137.md`.

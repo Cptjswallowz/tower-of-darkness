@@ -36,9 +36,11 @@ import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.EnemyKits
 import com.towerofdarkness.app.domain.combat.EnemySkill
 import com.towerofdarkness.app.domain.combat.EnemySkillKind
+import com.towerofdarkness.app.domain.combat.FxStrokeSpec
 import com.towerofdarkness.app.domain.combat.WeaponTag
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.domain.combat.BraceDrawSync
@@ -48,6 +50,8 @@ import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.domain.combat.WakeStageFrame
 import androidx.compose.foundation.clickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
+import com.towerofdarkness.app.ui.components.CombatStrokeOverlay
+import com.towerofdarkness.app.ui.components.CombatTileFlash
 import com.towerofdarkness.app.ui.components.SkillGlyphIcon
 import com.towerofdarkness.app.ui.components.skillJobIsBrace
 import com.towerofdarkness.app.domain.glyphs.SkillGlyph
@@ -81,6 +85,11 @@ fun CombatScreen(gc: GameController) {
     // v0.1.15: Wake icon + portrait crescent (FULL only); SPARK ember on icon
     var wakeIconPhase by remember { mutableStateOf(WakeIconPhase.IDLE) }
     var wakeStageFrame by remember { mutableStateOf(WakeStageFrame.NONE) }
+    // v0.1.37-fx: kernel flash / stroke (Wake slash stays in WakeStageOverlay)
+    var tileFlash by remember { mutableStateOf(false) }
+    var tileFlashColor by remember { mutableStateOf(CombatFx.COLOR_YOU) }
+    var strokeSpec by remember { mutableStateOf<FxStrokeSpec?>(null) }
+    var strokeVisible by remember { mutableStateOf(false) }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -95,14 +104,16 @@ fun CombatScreen(gc: GameController) {
     }
 
     // Snapshot speed with this log beat so mid-toggle VFX follows NEXT beat holds
+    // v0.1.37-fx kernel: flash → stroke → float → shake (fail-safe; never blocks resolve+log)
     LaunchedEffect(state?.log?.size) {
         val s = state ?: return@LaunchedEffect
         val last = s.log.lastOrNull() ?: return@LaunchedEffect
         val newEvents = s.log.drop(prevLogSize.coerceAtMost(s.log.size))
         prevLogSize = s.log.size
-        val tick = GameController.combatHoldMs(40L, gc.combatSpeedX)
-        val floatHold = GameController.combatHoldMs(700L, gc.combatSpeedX)
-        val absorbHold = GameController.combatHoldMs(BraceDrawSync.ABSORB_FLOAT_MS, gc.combatSpeedX)
+        val speed = gc.combatSpeedX
+        val tick = GameController.combatHoldMs(40L, speed)
+        val floatHold = CombatFx.fxHoldMs(CombatFx.FLOAT_MS, speed)
+        val absorbHold = GameController.combatHoldMs(BraceDrawSync.ABSORB_FLOAT_MS, speed)
         // Brace absorb in THIS log delta (hit may be followed by Defeat…)
         val absorbEvent = newEvents.lastOrNull { it.braceAbsorbed > 0 }
         if (absorbEvent != null && BraceDrawSync.delayHpBarAfter(absorbEvent)) {
@@ -121,17 +132,66 @@ fun CombatScreen(gc: GameController) {
             }
             diceShake = 0f
         }
-        last.floating?.let {
-            floatMsg = it.text
-            delay(floatHold)
-            floatMsg = null
-        }
-        if (last.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO) {
-            repeat(6) {
-                shake.snapTo(if (it % 2 == 0) 8f else -8f)
-                delay(tick)
+        // Primary FX line in this delta (skill / enemy / Wake); follow-ups have null fxId
+        val fxEvent = newEvents.lastOrNull { it.fxId != null } ?: last.takeIf { it.fxId != null }
+        try {
+            val spec = CombatFx.safeSpec(fxEvent?.fxId, fxEvent?.fxPlayer != false, s.enemy.kind)
+            if (spec != null) {
+                // 1. Fired tile flash
+                tileFlashColor = CombatFx.colorArgb(spec.role)
+                tileFlash = true
+                delay(CombatFx.fxHoldMs(spec.flashMs, speed))
+                tileFlash = false
+                // 2. Stroke You ↔ foe (unless NO STROKE / Wake slash)
+                if (spec.stroke != null && !spec.useWakeSlash) {
+                    strokeSpec = spec.stroke
+                    strokeVisible = true
+                    delay(CombatFx.fxHoldMs(spec.strokeMs, speed))
+                    strokeVisible = false
+                    strokeSpec = null
+                }
+                // 3. Number float (damage and/or Brace)
+                val floatText = fxEvent?.floating?.text ?: last.floating?.text
+                if (floatText != null) {
+                    floatMsg = floatText
+                    delay(floatHold)
+                    floatMsg = null
+                }
+                // 4. Shake by tier (Wake = heavier; layered with WakeStageOverlay)
+                if (spec.shake.amplitude > 0f && spec.shake.pulses > 0) {
+                    val amp = spec.shake.amplitude
+                    val pulses = spec.shake.pulses
+                    val pulseBudget = CombatFx.fxHoldMs(spec.shakeMs, speed) / pulses.coerceAtLeast(1)
+                    repeat(pulses) {
+                        shake.snapTo(if (it % 2 == 0) amp else -amp)
+                        delay(pulseBudget.coerceAtLeast(1L))
+                    }
+                    shake.snapTo(0f)
+                } else if (last.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO && spec.useWakeSlash) {
+                    // Wake already shook above; nothing extra
+                }
+            } else {
+                // No fxId — legacy float / rare anim only (Victory, follow-up Brace, etc.)
+                last.floating?.let {
+                    floatMsg = it.text
+                    delay(floatHold)
+                    floatMsg = null
+                }
+                if (last.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO) {
+                    repeat(6) {
+                        shake.snapTo(if (it % 2 == 0) 8f else -8f)
+                        delay(tick)
+                    }
+                    shake.snapTo(0f)
+                }
             }
+        } catch (_: Throwable) {
+            // Fail-safe: clear FX chrome; resolve+log already committed by engine
+            tileFlash = false
+            strokeVisible = false
+            strokeSpec = null
             shake.snapTo(0f)
+            last.floating?.let { floatMsg = it.text }
         }
     }
 
@@ -257,6 +317,23 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
+            // v0.1.37-fx: stroke across You↔foe (Wake slash stays above)
+            CombatStrokeOverlay(
+                stroke = strokeSpec,
+                visible = strokeVisible,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .align(Alignment.TopCenter)
+            )
+            CombatTileFlash(
+                visible = tileFlash,
+                colorArgb = tileFlashColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .align(Alignment.TopCenter)
+            )
         }
 
         Box(Modifier.fillMaxWidth().height(36.dp), contentAlignment = Alignment.Center) {

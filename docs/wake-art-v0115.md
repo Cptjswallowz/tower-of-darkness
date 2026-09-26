@@ -57,3 +57,7 @@ Do not skip steps; 2x shortens holds only (no skip-animations).
 - [x] SPARK: ember on icon only; no crescent
 - [x] Common skills: no crescent; placeholder bodies; no new SFX pack
 - [x] No Wake math changes; frozen systems untouched
+
+---
+
+**Related:** v0.1.37-fx — Wake tier keeps current Wake slash; heavier shake only. See `fx-v0137.md`.

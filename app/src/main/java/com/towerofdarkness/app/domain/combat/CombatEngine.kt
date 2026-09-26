@@ -29,7 +29,15 @@ data class CombatEvent(
     val glossaryHints: List<String> = emptyList(),
     val goldLog: Boolean = false,
     /** Presentation only (v0.1.14): Brace absorbed on this hit; 0 = none. */
-    val braceAbsorbed: Int = 0
+    val braceAbsorbed: Int = 0,
+    /**
+     * Presentation-only FX id (v0.1.37). Card id / enemy skill id / [CombatFx.ID_ASHBRAND_WAKE].
+     * Null = no kernel stroke/flash for this log line (follow-up Brace/Soften/Spark lines).
+     * Never affects damage math.
+     */
+    val fxId: String? = null,
+    /** True when [fxId] is a player skill / Wake; false for enemy kit. */
+    val fxPlayer: Boolean = true
 )
 
 data class CombatState(
@@ -208,7 +216,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 floating = FloatingText("WAKE", true, true),
                 animStyle = CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
                 sound = "legendary",
-                goldLog = true
+                goldLog = true,
+                fxId = CombatFx.ID_ASHBRAND_WAKE,
+                fxPlayer = true
             )
             pinned = wakeLine
             fullProc = true
@@ -279,7 +289,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     msg,
                     FloatingText("BRACE $gain", false),
                     sound = "ui",
-                    glossaryHints = listOf(skill.glossaryKey, "brace")
+                    glossaryHints = listOf(skill.glossaryKey, "brace"),
+                    fxId = skill.id,
+                    fxPlayer = false
                 )
                 // Soften pip stays — Hide family does not consume Soften
             }
@@ -298,7 +310,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     sound = "hit",
                     glossaryHints = listOf(skill.glossaryKey, "nip", "soften") +
                         if (absorbed > 0) listOf("brace") else emptyList(),
-                    braceAbsorbed = absorbed
+                    braceAbsorbed = absorbed,
+                    fxId = skill.id,
+                    fxPlayer = false
                 )
             }
             EnemySkillKind.DAMAGE -> {
@@ -319,7 +333,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     sound = "hit",
                     glossaryHints = listOf(skill.glossaryKey) +
                         if (absorbed > 0) listOf("brace") else emptyList(),
-                    braceAbsorbed = absorbed
+                    braceAbsorbed = absorbed,
+                    fxId = skill.id,
+                    fxPlayer = false
                 )
             }
         }
@@ -412,7 +428,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
                     FloatingText("-${e.damage}", true, card.rarity == Rarity.RARE),
-                    anim, sound
+                    anim, sound,
+                    fxId = card.id, fxPlayer = true
                 )
             }
             is SkillEffect.DamageAndHeal -> {
@@ -422,7 +439,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 val nh = (s.playerHp + e.heal).coerceAtMost(s.playerMaxHp)
                 events += CombatEvent(
                     "${card.title}: ${e.damage} dmg, +${e.heal} HP",
-                    FloatingText("-${e.damage}", true), anim, sound
+                    FloatingText("-${e.damage}", true), anim, sound,
+                    fxId = card.id, fxPlayer = true
                 )
                 s = s.copy(playerHp = nh)
             }
@@ -432,7 +450,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 s = applied.state
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
-                    FloatingText("-${e.damage}", true), anim, sound
+                    FloatingText("-${e.damage}", true), anim, sound,
+                    fxId = card.id, fxPlayer = true
                 )
                 var brace = s.brace
                 if (s.weapon.pipsFilled >= e.minPips) {
@@ -459,7 +478,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     FloatingText("-$dmg", true), anim, sound,
                     glossaryHints = listOf("spark", "wake", "brace", "soften").filter { t ->
                         card.effect.description.contains(t, ignoreCase = true)
-                    }
+                    },
+                    fxId = card.id, fxPlayer = true
                 )
             }
             is MoveEffect.DamageAndSoften -> {
@@ -469,7 +489,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 val brace = s.brace + e.braceGain
                 events += CombatEvent(
                     "${card.title} deals ${e.damage}",
-                    FloatingText("-${e.damage}", true), anim, sound
+                    FloatingText("-${e.damage}", true), anim, sound,
+                    fxId = card.id, fxPlayer = true
                 )
                 if (e.braceGain > 0) {
                     events += CombatEvent(
@@ -493,7 +514,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 events += CombatEvent(
                     "${card.title}: Brace ${e.brace}",
                     FloatingText("BRACE ${e.brace}", true), anim, sound,
-                    glossaryHints = listOf("brace")
+                    glossaryHints = listOf("brace"),
+                    fxId = card.id, fxPlayer = true
                 )
             }
             is Equipment.HealOrBrace -> {
@@ -503,14 +525,16 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     events += CombatEvent(
                         "${card.title}: Brace ${e.braceIfFull}",
                         FloatingText("BRACE", true), anim, sound,
-                        glossaryHints = listOf("brace")
+                        glossaryHints = listOf("brace"),
+                        fxId = card.id, fxPlayer = true
                     )
                 } else {
                     val nh = (s.playerHp + e.heal).coerceAtMost(s.playerMaxHp)
                     s = s.copy(playerHp = nh)
                     events += CombatEvent(
                         "${card.title}: +${e.heal} HP",
-                        FloatingText("+${e.heal}", true), anim, sound
+                        FloatingText("+${e.heal}", true), anim, sound,
+                        fxId = card.id, fxPlayer = true
                     )
                 }
             }

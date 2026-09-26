@@ -109,3 +109,7 @@ Hub (`hub-v0127` / hubkeep / hubmore), path math, Wake math, 2x, portraits, map 
 - [x] Soften → next damaging enemy skill (not Hide/Rust Guard/Cinder Hide); Nip ignores Soften in log; Brace on You before HP
 - [x] UI: 2 specials + Hit under enemy HP; smaller chrome; grey spent; tap → glossary (Nip copy locked)
 - [x] No bleed/stun/summon; freeze Hub/path/Wake math/2x/portraits/map tokens
+
+---
+
+**Related:** v0.1.37-fx — enemy stroke tiers/colors; Hide/Rust/Cinder NO STROKE. See `fx-v0137.md`.

@@ -88,3 +88,7 @@ Persist OWNED via MetaStore `unlocked_cards` (offer id). Buy twice → spends 0 
 - [x] Four skills Uncommon w3; Hub-gated (Meta); glossary bodies as table
 - [x] Spark Tithe net 0 / net +1 + “Spark spent” log; Wake Echo one log line, bonus no second Spark
 - [x] No new status words; no retune of existing cards / Wake math / enemy kits / path / 2x / art
+
+---
+
+**Related:** v0.1.37-fx — Ember Draw/Brand Mark/Spark Tithe/Wake Echo stroke map. See `fx-v0137.md`.
