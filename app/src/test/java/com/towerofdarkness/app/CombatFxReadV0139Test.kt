@@ -20,8 +20,9 @@ import kotlin.math.abs
 class CombatFxReadV0139Test {
 
     @Test
-    fun tag_isFxreadV0139() {
-        assertEquals("v0.1.39-fxread", CombatFx.TAG)
+    fun tag_advancedToFxfixV0140() {
+        // TAG advanced in v0.1.40-fxfix; readability locks in this class still hold
+        assertEquals("v0.1.40-fxfix", CombatFx.TAG)
     }
 
     @Test

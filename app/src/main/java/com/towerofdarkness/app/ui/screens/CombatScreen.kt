@@ -182,6 +182,8 @@ fun CombatScreen(gc: GameController) {
                 if (play.bracePipCount > 0 && play.braceOwner != null) {
                     bracePipCount = play.bracePipCount
                     bracePipOwner = play.braceOwner
+                    // First visible frame at progress 0 → full alpha via bracePipAlpha
+                    bracePipProgress = 0f
                     bracePipVisible = true
                     val pipHold = CombatFx.fxHoldMs(CombatFx.BRACE_PIP_MS, speed)
                     val steps = 6

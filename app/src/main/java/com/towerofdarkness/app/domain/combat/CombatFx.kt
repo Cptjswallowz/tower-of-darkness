@@ -1,10 +1,11 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.39-fxread (readability: bigger Brace, heavier slash).
- * Pure domain maps + duration + recipient-slash / Brace-pip helpers.
+ * Shared combat FX kernel — v0.1.40-fxfix (no screen flash, shields back, target-only slash).
+ * Aim from v0.1.38 + size/hold from v0.1.39; half-stage clip + tamed glow bloom.
+ * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow helpers.
  * Compose renders flash / short recipient slash / brace pips / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/fxread-v0139.md.
+ * Never changes damage / Wake math / who gets FX. See docs/fxfix-v0140.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -115,7 +116,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.39-fxread"
+    const val TAG = "v0.1.40-fxfix"
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
@@ -162,6 +163,12 @@ object CombatFx {
     /** Prior stroke thicknesses (v0.1.38) — tests assert 1.4×. */
     const val THICK_SMALL_PRIOR = 1.5f
     const val THICK_MEDIUM_PRIOR = 3.0f
+    /** v0.1.39 readability multiplier on core stroke thickness. */
+    const val THICKNESS_READ_MULT = 1.4f
+    /** v0.1.38 glow multiplier applied to *prior* thickness (absolute glow lock). */
+    const val STROKE_GLOW_PRIOR_MULT = 7f
+    /** Core stroke width = thickness × this (heavier cut keeps full 1.4×). */
+    const val STROKE_CORE_MULT = 3.2f
 
     /** Player SMALL ids (lock table). */
     val PLAYER_SMALL: Set<String> = setOf(
@@ -225,6 +232,27 @@ object CombatFx {
     /** Brace shield-pip owner: You Brace → YOU; foe Hide/Guard → FOE. */
     fun braceOwnerForPlayer(player: Boolean): FxRecipient =
         if (player) FxRecipient.YOU else FxRecipient.FOE
+
+    /**
+     * Half-stage X clip for recipient/owner FX so glow cannot wash both busts.
+     * YOU → left half `0f..0.5f`; FOE → right half `0.5f..1f`. Ranges are disjoint
+     * except the shared mid edge at 0.5.
+     */
+    fun recipientClipXFrac(recipient: FxRecipient): ClosedFloatingPointRange<Float> = when (recipient) {
+        FxRecipient.YOU -> 0f..0.5f
+        FxRecipient.FOE -> 0.5f..1f
+    }
+
+    /**
+     * Absolute glow stroke width ≈ v0.1.38 (priorThickness × [STROKE_GLOW_PRIOR_MULT]),
+     * not unbounded with 1.4× core thickness. Prefer `(thickness / 1.4f) * 7f`.
+     * Core still uses full thickness × [STROKE_CORE_MULT] (heavier cut, no plate wash).
+     */
+    fun strokeGlowWidth(thickness: Float): Float =
+        (thickness / THICKNESS_READ_MULT) * STROKE_GLOW_PRIOR_MULT
+
+    /** Core stroke width for Canvas (full 1.4× readability thickness). */
+    fun strokeCoreWidth(thickness: Float): Float = thickness * STROKE_CORE_MULT
 
     /**
      * Drawn Brace shield pip count = Brace gained, capped at [BRACE_PIP_CAP].
