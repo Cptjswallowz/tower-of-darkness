@@ -1,12 +1,13 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.45-slashscale (scale slash overlay to bust width; color FREE).
- * Aim / clip / glow / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
- * CLEAVE sheets wire into existing stroke + play packet only — no new tiers / no kernel replace.
- * Pure domain maps + duration + recipient-slash / Brace-pip / clip / glow / spark-hit-flash helpers.
- * Compose renders tile flash / CLEAVE slash (or path fallback) / brace pips / hit-flash / float / shake.
- * Never changes damage / Wake math / who gets FX. See docs/slashscale-v0145.md + docs/fxfix-v0140.md.
+ * Shared combat FX kernel — v0.1.46-strokefallback (drawn Wake-family stroke PRIMARY).
+ * Aim / clip / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
+ * Readable cut = Canvas path (glow + thick core crescent) on recipient bust — NOT CLEAVE flipbook.
+ * Optional CLEAVE tip garnish at stroke tip only; never another bust-coverage rescale of the sheet.
+ * Pure domain maps + duration + recipient-stroke / Brace-pip / clip / glow / spark helpers.
+ * Compose: [CombatStrokeOverlay] draws path primary; Wake gold arc stays [WakeStageOverlay].
+ * Never changes damage / Wake math / who gets FX. See docs/strokefallback-v0146.md.
  *
  * Kernel order on skill resolve: flash → stroke|brace-pips|hit-flash → float → shake → log+hold.
  * 2x halves FX durations via [fxHoldMs] (same pattern as combatHoldMs).
@@ -124,41 +125,73 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.45-slashscale"
+    const val TAG = "v0.1.46-strokefallback"
 
-    /** logcat tag for slash-light debug (this tip only). */
+    /** logcat tag for stroke / slash-light debug. */
     const val LOG_TAG_TOD_FX = "TodFx"
 
-    /** Exact combat-log / logcat line prefix — unit-tested. */
+    /** Exact combat-log / logcat line — drawn path stroke (primary readable cut). */
+    const val STROKE_DEBUG_FMT = "FX stroke on "
+
+    /** Optional tip-garnish only — existing sheet debug; not the primary cut. */
     const val SLASH_LIGHT_DEBUG_FMT = "FX slash-light on "
 
     /** Special id for Ashbrand FULL Wake (not a card id). */
     const val ID_ASHBRAND_WAKE = "ashbrand_wake"
 
-    /** Special id for Ashbrand SPARK half — CLEAVE hit-flash on foe (not a card id). */
+    /** Special id for Ashbrand SPARK half — short drawn stroke + tip spark (not a card id). */
     const val ID_ASHBRAND_SPARK = "ashbrand_spark"
 
     // --- Bust centers (stage width fracs) — You left, foe right ---
     const val YOU_BUST_X = 0.18f
     const val FOE_BUST_X = 0.82f
     const val BUST_Y = 0.42f
-    /** Half-extent of short slash (~bust diameter); never reaches opposite bust. */
-    const val SLASH_HALF_X_SMALL = 0.055f
-    const val SLASH_HALF_X_MEDIUM = 0.07f
+    /**
+     * Half-stage → bust WIDTH factor (matches CleaveKit.BUST_WIDTH_FRAC lock; frozen).
+     * Used only to size the *drawn path* stroke relative to bust — not a CLEAVE rescale.
+     */
+    const val STROKE_BUST_WIDTH_FRAC = 0.78f
+    /**
+     * Drawn-stroke full width as fraction of bust WIDTH.
+     * Player 70–90% (WO lock); enemy ~60%; never spans both busts.
+     */
+    const val STROKE_WIDTH_FRAC_PLAYER_SMALL = 0.78f
+    const val STROKE_WIDTH_FRAC_PLAYER_MEDIUM = 0.88f
+    const val STROKE_WIDTH_FRAC_ENEMY = 0.60f
+    /** Legacy half-extent names — derived from width fracs for call-site / test compat. */
+    val SLASH_HALF_X_SMALL: Float
+        get() = strokeHalfXFrac(FxRecipient.FOE, FxTier.SMALL)
+    val SLASH_HALF_X_MEDIUM: Float
+        get() = strokeHalfXFrac(FxRecipient.FOE, FxTier.MEDIUM)
     const val SLASH_HALF_Y_FACTOR = 0.65f
 
-    // --- Colors (ARGB) — role stroke lock ---
-    const val COLOR_YOU = 0xFFC9A227L          // gold ember
+    // --- Colors (ARGB) — tile flash / role tint (unchanged legacy) ---
+    const val COLOR_YOU = 0xFFC9A227L          // gold ember (tile / Wake language)
     const val COLOR_WEAK_GOBLIN = 0xFF6B7A3AL  // dirty green
     const val COLOR_STURDY_ORC = 0xFFA05030L   // rust
     const val COLOR_SEAL_WARDEN = 0xFFB87333L  // copper
     const val COLOR_ASH_WARDEN = 0xFFC45A2DL   // coal orange
     const val COLOR_SOFTEN_PIP = 0xFFE24A3BL  // red Soften pulse
 
+    // --- Drawn stroke colors — steel / ash / ember (NOT forced green/gold SrcIn) ---
+    const val COLOR_STROKE_YOU = 0xFFC9B8A0L       // steel ash ember
+    const val COLOR_STROKE_ENEMY = 0xFF8A8680L     // dull steel ash
+    const val COLOR_STROKE_ENEMY_EMBER = 0xFF9A8070L // dull ash-ember (warden)
+
     // --- 1x duration budgets (presentation only) ---
     const val FLASH_MS = 120L
-    const val STROKE_SMALL_MS = 400L
-    const val STROKE_MEDIUM_MS = 480L
+    /** Player Small/Medium total hold @1x (peak + short fade); WO peak 400–500 then fade. */
+    const val STROKE_SMALL_MS = 500L
+    const val STROKE_MEDIUM_MS = 500L
+    /** Peak linger @1x for player drawn stroke (pass/fail lock). */
+    const val STROKE_PLAYER_PEAK_MS = 420L
+    /** Enemy hit stroke shorter — total / peak @1x (WO 300–400 peak). */
+    const val STROKE_ENEMY_SMALL_MS = 360L
+    const val STROKE_ENEMY_MEDIUM_MS = 380L
+    const val STROKE_ENEMY_PEAK_MS = 320L
+    /** Ashbrand SPARK non-Wake — short drawn stroke (+ optional tip spark). */
+    const val STROKE_SPARK_MS = 280L
+    const val STROKE_SPARK_PEAK_MS = 200L
     const val FLOAT_MS = 700L
     const val SHAKE_MEDIUM_MS = 240L
     const val SHAKE_WAKE_MS = 400L
@@ -216,7 +249,7 @@ object CombatFx {
     /** Wake tier is exclusive — only Ashbrand Wake. */
     fun isWakeExclusiveId(id: String): Boolean = id == ID_ASHBRAND_WAKE
 
-    /** SPARK half — hit-flash only; never Wake tier / never slash-light. */
+    /** SPARK half — short drawn stroke (+ optional tip); never Wake tier / never FULL Wake. */
     fun isSparkId(id: String): Boolean = id == ID_ASHBRAND_SPARK
 
     fun roleForEnemy(kind: EnemyKind): FxRole = when (EnemyKitRole.fromKind(kind)) {
@@ -245,6 +278,58 @@ object CombatFx {
         FxRole.SEAL_WARDEN -> COLOR_SEAL_WARDEN
         FxRole.ASH_WARDEN -> COLOR_ASH_WARDEN
     }
+
+    /**
+     * Drawn-stroke paint — steel/ash/ember family (no forced green/gold role SrcIn).
+     * Player → steel ash ember; enemy → dull steel ash (wardens slightly ember).
+     */
+    fun strokeColorArgb(role: FxRole): Long = when (role) {
+        FxRole.YOU -> COLOR_STROKE_YOU
+        FxRole.WEAK_GOBLIN, FxRole.STURDY_ORC -> COLOR_STROKE_ENEMY
+        FxRole.SEAL_WARDEN, FxRole.ASH_WARDEN -> COLOR_STROKE_ENEMY_EMBER
+    }
+
+    /**
+     * Half horizontal extent (stage-width frac) for drawn stroke on [recipient].
+     * bustWidthFracOfStage = 0.5 × [STROKE_BUST_WIDTH_FRAC];
+     * fullStrokeFrac = bustWidthFracOfStage × widthFrac; halfX = full / 2.
+     */
+    fun strokeHalfXFrac(recipient: FxRecipient, tier: FxTier = FxTier.SMALL): Float {
+        val widthFrac = when {
+            recipient == FxRecipient.YOU -> STROKE_WIDTH_FRAC_ENEMY
+            tier == FxTier.MEDIUM || tier == FxTier.WAKE -> STROKE_WIDTH_FRAC_PLAYER_MEDIUM
+            else -> STROKE_WIDTH_FRAC_PLAYER_SMALL
+        }
+        val bustFracOfStage = 0.5f * STROKE_BUST_WIDTH_FRAC
+        return (bustFracOfStage * widthFrac) / 2f
+    }
+
+    /** Peak linger ms within already-scaled [holdMs] (2x shortens via caller). */
+    fun strokePeakMs(holdMs: Long, recipient: FxRecipient, spark: Boolean = false): Long {
+        val basePeak = when {
+            spark -> STROKE_SPARK_PEAK_MS
+            recipient == FxRecipient.YOU -> STROKE_ENEMY_PEAK_MS
+            else -> STROKE_PLAYER_PEAK_MS
+        }
+        val baseTotal = when {
+            spark -> STROKE_SPARK_MS
+            recipient == FxRecipient.YOU -> STROKE_ENEMY_SMALL_MS
+            else -> STROKE_SMALL_MS
+        }
+        // Proportional when speedX halves holdMs; peak is majority of hold then fade.
+        val scaled = (basePeak * holdMs / baseTotal.coerceAtLeast(1L)).coerceAtLeast(1L)
+        val lo = (holdMs * 55L / 100L).coerceAtLeast(1L)
+        val hi = (holdMs * 90L / 100L).coerceAtLeast(lo)
+        return scaled.coerceIn(lo, hi)
+    }
+
+    /** Stroke full width as fraction of bust width (test lock). */
+    fun strokeWidthFracOfBust(recipient: FxRecipient, tier: FxTier = FxTier.SMALL): Float =
+        when {
+            recipient == FxRecipient.YOU -> STROKE_WIDTH_FRAC_ENEMY
+            tier == FxTier.MEDIUM || tier == FxTier.WAKE -> STROKE_WIDTH_FRAC_PLAYER_MEDIUM
+            else -> STROKE_WIDTH_FRAC_PLAYER_SMALL
+        }
 
     /** Damage slash recipient: player skills hit foe; enemy skills hit You. */
     fun recipientFor(dir: FxStrokeDir): FxRecipient = when (dir) {
@@ -312,10 +397,7 @@ object CombatFx {
             FxRecipient.YOU -> YOU_BUST_X
             FxRecipient.FOE -> FOE_BUST_X
         }
-        val halfX = when (tier) {
-            FxTier.MEDIUM, FxTier.WAKE -> SLASH_HALF_X_MEDIUM
-            else -> SLASH_HALF_X_SMALL
-        }
+        val halfX = strokeHalfXFrac(recipient, tier)
         return SlashCutGeom(
             recipient = recipient,
             centerXFrac = cx,
@@ -332,7 +414,7 @@ object CombatFx {
      */
     fun tierForPlayer(cardId: String): FxTier = when {
         cardId == ID_ASHBRAND_WAKE -> FxTier.WAKE
-        cardId == ID_ASHBRAND_SPARK -> FxTier.NO_STROKE
+        cardId == ID_ASHBRAND_SPARK -> FxTier.SMALL // short drawn stroke via specForSpark
         cardId in PLAYER_NO_STROKE -> FxTier.NO_STROKE
         cardId in PLAYER_MEDIUM -> FxTier.MEDIUM
         cardId in PLAYER_SMALL -> FxTier.SMALL
@@ -365,16 +447,21 @@ object CombatFx {
         buildSpec(FxTier.WAKE, FxRole.YOU, player = true)
 
     /**
-     * Ashbrand SPARK — CLEAVE hit-flash on foe bust only (additive).
-     * No slash-light; icon ember ([WakeArt.SPARK_DRAWABLE]) stays separate.
+     * Ashbrand SPARK — short drawn stroke on foe (+ optional tip spark / hit-flash).
+     * FULL Wake stays [WakeStageOverlay] / [specForWake] only. Icon ember separate.
      */
-    fun specForSpark(): FxBeatSpec =
-        buildSpec(FxTier.NO_STROKE, FxRole.YOU, player = true).copy(
+    fun specForSpark(): FxBeatSpec {
+        val base = buildSpec(FxTier.SMALL, FxRole.YOU, player = true)
+        val thin = base.stroke?.copy(thickness = THICK_SMALL * 0.75f)
+        return base.copy(
+            stroke = thin,
+            strokeMs = STROKE_SPARK_MS,
             useCleaveHitFlash = true,
             hitFlashMs = CleaveKit.HIT_FLASH_MS,
             recipient = FxRecipient.FOE,
             flashMs = 0L
         )
+    }
 
     /**
      * Resolve FX from an event hint. Returns null when event has no fxId (follow-up lines).
@@ -441,7 +528,7 @@ object CombatFx {
     private fun buildSpec(tier: FxTier, role: FxRole, player: Boolean): FxBeatSpec {
         val dir = if (player) FxStrokeDir.YOU_TO_FOE else FxStrokeDir.FOE_TO_YOU
         val recipient = recipientFor(dir)
-        val color = colorArgb(role)
+        val color = strokeColorArgb(role)
         val stroke: FxStrokeSpec? = when (tier) {
             FxTier.SMALL -> FxStrokeSpec(color, THICK_SMALL, dir, recipient)
             FxTier.MEDIUM -> FxStrokeSpec(color, THICK_MEDIUM, dir, recipient)
@@ -454,8 +541,8 @@ object CombatFx {
             FxTier.WAKE -> FxShakeSpec(SHAKE_WAKE_AMP, 8)
         }
         val strokeMs = when (tier) {
-            FxTier.SMALL -> STROKE_SMALL_MS
-            FxTier.MEDIUM -> STROKE_MEDIUM_MS
+            FxTier.SMALL -> if (player) STROKE_SMALL_MS else STROKE_ENEMY_SMALL_MS
+            FxTier.MEDIUM -> if (player) STROKE_MEDIUM_MS else STROKE_ENEMY_MEDIUM_MS
             FxTier.NO_STROKE, FxTier.WAKE -> 0L
         }
         val shakeMs = when (tier) {
@@ -484,18 +571,29 @@ object CombatFx {
 
 
     /**
-     * Debug line for this tip only: `FX slash-light on <target>`.
+     * Debug line for drawn path stroke: `FX stroke on <target>`.
      * Target is `You` or foe display name / `foe`.
+     */
+    fun strokeDebugLine(targetLabel: String): String =
+        STROKE_DEBUG_FMT + targetLabel
+
+    /**
+     * Optional tip-garnish debug: `FX slash-light on <target>`.
+     * Only when CLEAVE tip cell actually draws — not the primary cut.
      */
     fun slashLightDebugLine(targetLabel: String): String =
         SLASH_LIGHT_DEBUG_FMT + targetLabel
 
-    /** Label for slash-light debug: YOU → `You`; FOE → foe name or `foe`. */
+    /** Label for stroke / slash-light debug: YOU → `You`; FOE → foe name or `foe`. */
     fun slashLightTargetLabel(recipient: FxRecipient, foeName: String?): String =
         when (recipient) {
             FxRecipient.YOU -> "You"
             FxRecipient.FOE -> foeName?.takeIf { it.isNotBlank() } ?: "foe"
         }
+
+    /** Alias — same labels for stroke debug. */
+    fun strokeTargetLabel(recipient: FxRecipient, foeName: String?): String =
+        slashLightTargetLabel(recipient, foeName)
 
     /** True when Wake Echo maps to a single Medium (combined damage line). */
     fun wakeEchoIsSingleMedium(): Boolean =

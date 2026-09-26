@@ -22,7 +22,7 @@ class CombatFxReadV0139Test {
     @Test
     fun tag_advancedToFxfixV0140() {
         // TAG advanced in v0.1.40-fxfix; readability locks in this class still hold
-        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
+        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
     }
 
     @Test
@@ -37,13 +37,13 @@ class CombatFxReadV0139Test {
 
     @Test
     fun strokeHolds_plus200Ms_at1x() {
-        assertEquals(400L, CombatFx.STROKE_SMALL_MS)
-        assertEquals(480L, CombatFx.STROKE_MEDIUM_MS)
-        assertEquals(400L, CombatFx.specForPlayer("hostflint").strokeMs)
-        assertEquals(480L, CombatFx.specForPlayer("tower_pike").strokeMs)
-        // 2x halves via fxHoldMs → +100ms at 2x vs prior
-        assertEquals(200L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(240L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
+        // v0.1.46: player peak 400–500 then fade; total ≤500 @1x
+        assertEquals(500L, CombatFx.STROKE_SMALL_MS)
+        assertEquals(500L, CombatFx.STROKE_MEDIUM_MS)
+        assertEquals(500L, CombatFx.specForPlayer("hostflint").strokeMs)
+        assertEquals(500L, CombatFx.specForPlayer("tower_pike").strokeMs)
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
     }
 
     @Test

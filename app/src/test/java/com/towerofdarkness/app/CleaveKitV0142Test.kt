@@ -30,8 +30,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun tag_isCleaveKitV0142() {
-        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
-        assertEquals("v0.1.45-slashscale", CleaveKit.TAG)
+        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
+        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
     }
 
     @Test
@@ -145,16 +145,17 @@ class CleaveKitV0142Test {
         val spark = CombatFx.specForSpark()
         assertTrue(spark.useCleaveHitFlash)
         assertEquals(FxRecipient.FOE, spark.recipient)
-        assertNull(spark.stroke)
+        assertNotNull(spark.stroke) // v0.1.46: short drawn stroke + tip spark
         assertFalse(spark.useWakeSlash)
         assertEquals(CleaveKit.HIT_FLASH_MS, spark.hitFlashMs)
         assertEquals(0L, spark.flashMs)
+        assertEquals(CombatFx.STROKE_SPARK_MS, spark.strokeMs)
         // Clip is half-stage FOE — not full screen
         val clip = CombatFx.recipientClipXFrac(spark.recipient)
         assertEquals(0.5f, clip.start, 0.0001f)
         assertTrue(clip.endInclusive <= 1f + 0.0001f)
         assertTrue(CombatFx.isSparkId(CombatFx.ID_ASHBRAND_SPARK))
-        assertEquals(FxTier.NO_STROKE, CombatFx.tierForPlayer(CombatFx.ID_ASHBRAND_SPARK))
+        assertEquals(FxTier.SMALL, CombatFx.tierForPlayer(CombatFx.ID_ASHBRAND_SPARK))
     }
 
     @Test
@@ -206,8 +207,8 @@ class CleaveKitV0142Test {
 
     @Test
     fun speed2x_halvesSlashAndHitFlash() {
-        assertEquals(200L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(240L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
         assertEquals(160L, CombatFx.fxHoldMs(CleaveKit.HIT_FLASH_MS, 2))
         assertEquals(350L, CombatFx.fxHoldMs(CombatFx.BRACE_PIP_MS, 2))
     }

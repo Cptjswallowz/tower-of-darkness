@@ -16,7 +16,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.44-slashproof locks evolved under v0.1.45-slashscale TAG.
+ * v0.1.44-slashproof locks evolved under v0.1.46-strokefallback TAG.
  * Sheet / map / peak / debug still hold; crop+scale numbers live in SlashScaleV0145Test.
  * See docs/slashscale-v0145.md.
  */
@@ -24,8 +24,8 @@ class SlashProofV0144Test {
 
     @Test
     fun tag_isSlashProofV0144() {
-        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
-        assertEquals("v0.1.45-slashscale", CleaveKit.TAG)
+        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
+        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
     }
 
     @Test
@@ -80,7 +80,7 @@ class SlashProofV0144Test {
             assertNotNull(s.stroke)
             assertEquals(FxRecipient.FOE, s.recipient)
             assertTrue(s.useCleaveHitFlash)
-            assertEquals(CombatFx.COLOR_YOU, s.stroke!!.colorArgb)
+            assertEquals(CombatFx.COLOR_STROKE_YOU, s.stroke!!.colorArgb)
         }
     }
 
@@ -163,7 +163,7 @@ class SlashProofV0144Test {
 
     @Test
     fun speed2x_halvesHolds() {
-        assertEquals(200L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
         assertEquals(100L, CombatFx.fxHoldMs(CleaveKit.PEAK_HOLD_MS, 2))
     }
 }

@@ -24,8 +24,8 @@ class SlashReadV0143Test {
 
     @Test
     fun tag_isSlashReadV0143() {
-        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
-        assertEquals("v0.1.45-slashscale", CleaveKit.TAG)
+        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
+        assertEquals("v0.1.46-strokefallback", CleaveKit.TAG)
     }
 
     @Test
@@ -107,7 +107,7 @@ class SlashReadV0143Test {
             assertEquals(FxRecipient.FOE, s.recipient)
             assertTrue(s.useCleaveHitFlash)
             assertEquals(CleaveKit.CONTACT_HIT_FLASH_MS, s.hitFlashMs)
-            assertEquals(CombatFx.COLOR_YOU, s.stroke!!.colorArgb)
+            assertEquals(CombatFx.COLOR_STROKE_YOU, s.stroke!!.colorArgb)
         }
     }
 
@@ -164,7 +164,8 @@ class SlashReadV0143Test {
         val spark = CombatFx.specForSpark()
         assertTrue(spark.useCleaveHitFlash)
         assertEquals(CleaveKit.HIT_FLASH_MS, spark.hitFlashMs)
-        assertNull(spark.stroke)
+        assertNotNull(spark.stroke) // v0.1.46: short drawn stroke
+        assertFalse(spark.useWakeSlash)
     }
 
     @Test
@@ -177,8 +178,8 @@ class SlashReadV0143Test {
 
     @Test
     fun speed2x_halvesHolds() {
-        assertEquals(200L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
-        assertEquals(240L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_SMALL_MS, 2))
+        assertEquals(250L, CombatFx.fxHoldMs(CombatFx.STROKE_MEDIUM_MS, 2))
         assertEquals(100L, CombatFx.fxHoldMs(CleaveKit.CONTACT_HIT_FLASH_MS, 2))
         assertEquals(160L, CombatFx.fxHoldMs(CleaveKit.HIT_FLASH_MS, 2))
     }

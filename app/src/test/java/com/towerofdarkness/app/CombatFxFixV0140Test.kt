@@ -20,7 +20,7 @@ class CombatFxFixV0140Test {
 
     @Test
     fun tag_isFxfixV0140() {
-        assertEquals("v0.1.45-slashscale", CombatFx.TAG)
+        assertEquals("v0.1.46-strokefallback", CombatFx.TAG)
     }
 
     @Test
@@ -66,8 +66,8 @@ class CombatFxFixV0140Test {
         assertEquals(4.2f, CombatFx.THICK_MEDIUM, 0.001f)
         assertEquals(CombatFx.THICKNESS_READ_MULT, 1.4f, 0.001f)
         // Stroke ms +200 vs 0.1.38
-        assertEquals(400L, CombatFx.STROKE_SMALL_MS)
-        assertEquals(480L, CombatFx.STROKE_MEDIUM_MS)
+        assertEquals(500L, CombatFx.STROKE_SMALL_MS)
+        assertEquals(500L, CombatFx.STROKE_MEDIUM_MS)
         assertEquals(700L, WakeArt.FRAME_SLASH_MS)
         // Brace hold / fade / radius
         assertEquals(700L, CombatFx.BRACE_PIP_MS)

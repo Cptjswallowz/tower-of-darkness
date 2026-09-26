@@ -45,7 +45,9 @@ class CombatFxAimV0138Test {
                 assertFalse("must not span You↔foe: $r $tier $g", g.spansBothBusts())
                 assertEquals(r, g.recipient)
                 val span = g.endXFrac - g.startXFrac
-                assertTrue("cut too long: $span", span < 0.25f)
+                // v0.1.46: Wake-family stroke spans ~70–90% bust (~0.27–0.35 stage);
+                // still must stay inside half-stage (never You↔foe bar).
+                assertTrue("cut too long: $span", span < 0.40f)
                 when (r) {
                     FxRecipient.YOU -> {
                         assertEquals(CombatFx.YOU_BUST_X, g.centerXFrac, 0.001f)

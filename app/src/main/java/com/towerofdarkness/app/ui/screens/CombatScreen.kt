@@ -105,9 +105,11 @@ fun CombatScreen(gc: GameController) {
     var bracePipVisible by remember { mutableStateOf(false) }
     var bracePipProgress by remember { mutableStateOf(0f) }
     var softenPulse by remember { mutableStateOf(false) }
-    // v0.1.45-slashscale: player-visible combat-log echo of slash-light debug
+    // v0.1.46-strokefallback: combat-log echo of drawn stroke (primary) + optional tip garnish
+    var strokeDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
+    var sparkStroke by remember { mutableStateOf(false) }
     if (state != null && displayedPlayerHp < 0) {
         displayedPlayerHp = state.playerHp
     }
@@ -186,13 +188,15 @@ fun CombatScreen(gc: GameController) {
                     strokeSpec = spec.stroke
                     strokeTier = spec.tier
                     strokeHoldMs = CombatFx.fxHoldMs(spec.strokeMs, speed)
-                    slashDebugTarget = CombatFx.slashLightTargetLabel(
+                    sparkStroke = CombatFx.isSparkId(fxEvent?.fxId ?: "")
+                    slashDebugTarget = CombatFx.strokeTargetLabel(
                         spec.stroke!!.recipient,
                         if (spec.stroke!!.recipient == FxRecipient.FOE) {
                             s.enemy.kind.displayName
                         } else null
                     )
-                    slashDebugLine = null // overlay will set via onSlashLightDebug
+                    strokeDebugLine = null // overlay sets via onStrokeDebug
+                    slashDebugLine = null // tip garnish only
                     strokeVisible = true
                     if (spec.useCleaveHitFlash && spec.hitFlashMs > 0L) {
                         hitFlashRecipient = spec.recipient
@@ -203,6 +207,8 @@ fun CombatScreen(gc: GameController) {
                     delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
+                    sparkStroke = false
+                    strokeDebugLine = null
                     slashDebugLine = null
                     hitFlashVisible = false
                     hitFlashRecipient = null
@@ -422,14 +428,16 @@ fun CombatScreen(gc: GameController) {
                         .align(Alignment.TopCenter)
                 )
             }
-            // v0.1.45-slashscale: short slash on recipient bust; 180.dp so large
-            // bust-width crescent is not clipped to a blob (half-stage X clip unchanged)
+            // v0.1.46-strokefallback: drawn Wake-family stroke on recipient bust (primary).
+            // 180.dp stage strip; half-stage X clip unchanged. Optional tip garnish only.
             CombatStrokeOverlay(
                 stroke = strokeSpec,
                 visible = strokeVisible,
                 tier = strokeTier,
                 holdMs = strokeHoldMs,
                 debugTarget = slashDebugTarget,
+                sparkStroke = sparkStroke,
+                onStrokeDebug = { line -> strokeDebugLine = line },
                 onSlashLightDebug = { line -> slashDebugLine = line },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -498,7 +506,13 @@ fun CombatScreen(gc: GameController) {
                     while (recent.size > 5) recent.removeAt(0)
                 }
             }
-            // v0.1.45-slashscale: prove slash-light draw in player-visible combat log
+            // v0.1.46-strokefallback: prove drawn stroke (primary) + optional tip garnish
+            strokeDebugLine?.let { dbg ->
+                if (recent.none { it.message == dbg }) {
+                    recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
+                    while (recent.size > 5) recent.removeAt(0)
+                }
+            }
             slashDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))

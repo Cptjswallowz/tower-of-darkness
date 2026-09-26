@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -42,11 +41,12 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.45-slashscale — CLEAVE slash-light scaled to bust WIDTH
- * (tight content crop + BUST_COVERAGE; color FREE — natural sheet, no forced SrcIn).
- * Canvas path fallback only if sheet decode fails. Wake slash stays in [WakeStageOverlay].
- * Aim / clip locks from v0.1.40-fxfix.
- * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block.
+ * Presentation layer for v0.1.46-strokefallback — drawn Wake-family stroke PRIMARY.
+ * Thick glow + core quadratic crescent on recipient bust (same family as Wake arc language).
+ * Optional CLEAVE slash-light tip garnish at stroke TIP only — never the slash.
+ * Wake gold arc stays in [WakeStageOverlay]. Aim / clip locks from v0.1.40-fxfix.
+ * Banned: full-width gold bar You↔foe; whole-row tint flash; plate wash; shield-block;
+ * another bust-coverage rescale of the CLEAVE sheet as the primary FX.
  */
 @Composable
 fun CombatStrokeOverlay(
@@ -54,22 +54,25 @@ fun CombatStrokeOverlay(
     visible: Boolean,
     modifier: Modifier = Modifier,
     tier: FxTier = FxTier.SMALL,
-    /** Scaled hold (already 1x/2x); drives atlas frame progress + peak linger. */
+    /** Scaled hold (already 1x/2x); drives peak linger then fade. */
     holdMs: Long = CombatFx.STROKE_SMALL_MS,
     /**
-     * Debug target label (`You` / foe name / `foe`) — logs `FX slash-light on <target>`
-     * to logcat [CombatFx.LOG_TAG_TOD_FX] and optional combat-log callback when sheet draws.
+     * Debug target label (`You` / foe name / `foe`) — logs `FX stroke on <target>`
+     * always when path draws; `FX slash-light on <target>` only if tip garnish draws.
      */
     debugTarget: String = "foe",
-    /** Invoked once per visible sheet draw with the exact debug line (combat log). */
-    onSlashLightDebug: ((String) -> Unit)? = null
+    /** Invoked once per visible path stroke with `FX stroke on …` (combat log). */
+    onStrokeDebug: ((String) -> Unit)? = null,
+    /** Invoked once when optional CLEAVE tip garnish actually draws. */
+    onSlashLightDebug: ((String) -> Unit)? = null,
+    /** Ashbrand SPARK short stroke — shorter peak via [CombatFx.strokePeakMs]. */
+    sparkStroke: Boolean = false
 ) {
-    // Prefer CLEAVE sheet whenever stroke is present — do not skip on thickness quirks
-    if (!visible || stroke == null) return
+    if (!visible || stroke == null || stroke.thickness <= 0f) return
     val color = Color(stroke.colorArgb)
     val recipient = stroke.recipient
     val context = LocalContext.current
-    // Compile-linked R.drawable — preferred path; fail-soft only if bitmap decode fails
+    // Optional tip garnish sheet — never primary; fail-soft if missing
     val slashSheet: ImageBitmap? = remember {
         try {
             ImageBitmap.imageResource(context.resources, R.drawable.fx_slash_light)
@@ -84,7 +87,15 @@ fun CombatStrokeOverlay(
             }
         }
     }
-    // Prove the map: sheet present + stroke showing → one debug line (combat log + logcat)
+    // Drawn path is always the readable cut
+    LaunchedEffect(visible, debugTarget, tier, sparkStroke) {
+        if (visible) {
+            val line = CombatFx.strokeDebugLine(debugTarget)
+            Log.i(CombatFx.LOG_TAG_TOD_FX, line)
+            onStrokeDebug?.invoke(line)
+        }
+    }
+    // Tip garnish debug only when sheet is present (actually drawn at tip)
     LaunchedEffect(visible, slashSheet != null, debugTarget, tier) {
         if (visible && slashSheet != null) {
             val line = CombatFx.slashLightDebugLine(debugTarget)
@@ -92,27 +103,23 @@ fun CombatStrokeOverlay(
             onSlashLightDebug?.invoke(line)
         }
     }
-    var frameIndex by remember(visible, holdMs, tier) { mutableIntStateOf(0) }
-    var fadeAlpha by remember(visible, holdMs, tier) { mutableFloatStateOf(1f) }
-    LaunchedEffect(visible, holdMs, tier) {
+    var fadeAlpha by remember(visible, holdMs, tier, sparkStroke) { mutableFloatStateOf(1f) }
+    LaunchedEffect(visible, holdMs, tier, sparkStroke) {
         if (!visible) {
-            frameIndex = 0
             fadeAlpha = 1f
             return@LaunchedEffect
         }
-        val frames = CleaveKit.SLASH_PLAY_FRAMES
-        val delays = CleaveKit.slashFrameDelaysMs(holdMs, tier)
-        val peakIdx = frames.indexOf(CleaveKit.SLASH_PEAK_FRAME).coerceAtLeast(0)
-        for (i in frames.indices) {
-            frameIndex = i
-            // Full brightness through peak; fade after peak window
-            fadeAlpha = if (i <= peakIdx) 1f else {
-                val after = (i - peakIdx).toFloat() / (frames.size - peakIdx).coerceAtLeast(1)
-                (1f - after * 0.55f).coerceIn(0.35f, 1f)
-            }
-            delay(delays.getOrElse(i) { CleaveKit.frameStepMs(holdMs, frames.size) })
+        val peak = CombatFx.strokePeakMs(holdMs, recipient, spark = sparkStroke)
+        val fade = (holdMs - peak).coerceAtLeast(1L)
+        fadeAlpha = 1f
+        delay(peak)
+        val steps = 8
+        val stepMs = (fade / steps).coerceAtLeast(1L)
+        for (i in 1..steps) {
+            fadeAlpha = (1f - i.toFloat() / steps).coerceIn(0.15f, 1f)
+            delay(stepMs)
         }
-        fadeAlpha = 0.35f
+        fadeAlpha = 0.15f
     }
     Canvas(modifier.fillMaxSize()) {
         val w = size.width
@@ -124,69 +131,30 @@ fun CombatStrokeOverlay(
             right = clip.endInclusive * w,
             bottom = h
         ) {
+            // PRIMARY: Wake-family drawn path (glow + thick core crescent)
+            drawWakeFamilyStroke(stroke, tier, color, fadeAlpha)
+            // OPTIONAL: tiny CLEAVE tip garnish at stroke tip only (not full slash)
             if (slashSheet != null) {
-                drawCleaveSlash(
+                drawCleaveTipGarnish(
                     sheet = slashSheet,
-                    recipient = recipient,
+                    stroke = stroke,
                     tier = tier,
-                    frameIndex = frameIndex,
-                    tint = color,
                     alpha = fadeAlpha
                 )
-            } else if (stroke.thickness > 0f) {
-                // Fail-soft: prior Canvas path stroke if sheet missing
-                drawPathFallback(stroke, tier, color)
             }
         }
     }
 }
 
-private fun DrawScope.drawCleaveSlash(
-    sheet: ImageBitmap,
-    recipient: FxRecipient,
-    tier: FxTier,
-    frameIndex: Int,
-    @Suppress("UNUSED_PARAMETER") tint: Color,
-    alpha: Float
-) {
-    val w = size.width
-    val h = size.height
-    val cx = when (recipient) {
-        FxRecipient.YOU -> CombatFx.YOU_BUST_X * w
-        FxRecipient.FOE -> CombatFx.FOE_BUST_X * w
-    }
-    // Bust sits in the portrait strip — keep Y on bust, not mid-kit / HP bar
-    val cy = CombatFx.BUST_Y * h
-    // Bust-WIDTH scale (half-stage × BUST_WIDTH_FRAC) × coverage / content-fill
-    val base = CleaveKit.slashDrawPx(w, h, tier)
-    val frames = CleaveKit.SLASH_PLAY_FRAMES
-    val frame = frames.getOrElse(frameIndex.coerceIn(0, frames.lastIndex)) {
-        CleaveKit.SLASH_PEAK_FRAME
-    }
-    val (sx, sy) = CleaveKit.slashCropOrigin(frame)
-    val crop = CleaveKit.SLASH_CROP_PX
-    val dstLeft = cx - base * CleaveKit.SLASH_ANCHOR_X
-    val dstTop = cy - base * CleaveKit.SLASH_ANCHOR_Y
-    val dst = base.toInt().coerceAtLeast(1)
-    val a = alpha.coerceIn(0.2f, 1f)
-    // Color FREE: natural sheet colors (painterly). No forced SrcIn gold/green
-    // that washed the crescent into a mono glow blob on 0.1.44.
-    drawImage(
-        image = sheet,
-        srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
-        srcSize = androidx.compose.ui.unit.IntSize(crop, crop),
-        dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
-        dstSize = androidx.compose.ui.unit.IntSize(dst, dst),
-        alpha = a,
-        colorFilter = null,
-        filterQuality = FilterQuality.Low
-    )
-}
-
-private fun DrawScope.drawPathFallback(
+/**
+ * Wake-family readable cut — glow + thick core quadratic crescent on recipient bust.
+ * Width from [CombatFx.slashCutGeom] (player ~70–90% bust, enemy ~60%).
+ */
+private fun DrawScope.drawWakeFamilyStroke(
     stroke: FxStrokeSpec,
     tier: FxTier,
-    color: Color
+    color: Color,
+    alpha: Float
 ) {
     val w = size.width
     val h = size.height
@@ -197,26 +165,84 @@ private fun DrawScope.drawPathFallback(
     val ey = geom.halfExtentYFrac * h
     val start = Offset(cx - ex, cy - ey)
     val end = Offset(cx + ex, cy + ey)
-    val mid = Offset(cx + ex * 0.15f, cy - ey * 0.35f)
+    val mid = Offset(cx + ex * 0.12f, cy - ey * 0.55f)
     val path = Path().apply {
         moveTo(start.x, start.y)
         quadraticTo(mid.x, mid.y, end.x, end.y)
     }
+    val a = alpha.coerceIn(0.15f, 1f)
     drawPath(
         path = path,
-        color = color.copy(alpha = 0.45f),
+        color = color.copy(alpha = 0.38f * a),
         style = Stroke(
-            width = CombatFx.strokeGlowWidth(stroke.thickness),
+            width = CombatFx.strokeGlowWidth(stroke.thickness) * 1.15f,
             cap = StrokeCap.Round
         )
     )
     drawPath(
         path = path,
-        color = color.copy(alpha = 0.92f),
+        color = color.copy(alpha = 0.55f * a),
+        style = Stroke(
+            width = CombatFx.strokeGlowWidth(stroke.thickness) * 0.65f,
+            cap = StrokeCap.Round
+        )
+    )
+    drawPath(
+        path = path,
+        color = color.copy(alpha = 0.95f * a),
         style = Stroke(
             width = CombatFx.strokeCoreWidth(stroke.thickness),
             cap = StrokeCap.Round
         )
+    )
+    drawPath(
+        path = path,
+        color = Color(0xFFE8E0D0).copy(alpha = 0.55f * a),
+        style = Stroke(
+            width = CombatFx.strokeCoreWidth(stroke.thickness) * 0.35f,
+            cap = StrokeCap.Round
+        )
+    )
+}
+
+/**
+ * Optional CLEAVE tip garnish — small dst at stroke tip only.
+ * Invisible tip is NOT fail if path stroke is readable. Never full slash / bust rescale.
+ */
+private fun DrawScope.drawCleaveTipGarnish(
+    sheet: ImageBitmap,
+    stroke: FxStrokeSpec,
+    tier: FxTier,
+    alpha: Float
+) {
+    val w = size.width
+    val h = size.height
+    val geom = CombatFx.slashCutGeom(stroke.recipient, tier)
+    val cx = geom.centerXFrac * w
+    val cy = geom.centerYFrac * h
+    val ex = geom.halfExtentXFrac * w
+    val ey = geom.halfExtentYFrac * h
+    val tipX = cx + ex
+    val tipY = cy + ey
+    val tipSize = (min(w, h) * 0.11f).coerceAtLeast(24f)
+    val frame = CleaveKit.SLASH_PEAK_FRAME
+    val (sx, sy) = CleaveKit.slashCropOrigin(frame)
+    val crop = CleaveKit.SLASH_CROP_PX
+    val dstLeft = tipX - tipSize * 0.55f
+    val dstTop = tipY - tipSize * 0.55f
+    val a = (alpha * 0.75f).coerceIn(0.1f, 1f)
+    drawImage(
+        image = sheet,
+        srcOffset = androidx.compose.ui.unit.IntOffset(sx, sy),
+        srcSize = androidx.compose.ui.unit.IntSize(crop, crop),
+        dstOffset = androidx.compose.ui.unit.IntOffset(dstLeft.toInt(), dstTop.toInt()),
+        dstSize = androidx.compose.ui.unit.IntSize(
+            tipSize.toInt().coerceAtLeast(1),
+            tipSize.toInt().coerceAtLeast(1)
+        ),
+        alpha = a,
+        colorFilter = null,
+        filterQuality = FilterQuality.Low
     )
 }
 

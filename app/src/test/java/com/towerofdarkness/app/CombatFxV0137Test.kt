@@ -142,12 +142,12 @@ class CombatFxV0137Test {
     fun enemyStroke_flipsDirection() {
         val player = CombatFx.specForPlayer("hostflint")
         assertEquals(FxStrokeDir.YOU_TO_FOE, player.stroke!!.dir)
-        assertEquals(CombatFx.COLOR_YOU, player.stroke!!.colorArgb)
+        assertEquals(CombatFx.COLOR_STROKE_YOU, player.stroke!!.colorArgb)
         val enemy = CombatFx.specForEnemy("shiv", EnemyKind.GOBLIN)
         assertEquals(FxStrokeDir.FOE_TO_YOU, enemy.stroke!!.dir)
-        assertEquals(CombatFx.COLOR_WEAK_GOBLIN, enemy.stroke!!.colorArgb)
+        assertEquals(CombatFx.COLOR_STROKE_ENEMY, enemy.stroke!!.colorArgb)
         val orc = CombatFx.specForEnemy("cleave", EnemyKind.ORC)
-        assertEquals(CombatFx.COLOR_STURDY_ORC, orc.stroke!!.colorArgb)
+        assertEquals(CombatFx.COLOR_STROKE_ENEMY, orc.stroke!!.colorArgb)
         assertEquals(FxTier.MEDIUM, orc.tier)
     }
 
