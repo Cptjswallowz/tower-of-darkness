@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.55-hubsplit)
+## Status (v0.1.56-bankone)
 
+- **v0.1.56-bankone:** One `remnants_bank` wallet (Title+Hub same getter); Floor rem→purse; Continue+Menu both bank (one txn); Climb keeps bank. FX/SFX/Kept formula LOCKED (Gate+5). No Drive mirror. Tagged release. Still debug.
 - **v0.1.55-hubsplit:** Hub Relics→Perks→Skills; no cyan bust ring; Summary Menu+Continue both bank; overlays restaged. FX/SFX LOCKED; Kept formula unchanged. Tagged release. Still debug.
   - overlays: `overlay_soot_rim.png`, `overlay_ash_pauldron.png`, `overlay_troll_tooth.png`, `overlay_gate_sigil.png`
   - Hub: Relics (owned trophies) → Perks → Skills
