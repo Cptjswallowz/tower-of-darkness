@@ -239,11 +239,12 @@ class TrollkeptV0154Test {
         assertTrue(ClimbKept.anyTrophyOwned(setOf(ClimbKept.ID_SOOT_RIM)))
         assertFalse(ClimbKept.anyTrophyOwned(emptySet()))
 
+        // v0.1.55-hubsplit overlay art — authoritative md5s in docs/art-audio/HUBSPLIT_OVERLAYS_v0.1.55.md
         val expected = mapOf(
-            "overlay_soot_rim" to "90a077e1ef7992edf04f463b7139004b",
-            "overlay_ash_pauldron" to "5f0f16af1083ecb210e9b7f860ca189b",
-            "overlay_troll_tooth" to "24801321125242e99d49e09f685c17a0",
-            "overlay_gate_sigil" to "50987c84db3e116bebbe1fb30192aa2e"
+            "overlay_soot_rim" to "6d9431fac60ace69e7d1cefd06055655",
+            "overlay_ash_pauldron" to "811e469eb4ba46c5adf96c2a4cc50439",
+            "overlay_troll_tooth" to "c5fadc1ad5c7ef333efb341a9676e554",
+            "overlay_gate_sigil" to "5dacbd7bfbeaefc020f39eba75f5248e"
         )
         for ((name, md5) in expected) {
             val f = listOf(
