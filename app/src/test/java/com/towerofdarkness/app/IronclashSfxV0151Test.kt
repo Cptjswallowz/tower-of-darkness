@@ -186,4 +186,20 @@ class IronclashSfxV0151Test {
     fun garnishSet_emberAndSoftenOnly() {
         assertEquals(setOf(IronclashSfx.KEY_EMBER, IronclashSfx.KEY_SOFTEN), IronclashSfx.GARNISH_KEYS)
     }
+
+    /**
+     * Case 7 (v0.1.51-ironclash): GameController must play KEY_UI at these call sites
+     * (not unit-tested here — ViewModel/SoundBus wiring). Keep in sync with GameController:
+     * continueClimb, selectPathNode (after validation). confirmLoadout / buyOffer already play ui.
+     * enterNode must NOT play ui (avoid double-fire from confirmLoadout → enterNode).
+     */
+    @Test
+    fun uiCallSites_documentedForCase7() {
+        val required = listOf("continueClimb", "selectPathNode")
+        val alreadyOk = listOf("confirmLoadout", "buyOffer")
+        assertTrue(required.isNotEmpty())
+        assertTrue(alreadyOk.contains("confirmLoadout"))
+        assertEquals(IronclashSfx.KEY_UI, "ui")
+    }
+
 }

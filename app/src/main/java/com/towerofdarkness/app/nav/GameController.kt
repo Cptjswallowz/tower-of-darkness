@@ -220,6 +220,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     /** Menu Continue — resume Path or FloorBreak from slot. */
     fun continueClimb() {
+        sound.play("ui")
         viewModelScope.launch {
             val slot = meta.readMidRunSlot() ?: return@launch
             hasMidRunSlot = true
@@ -444,6 +445,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // allow only adjacent choices
             if (nodeId !in p.edges.filter { it.from == p.currentId }.map { it.to }) return
         }
+        // Kenney UI click once per successful path-node tap (before loadout redirect or enterNode).
+        // enterNode itself stays silent so confirmLoadout → enterNode does not double-fire.
+        sound.play("ui")
         if (!loadoutLocked && (loadout.size != Balance.LOADOUT_MAX)) {
             pendingNodeId = nodeId
             nav = NavState.Loadout

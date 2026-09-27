@@ -34,3 +34,8 @@ Curated source (commit): `assets/sfx/{ironclash,lentikula,kenney_ui}/` + license
 ## Debug
 
 Logcat `SFX` once per clip: `impact|wake|brace|ember|soften|ui <clip>`.
+
+
+## Case 7 fix (post-QA)
+
+`GameController.continueClimb()` and `selectPathNode()` now call `sound.play("ui")` (Kenney `click_001`) so Menu Continue and path-node enter are audible. `enterNode` stays silent to avoid double-fire with `confirmLoadout` → pending enter. versionCode **52** / versionName **0.1.51-ironclash**. Combat FX still LOCKED.
