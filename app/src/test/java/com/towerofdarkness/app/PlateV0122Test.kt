@@ -81,11 +81,14 @@ class PlateV0122Test {
     @Test
     fun portraitPngPaths_noSecondPaintedOvalBehindStill() {
         val src = heroShowcaseSource()
-        val sealBranch = src.substringAfter("Asset-backed boss without volume", "")
-            .substringBefore("Trash / Wretch", src)
+        // Asset-backed PNG branch (portraitRes != null, no volume): Image + CircleShape clip only.
+        // drawOval may exist only in the placeholder Canvas fallback (no portraitRes).
+        val pngBranch = src.substringAfter("} else if (portraitRes != null) {", "")
+            .substringBefore("} else {", "")
+        assertTrue("expected asset-backed PNG branch", pngBranch.isNotBlank())
         assertFalse(
-            "Seal-Warden PNG path must not drawOval behind still",
-            sealBranch.contains("drawOval")
+            "Seal-Warden / Gate-Warden PNG path must not drawOval behind still",
+            pngBranch.contains("drawOval")
         )
         assertFalse(PortraitPlate.SECOND_OVAL_BEHIND_PNG)
     }
