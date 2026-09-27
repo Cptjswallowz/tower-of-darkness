@@ -29,14 +29,15 @@ No Tower of the World / Eldermark art, music, or asset reuse as ToD deliverables
 - art/ui/rarity_glow_epic.png
 - art/ui/rarity_glow_legendary.png
 
-## Audio — `audio/` (v0.1.52-slashlayer one-shots + legacy stubs)
+## Audio — `audio/` (v0.1.53-wakeblade one-shots + legacy stubs)
+- audio/ironclash/IRONCLASH_02_Sword_Swing_Heavy_04_wake_plus3db.ogg — wake_swing (+3dB baked)
+- audio/ironclash/IRONCLASH_24_Flesh_Hit_Heavy_04_wake_plus3db.ogg — wake_impact (+3dB baked)
 - audio/ironclash/IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg — slash_swing (+3dB baked)
 - audio/ironclash/IRONCLASH_23_Flesh_Hit_Light_08.ogg — slash_impact
-- audio/ironclash/IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg — Wake clash under sting
 - audio/ironclash/IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg — brace
-- audio/lentikula/lentikula_fire_impact_5_short220.ogg — ember / Wake tip
+- audio/lentikula/lentikula_fire_impact_5_short220.ogg — ember / Wake tip (duck under Wake)
 - audio/lentikula/lentikula_heal_impact_4_soften.ogg — soften
 - audio/kenney_ui/click_001.ogg — ui
-- audio/sfx_dice.wav / audio/sfx_legendary_sting.wav / audio/sfx_miss.wav — kept
-- Leftover unused: IRONCLASH_03_…wake380, IRONCLASH_23_…_05
-- See docs/art-audio/IRONCLASH_SFX_v0.1.52.md + docs/slashlayer-v0152.md
+- audio/sfx_dice.wav / audio/sfx_legendary_sting.wav / audio/sfx_miss.wav — kept (sting = Wake lead)
+- Leftover unused: IRONCLASH_03_…wake380, IRONCLASH_28_…wake380, IRONCLASH_23_…_05
+- See docs/art-audio/IRONCLASH_SFX_v0.1.53.md + docs/wakeblade-v0153.md

@@ -72,7 +72,7 @@ class AssetSoundBus(context: Context) : SoundBus {
         try {
             val t = when (key) {
                 IronclashSfx.KEY_DICE -> ToneGenerator.TONE_PROP_BEEP
-                IronclashSfx.KEY_LEGENDARY, IronclashSfx.KEY_WAKE_CLASH ->
+                IronclashSfx.KEY_LEGENDARY, IronclashSfx.KEY_WAKE_IMPACT, IronclashSfx.KEY_WAKE_SWING ->
                     ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD
                 IronclashSfx.KEY_MISS -> ToneGenerator.TONE_PROP_NACK
                 IronclashSfx.KEY_UI -> ToneGenerator.TONE_PROP_ACK
@@ -88,7 +88,8 @@ class AssetSoundBus(context: Context) : SoundBus {
         val clip = when (key) {
             IronclashSfx.KEY_SWING -> IronclashSfx.FILE_SWING
             IronclashSfx.KEY_IMPACT -> IronclashSfx.FILE_IMPACT
-            IronclashSfx.KEY_WAKE_CLASH -> IronclashSfx.FILE_WAKE_CLASH
+            IronclashSfx.KEY_WAKE_SWING -> IronclashSfx.FILE_WAKE_SWING
+            IronclashSfx.KEY_WAKE_IMPACT -> IronclashSfx.FILE_WAKE_IMPACT
             IronclashSfx.KEY_BRACE -> IronclashSfx.FILE_BRACE
             IronclashSfx.KEY_EMBER -> IronclashSfx.FILE_EMBER
             IronclashSfx.KEY_SOFTEN -> IronclashSfx.FILE_SOFTEN
@@ -101,7 +102,8 @@ class AssetSoundBus(context: Context) : SoundBus {
         val role = when (key) {
             IronclashSfx.KEY_SWING -> "swing"
             IronclashSfx.KEY_IMPACT -> "impact"
-            IronclashSfx.KEY_WAKE_CLASH -> "clash"
+            IronclashSfx.KEY_WAKE_SWING -> "wake_swing"
+            IronclashSfx.KEY_WAKE_IMPACT -> "wake_impact"
             IronclashSfx.KEY_LEGENDARY -> "sting"
             else -> key
         }

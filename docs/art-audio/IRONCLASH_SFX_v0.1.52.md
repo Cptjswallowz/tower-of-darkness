@@ -1,3 +1,5 @@
+> Wake mapping superseded by `IRONCLASH_SFX_v0.1.53.md` (wakeblade). slash_swing/slash_impact/brace still valid.
+
 # IRONCLASH SFX — v0.1.52-slashlayer (Art)
 
 Audio-only. Visuals LOCKED (no FX sheets / stroke / PLUME / Kenney pips).

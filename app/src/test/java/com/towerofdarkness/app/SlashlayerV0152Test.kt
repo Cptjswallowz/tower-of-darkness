@@ -8,7 +8,8 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.52-slashlayer — swing+impact layer, Wake Critical stinger clash, brace.
+ * v0.1.52-slashlayer regression — swing+impact layer + brace kept in v0.1.53-wakeblade.
+ * Wake clash assertions removed (superseded by WakebladeV0153Test).
  * Does NOT assert CombatFx stroke changes (LOCKED).
  */
 class SlashlayerV0152Test {
@@ -26,11 +27,6 @@ class SlashlayerV0152Test {
     }
 
     @Test
-    fun tag_isSlashlayerV0152() {
-        assertEquals("v0.1.52-slashlayer", IronclashSfx.TAG)
-    }
-
-    @Test
     fun swingLeadMs_inBand40to80() {
         assertTrue(
             "SWING_LEAD_MS must be in 40–80, was ${IronclashSfx.SWING_LEAD_MS}",
@@ -39,7 +35,7 @@ class SlashlayerV0152Test {
     }
 
     @Test
-    fun roleToFilename_mapExact() {
+    fun roleToFilename_slashAndBraceExact() {
         assertEquals(
             "IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg",
             IronclashSfx.ROLE_TO_FILENAME[IronclashSfx.KEY_SWING]
@@ -51,14 +47,6 @@ class SlashlayerV0152Test {
         assertEquals(
             "IRONCLASH_23_Flesh_Hit_Light_08.ogg",
             IronclashSfx.ROLE_TO_FILENAME["slash_impact"]
-        )
-        assertEquals(
-            "IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg",
-            IronclashSfx.ROLE_TO_FILENAME["wake"]
-        )
-        assertEquals(
-            "IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg",
-            IronclashSfx.ROLE_TO_FILENAME[IronclashSfx.KEY_WAKE_CLASH]
         )
         assertEquals(
             "IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg",
@@ -96,10 +84,6 @@ class SlashlayerV0152Test {
             IronclashSfx.PATH_IMPACT
         )
         assertEquals(
-            "audio/ironclash/IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg",
-            IronclashSfx.PATH_WAKE_CLASH
-        )
-        assertEquals(
             "audio/ironclash/IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg",
             IronclashSfx.PATH_BRACE
         )
@@ -115,11 +99,10 @@ class SlashlayerV0152Test {
     }
 
     @Test
-    fun loadMap_keysIncludeSwingImpactWakeBraceEmberSoftenUiDiceStingMiss() {
+    fun loadMap_keysIncludeSwingImpactBraceEmberSoftenUiDiceStingMiss() {
         val m = IronclashSfx.LOAD_MAP
         assertTrue(m.containsKey(IronclashSfx.KEY_SWING))
         assertTrue(m.containsKey(IronclashSfx.KEY_IMPACT))
-        assertTrue(m.containsKey(IronclashSfx.KEY_WAKE_CLASH))
         assertTrue(m.containsKey(IronclashSfx.KEY_BRACE))
         assertTrue(m.containsKey(IronclashSfx.KEY_EMBER))
         assertTrue(m.containsKey(IronclashSfx.KEY_SOFTEN))
@@ -127,18 +110,18 @@ class SlashlayerV0152Test {
         assertTrue(m.containsKey(IronclashSfx.KEY_DICE))
         assertTrue(m.containsKey(IronclashSfx.KEY_LEGENDARY))
         assertTrue(m.containsKey(IronclashSfx.KEY_MISS))
+        assertFalse("wake_clash unmapped in v0.1.53", m.containsKey("wake_clash"))
         assertEquals(IronclashSfx.PATH_STING, m[IronclashSfx.KEY_LEGENDARY])
         assertEquals(IronclashSfx.PATH_SWING, m[IronclashSfx.KEY_SWING])
     }
 
     @Test
-    fun runtimeAssets_existUnderAudio() {
+    fun runtimeAssets_slashLayerExistUnderAudio() {
         val root = assetsAudio()
         assertTrue(root.isDirectory)
         listOf(
             IronclashSfx.FILE_SWING,
             IronclashSfx.FILE_IMPACT,
-            IronclashSfx.FILE_WAKE_CLASH,
             IronclashSfx.FILE_BRACE,
             IronclashSfx.FILE_EMBER,
             IronclashSfx.FILE_SOFTEN,
@@ -153,11 +136,10 @@ class SlashlayerV0152Test {
     }
 
     @Test
-    fun curatedSource_md5MatchesManifest() {
+    fun curatedSource_slashMd5MatchesManifest() {
         val expected = mapOf(
             "ironclash/IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg" to "fde6b48d4dc8e0c305a28e6008fd3cea",
             "ironclash/IRONCLASH_23_Flesh_Hit_Light_08.ogg" to "54e2c70b9d992a20b6c50c0da6ff3146",
-            "ironclash/IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg" to "d6186f00f278f7f0f13f99f06ed9a19c",
             "ironclash/IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg" to "a0350366bc961ea7e65e050a0a70a8dd",
             "lentikula/lentikula_fire_impact_5_short220.ogg" to "1d24b7056b45b49d8897d48926874d19",
             "lentikula/lentikula_heal_impact_4_soften.ogg" to "248fb43b6f65506649330185bcba0b03",
@@ -200,26 +182,11 @@ class SlashlayerV0152Test {
     }
 
     @Test
-    fun sameFrame_legendaryLayersStingAndWakeClash_ducksEmber() {
-        val frame = IronclashSfx.resolveFrame(
-            listOf(IronclashSfx.KEY_LEGENDARY, IronclashSfx.KEY_EMBER)
-        )
-        val byKey = frame.associate { it.key to it }
-        assertEquals(IronclashSfx.VOL_FULL, byKey[IronclashSfx.KEY_LEGENDARY]?.volume)
-        assertEquals(IronclashSfx.VOL_WAKE_CLASH, byKey[IronclashSfx.KEY_WAKE_CLASH]?.volume)
-        assertEquals(IronclashSfx.VOL_GARNISH_DUCK, byKey[IronclashSfx.KEY_EMBER]?.volume)
-        assertEquals(
-            "IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg",
-            IronclashSfx.FILE_WAKE_CLASH.substringAfter('/')
-        )
-    }
-
-    @Test
-    fun braceAlone_noClash() {
+    fun braceAlone_shieldOnly() {
         val frame = IronclashSfx.resolveFrame(listOf(IronclashSfx.KEY_BRACE))
         assertEquals(1, frame.size)
         assertEquals(IronclashSfx.KEY_BRACE, frame[0].key)
-        assertFalse(frame.any { it.key == IronclashSfx.KEY_WAKE_CLASH })
+        assertFalse(frame.any { it.key == "wake_clash" })
     }
 
     @Test
