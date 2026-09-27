@@ -1,7 +1,6 @@
 # P1 Audio — v0.1.52-slashlayer
 
-Status: **implemented** (P1 Audio remap).  
-**Do not** tag / `gh release` until CoS green after QA. HOLD tag `v0.1.52-slashlayer`.
+Status: **LIVE** — tagged `v0.1.52-slashlayer` @ `fcf9738` (CoS green after QA PASS).
 
 Combat FX art **LOCKED** (stroke / puff / Wake / PLUME / Kenney particles / Floor3 / Hub / shop / combat math / Ashbrand ember math) — untouched.
 
@@ -37,7 +36,7 @@ Curated source: `assets/sfx/ironclash/` (+ licenses). Art doc: `docs/art-audio/I
 
 - No CombatStrokeOverlay / puff hold / Kenney particle pips / skill math / Floor3 / Hub / shop / CombatFx stroke / PLUME / Wake art.
 - Pack zips under `/workspace/tod-sfx-v0151/` **not** committed.
-- Tag **HELD**; push `origin/main` OK (no force).
+- Tag **`v0.1.52-slashlayer`** LIVE; push `origin/main` OK (no force).
 - Real `./gradlew :app:assembleDebug` only.
 
 ## Debug

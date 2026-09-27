@@ -6,7 +6,11 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 ## Status (v0.1.52-slashlayer)
 
-- **v0.1.52-slashlayer:** P1 audio remap — slash_swing+slash_impact layer (60ms lead), heavier Wake clash (Critical stinger under sting), brace unchanged; +3dB baked in swing file. Combat FX stroke LOCKED. Untagged until CoS. Still debug.
+- **v0.1.52-slashlayer:** P1 audio remap — swing+impact layer (60ms lead), heavier Wake clash under sting, Brace shield only; visuals LOCKED. Tagged release. Still debug.
+  - `slash_swing=IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg`
+  - `slash_impact=IRONCLASH_23_Flesh_Hit_Light_08.ogg`
+  - `wake_clash=IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg`
+  - `brace=IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg`
 - **v0.1.51-ironclash:** P1 audio — IRONCLASH impact/clash/brace + Lentikula ember/soften + Kenney UI click; Wake = sting+clash; same-frame Impact full / garnish duck; dice/sting/miss path fix. Combat FX stroke LOCKED. Untagged until CoS. Still debug.
 - **v0.1.50-puffhold:** PLUME ash-puff (Dust/Ash) + footstep (Cinder) + grinder tip; puff/sparks hold **400–500ms** TARGET bust; Soften/Brace Kenney; stroke LOCKED. Untagged until CoS. Still debug.
 - **v0.1.49-plumegarnish:** PLUME (grinder-sparks/sand-kick/footstep-puff) + Kenney (spark/circle/smoke/flare) garnish from assets/fx; Soften under foe; Brace GAIN flare; stroke LOCKED; never ground-fog wall. Tagged release. Still debug.
