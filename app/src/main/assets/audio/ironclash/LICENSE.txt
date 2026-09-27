@@ -1,0 +1,15 @@
+IRONCLASH - Melee Combat & Impact Sounds
+License (v1.0)
+
+YOU MAY use these sounds in unlimited personal and commercial projects, modify and process
+them freely, and ship them without credit.
+
+YOU MAY NOT resell or redistribute the sound files themselves as a sound pack or sample
+library, or upload them to an asset store, stock site or AI training dataset.
+
+Ship them INSIDE your work, not AS the work.
+
+NO WARRANTY.
+
+Provenance note: every file here is the deterministic output of hand-written DSP code.
+There is no third-party audio, no recorded material and no generative-AI audio in the pack.

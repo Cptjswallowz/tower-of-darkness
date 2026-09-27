@@ -539,20 +539,28 @@ class GameController(app: Application) : AndroidViewModel(app) {
         combatJob = viewModelScope.launch { runCombatBeats() }
     }
 
+    /** Play all new CombatEvent sounds since [from]; same-frame Impact wins / garnish ducks. */
+    private fun playLogSounds(s: CombatState, from: Int) {
+        if (from >= s.log.size) return
+        sound.playFrame(s.log.subList(from, s.log.size).map { it.sound })
+    }
+
     private suspend fun runCombatBeats() {
         var s = combatState ?: return
         while (!s.finished) {
             // A — dice tumble
+            val diceFrom = s.log.size
             s = engine.diceTumble(s)
             combatState = s
-            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            playLogSounds(s, diceFrom)
             combatHold(Balance.DICE_MS)
             // B — slot already highlighted
 
             // C — skill
+            val skillFrom = s.log.size
             s = engine.resolveSkill(s)
             combatState = s
-            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            playLogSounds(s, skillFrom)
             val skillMs = if (s.lastFiredCard?.rarity == Rarity.RARE ||
                 s.lastFiredCard?.rarity == Rarity.LEGENDARY
             ) Balance.SKILL_RARE_MS else Balance.SKILL_COMMON_MS
@@ -564,9 +572,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms @1x
             if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
                 val fullWake = s.pendingFullWake
+                val weaponFrom = s.log.size
                 s = engine.resolveWeapon(s)
                 combatState = s
-                s.log.lastOrNull()?.sound?.let { sound.play(it) }
+                playLogSounds(s, weaponFrom)
                 combatHold(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
             }
 
@@ -585,9 +594,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
             }
 
             // F — enemy counter
+            val enemyFrom = s.log.size
             s = engine.resolveEnemy(s)
             combatState = s
-            s.log.lastOrNull()?.sound?.let { sound.play(it) }
+            playLogSounds(s, enemyFrom)
             combatHold(Balance.ENEMY_HOLD_MS)
 
             if (s.finished) break

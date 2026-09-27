@@ -1,0 +1,3 @@
+Lentikula Spell Impacts (fire + healing).
+Source archives (DO NOT commit): Basic_Spell_Impacts.zip, Healing_Spell_Impacts_Pack_by_Lentikula.7z
+Staged under /workspace/tod-sfx-v0151/. Clips here are trimmed/processed one-shots for Tower of Darkness only — not a redistributed pack.

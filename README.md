@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.50-puffhold)
+## Status (v0.1.51-ironclash)
 
+- **v0.1.51-ironclash:** P1 audio — IRONCLASH impact/clash/brace + Lentikula ember/soften + Kenney UI click; Wake = sting+clash; same-frame Impact full / garnish duck; dice/sting/miss path fix. Combat FX stroke LOCKED. Untagged until CoS. Still debug.
 - **v0.1.50-puffhold:** PLUME ash-puff (Dust/Ash) + footstep (Cinder) + grinder tip; puff/sparks hold **400–500ms** TARGET bust; Soften/Brace Kenney; stroke LOCKED. Untagged until CoS. Still debug.
 - **v0.1.49-plumegarnish:** PLUME (grinder-sparks/sand-kick/footstep-puff) + Kenney (spark/circle/smoke/flare) garnish from assets/fx; Soften under foe; Brace GAIN flare; stroke LOCKED; never ground-fog wall. Tagged release. Still debug.
 - **v0.1.48-strokeboth:** filled crescent both ways; strokeWidth player vs enemy (core 0.14/0.18/0.10); peaks 500/450; F3 locked; Wake/Brace frozen. Tagged release. Still debug.

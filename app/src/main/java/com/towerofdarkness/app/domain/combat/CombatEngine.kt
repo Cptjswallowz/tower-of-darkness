@@ -25,7 +25,7 @@ data class CombatEvent(
     val message: String,
     val floating: FloatingText? = null,
     val animStyle: CombatAnimStyle = CombatAnimStyle.QUICK,
-    val sound: String = "hit",
+    val sound: String = "impact",
     val glossaryHints: List<String> = emptyList(),
     val goldLog: Boolean = false,
     /** Presentation only (v0.1.14): Brace absorbed on this hit; 0 = none. */
@@ -109,7 +109,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
         val events = mutableListOf<CombatEvent>()
         if (spent.size >= state.activeCards.size && state.activeCards.isNotEmpty()) {
             spent = emptySet()
-            events += CombatEvent("Cycle reset", sound = "ui")
+            events += CombatEvent("Cycle reset", sound = "")
         }
         events += CombatEvent("Dice tumble…", sound = "dice")
         val live = state.activeCards.filter { it.id !in spent }
@@ -154,7 +154,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 s = s.copy(brace = s.brace + ember.braceIfZeroBefore)
                 allEvents += CombatEvent(
                     "Brace +${ember.braceIfZeroBefore}",
-                    FloatingText("BRACE", true), anim, "card_fire",
+                    FloatingText("BRACE", true), anim, "brace",
                     glossaryHints = listOf("brace"),
                     braceGained = ember.braceIfZeroBefore
                 )
@@ -163,7 +163,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 s = s.copy(counterPenalty = s.counterPenalty + ember.softenIfBeforeGte1)
                 allEvents += CombatEvent(
                     "Counter softened −${ember.softenIfBeforeGte1}",
-                    sound = "ui",
+                    sound = "soften",
                     glossaryHints = listOf("soften"),
                     softenApplied = ember.softenIfBeforeGte1
                 )
@@ -173,7 +173,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 s = s.copy(weapon = w.copy(charge = (w.charge - 1).coerceAtLeast(0)))
                 allEvents += CombatEvent(
                     "Spark spent",
-                    sound = "ui",
+                    sound = "",
                     glossaryHints = listOf("spark")
                 )
             }
@@ -248,7 +248,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 message = "Ashbrand spark ($dmg)",
                 floating = null,
                 animStyle = CombatAnimStyle.QUICK,
-                sound = "card_fire",
+                sound = "ember",
                 goldLog = false,
                 // v0.1.42: CLEAVE hit-flash on foe; icon ember stays WakeArt
                 fxId = CombatFx.ID_ASHBRAND_SPARK,
@@ -282,12 +282,12 @@ class CombatEngine(private val rng: Random = Random.Default) {
         val events = mutableListOf<CombatEvent>()
         if (spent.size >= kit.size && kit.isNotEmpty()) {
             spent = emptySet()
-            events += CombatEvent("Enemy cycle reset", sound = "ui")
+            events += CombatEvent("Enemy cycle reset", sound = "")
         }
         val live = kit.filter { it.id !in spent }
         val skill = pickWeighted(live) { it.weight }
             ?: return state.copy(log = state.log + events, beat = CombatBeat.AFTER_ENEMY)
-        events += CombatEvent("${state.enemy.kind.displayName} winds up…", sound = "ui")
+        events += CombatEvent("${state.enemy.kind.displayName} winds up…", sound = "")
 
         var s = state.copy(
             enemySpentIds = spent + skill.id,
@@ -303,7 +303,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 events += CombatEvent(
                     msg,
                     FloatingText("BRACE $gain", false),
-                    sound = "ui",
+                    sound = "brace",
                     glossaryHints = listOf(skill.glossaryKey, "brace"),
                     fxId = skill.id,
                     fxPlayer = false,
@@ -323,7 +323,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 events += CombatEvent(
                     msg,
                     FloatingText("-$hpDmg", false),
-                    sound = "hit",
+                    sound = "impact",
                     glossaryHints = listOf(skill.glossaryKey, "nip", "soften") +
                         if (absorbed > 0) listOf("brace") else emptyList(),
                     braceAbsorbed = absorbed,
@@ -346,7 +346,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 events += CombatEvent(
                     msg,
                     FloatingText("-$hpDmg", false),
-                    sound = "hit",
+                    sound = "impact",
                     glossaryHints = listOf(skill.glossaryKey) +
                         if (absorbed > 0) listOf("brace") else emptyList(),
                     braceAbsorbed = absorbed,
@@ -433,7 +433,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
     ): Triple<CombatState, List<CombatEvent>, Boolean> {
         val events = mutableListOf<CombatEvent>()
         var s = state
-        val sound = if (card.rarity == Rarity.RARE) "legendary" else "card_fire"
+        val sound = "impact"
         var isAttack = false
 
         when (val e = card.effect) {
@@ -474,7 +474,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     brace += e.brace
                     events += CombatEvent(
                         "Brace +${e.brace}",
-                        FloatingText("BRACE", true), anim, sound,
+                        FloatingText("BRACE", true), anim, "brace",
                         glossaryHints = listOf("brace"),
                         braceGained = e.brace
                     )
@@ -512,7 +512,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 if (e.braceGain > 0) {
                     events += CombatEvent(
                         "Brace +${e.braceGain}",
-                        FloatingText("BRACE", true), anim, sound,
+                        FloatingText("BRACE", true), anim, "brace",
                         glossaryHints = listOf("brace"),
                         braceGained = e.braceGain
                     )
@@ -520,7 +520,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 if (e.counterPenalty > 0) {
                     events += CombatEvent(
                         "Counter softened −${e.counterPenalty}",
-                        sound = "ui",
+                        sound = "soften",
                         glossaryHints = listOf("soften"),
                         softenApplied = e.counterPenalty
                     )
@@ -532,7 +532,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 s = s.copy(brace = s.brace + e.brace)
                 events += CombatEvent(
                     "${card.title}: Brace ${e.brace}",
-                    FloatingText("BRACE ${e.brace}", true), anim, sound,
+                    FloatingText("BRACE ${e.brace}", true), anim, "brace",
                     glossaryHints = listOf("brace"),
                     fxId = card.id, fxPlayer = true,
                     braceGained = e.brace
@@ -544,7 +544,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     s = s.copy(brace = s.brace + e.braceIfFull)
                     events += CombatEvent(
                         "${card.title}: Brace ${e.braceIfFull}",
-                        FloatingText("BRACE", true), anim, sound,
+                        FloatingText("BRACE", true), anim, "brace",
                         glossaryHints = listOf("brace"),
                         fxId = card.id, fxPlayer = true,
                         braceGained = e.braceIfFull
@@ -554,7 +554,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     s = s.copy(playerHp = nh)
                     events += CombatEvent(
                         "${card.title}: +${e.heal} HP",
-                        FloatingText("+${e.heal}", true), anim, sound,
+                        FloatingText("+${e.heal}", true), anim, "",
                         fxId = card.id, fxPlayer = true
                     )
                 }
