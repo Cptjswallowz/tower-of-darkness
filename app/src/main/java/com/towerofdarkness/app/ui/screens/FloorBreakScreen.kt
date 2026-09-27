@@ -33,7 +33,7 @@ fun FloorBreakScreen(gc: GameController) {
         Text("The stair turns.", color = Gold, fontSize = 22.sp)
         Spacer(Modifier.height(12.dp))
         Text(
-            "HP ${gc.playerHp} · ${gc.runWallet} rem · Ashbrand Lv${gc.equippedWeapon.level}",
+            "HP ${gc.playerHp} · purse ${gc.runWallet} · Ashbrand Lv${gc.equippedWeapon.level}",
             color = Bone.copy(0.7f),
             fontSize = 13.sp
         )

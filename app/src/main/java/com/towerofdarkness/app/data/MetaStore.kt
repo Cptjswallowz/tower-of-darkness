@@ -44,6 +44,28 @@ class MetaStore(private val context: Context) {
         }
     }
 
+    /**
+     * v0.1.56-bankone: one DataStore edit for Kept payout + trophy unlocks.
+     * Prevents partial write (trophies kept / bank missing or vice versa).
+     * Returns prev / add / now for BANK write log.
+     */
+    suspend fun commitSummaryBank(kept: Int, trophyIds: List<String>): SummaryBankWrite {
+        var prev = 0
+        var now = 0
+        context.dataStore.edit { prefs ->
+            prev = prefs[KEY_REMNANTS] ?: 0
+            val add = kept.coerceAtLeast(0)
+            now = (prev + add).coerceAtLeast(0)
+            prefs[KEY_REMNANTS] = now
+            if (trophyIds.isNotEmpty()) {
+                val cur = (prefs[KEY_UNLOCKED] ?: CardCatalog.starterUnlockedIds()).toMutableSet()
+                cur += trophyIds
+                prefs[KEY_UNLOCKED] = cur
+            }
+        }
+        return SummaryBankWrite(prev = prev, add = kept.coerceAtLeast(0), now = now)
+    }
+
     suspend fun spendRemnants(amount: Int): Boolean {
         var ok = false
         context.dataStore.edit {
@@ -101,3 +123,6 @@ class MetaStore(private val context: Context) {
         context.dataStore.edit { it.remove(KEY_MIDRUN) }
     }
 }
+
+/** Result of [MetaStore.commitSummaryBank] for BANK write log. */
+data class SummaryBankWrite(val prev: Int, val add: Int, val now: Int)

@@ -103,7 +103,6 @@ class HubsplitV0155Test {
     fun partC_goMenuAndGoHub_awaitLeaveRunSummary() {
         val gc = gcSource()
         assertTrue(gc.contains("fun leaveRunSummary"))
-        assertTrue(gc.contains("summaryCommitJob?.join()"))
         assertTrue(gc.contains("SummaryBankCommit.apply"))
         // goMenu from Summary must not bare-nav
         val goMenu = gc.substringAfter("fun goMenu()").substringBefore("fun goHub()")
@@ -114,12 +113,14 @@ class HubsplitV0155Test {
         )
         val goHub = gc.substringAfter("fun goHub()").substringBefore("fun leaveRunSummary")
         assertTrue(goHub.contains("leaveRunSummary(NavState.MetaHub)"))
-        // finishRun tracks commit job; mid-run clear on leave
+        // v0.1.56: leave launches one-txn commit; mid-run clear on leave
         assertTrue(gc.contains("summaryCommitJob = viewModelScope.launch"))
         assertTrue(gc.contains("meta.clearMidRunSlot()"))
+        assertTrue(gc.contains("commitSummaryBank"))
         val leave = gc.substringAfter("fun leaveRunSummary").substringBefore("fun continueClimb")
         assertTrue(leave.contains("clearMidRunSlot"))
-        assertTrue(leave.contains("summaryCommitJob?.join()"))
+        assertTrue(leave.contains("commitSummaryBank"))
+        assertTrue(leave.contains("bankWriteLogLine"))
     }
 
     // --- PART B: Hub Relics / sections ---

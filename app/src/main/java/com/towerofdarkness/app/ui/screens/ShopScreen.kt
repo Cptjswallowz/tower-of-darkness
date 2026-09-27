@@ -27,7 +27,7 @@ fun ShopScreen(gc: GameController) {
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Shop", color = Gold, fontSize = 22.sp)
         Text(
-            "HP ${gc.playerHp} / $maxHp · ${gc.runWallet} rem",
+            "HP ${gc.playerHp} / $maxHp · purse ${gc.runWallet}",
             color = Bone,
             fontSize = 14.sp
         )

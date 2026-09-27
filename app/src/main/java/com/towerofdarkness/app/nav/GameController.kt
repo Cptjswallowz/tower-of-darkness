@@ -1,6 +1,7 @@
 package com.towerofdarkness.app.nav
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -164,8 +165,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var summary by mutableStateOf<RunSummaryData?>(null)
         private set
-    /** v0.1.55 PART C — MetaStore bank+trophy write launched in finishRun; leave awaits. */
+    /** v0.1.55/56 — MetaStore bank+trophy write; leaveRunSummary awaits / performs one txn. */
     private var summaryCommitJob: Job? = null
+    /** Guard: Kept payout applied to MetaStore once per summary sheet. */
+    private var summaryBankWritten: Boolean = false
     var glossaryTerm by mutableStateOf<String?>(null)
         private set
     var weightHitchCardId by mutableStateOf<String?>(null)
@@ -249,15 +252,33 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     /**
      * Leave Run Summary only after bank + trophy unlocks are committed.
-     * Used by Continue (Hub) and Menu — both paths clear mid-run then navigate.
+     * v0.1.56-bankone: Continue and Menu both one-txn bank+=Kept + trophies, log, then nav.
      */
     fun leaveRunSummary(dest: NavState) {
-        viewModelScope.launch {
-            summaryCommitJob?.join()
-            summaryCommitJob = null
-            // Re-sync local from store so post-leave bank == bankBefore + Kept.
-            remnantsBank = meta.remnantsBank.first()
-            unlockedCards = meta.unlockedCards.first()
+        val source = when (dest) {
+            NavState.MetaHub -> "continue"
+            NavState.MainMenu -> "menu"
+            else -> "menu"
+        }
+        // Claim write synchronously so double-tap Menu/Continue cannot double-add Kept.
+        val sheet = summary
+        val shouldWrite = sheet != null && !summaryBankWritten
+        if (shouldWrite) summaryBankWritten = true
+        summaryCommitJob = viewModelScope.launch {
+            if (shouldWrite) {
+                val s = requireNotNull(sheet)
+                val write = meta.commitSummaryBank(s.kept, s.newTrophyIds)
+                Log.i(
+                    "BANK",
+                    SummaryBankCommit.bankWriteLogLine(write.prev, write.add, write.now, source)
+                )
+                remnantsBank = write.now
+                unlockedCards = meta.unlockedCards.first()
+            } else {
+                // Already committed (or no sheet) — re-sync local from store.
+                remnantsBank = meta.remnantsBank.first()
+                unlockedCards = meta.unlockedCards.first()
+            }
             meta.clearMidRunSlot()
             hasMidRunSlot = false
             summary = null
@@ -345,6 +366,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorRumors = emptyList()
         climbKept = ClimbKeptFlags()
         pendingNodeId = null
+        // v0.1.56-bankone: purse (run_wallet) starts 0; remnants_bank MUST NOT be zeroed.
         runWallet = 0
         runRemnantsEarned = 0
         playerHp = climbMaxHp
@@ -396,6 +418,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorRumors = emptyList()
         climbKept = ClimbKeptFlags()
         pendingNodeId = null
+        // v0.1.56-bankone: purse (run_wallet) starts 0; remnants_bank MUST NOT be zeroed.
         runWallet = 0
         runRemnantsEarned = 0
         unlocksThisRun = emptySet()
@@ -427,6 +450,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorRumors = emptyList()
         climbKept = ClimbKeptFlags()
         pendingNodeId = null
+        // v0.1.56-bankone: purse (run_wallet) starts 0; remnants_bank MUST NOT be zeroed.
         runWallet = 0
         runRemnantsEarned = 0
         unlocksThisRun = emptySet()
@@ -1309,19 +1333,14 @@ class GameController(app: Application) : AndroidViewModel(app) {
             bankBefore = bankBefore,
             newTrophyIds = payout.newTrophyIds
         )
-        // Fire MetaStore writes; leaveRunSummary awaits this job before nav.
-        // Also apply optimistic local bank/unlocks so Hub CTA sees them if flow lags.
+        // Optimistic local bank/unlocks for sheet UI; MetaStore one-txn on leave (Continue|Menu).
         remnantsBank = committed.remnantsBank
         unlockedCards = committed.unlocks
-        summaryCommitJob = viewModelScope.launch {
-            for (id in payout.newTrophyIds) {
-                meta.unlockCard(id)
-            }
-            if (payout.kept > 0) meta.addRemnants(payout.kept)
-        }
+        summaryBankWritten = false
+        summaryCommitJob = null
         runWallet = 0
         pendingStartBrace = 0
-        // Mid-run clear deferred to leaveRunSummary (Menu + Continue both clear).
+        // Mid-run clear + BANK write deferred to leaveRunSummary (Menu + Continue both commit).
         nav = NavState.RunSummary
     }
 

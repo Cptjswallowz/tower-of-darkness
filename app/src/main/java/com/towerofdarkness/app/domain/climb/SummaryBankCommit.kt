@@ -23,4 +23,14 @@ object SummaryBankCommit {
     /** Post-leave invariant: bank after leave == bank before sheet + Kept shown. */
     fun bankInvariant(bankBefore: Int, keptShown: Int, bankAfter: Int): Boolean =
         bankAfter == bankBefore + keptShown
+
+    /** v0.1.56-bankone — exact log line after MetaStore commit. source = continue|menu */
+    fun bankWriteLogLine(prev: Int, add: Int, now: Int, source: String): String =
+        "BANK write prev=$prev add=$add now=$now source=$source"
+
+    fun leaveSource(destName: String): String = when (destName) {
+        "MetaHub" -> "continue"
+        "MainMenu" -> "menu"
+        else -> "menu"
+    }
 }
