@@ -139,3 +139,7 @@ Hub buys still spend `remnants_bank` immediately (unchanged).
 | 2026-09-27 | Meta lock from CoS WO v0.1.55-hubsplit PART B |
 
 **Related:** v0.1.56-bankone — Title/Hub bank getter + Summary commit txn. See `bankone-v0156.md`.
+
+---
+
+**Follow-on:** Scrap pouch + relic combat/summary effects + Forge Rest/Shop — [`forge-v0158.md`](forge-v0158.md).

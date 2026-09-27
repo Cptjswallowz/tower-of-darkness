@@ -21,7 +21,12 @@ import com.towerofdarkness.app.domain.climb.ClimbKept
 import com.towerofdarkness.app.domain.climb.ClimbKeptFlags
 import com.towerofdarkness.app.domain.climb.FloorRumors
 import com.towerofdarkness.app.domain.climb.KeptLine
+import com.towerofdarkness.app.domain.climb.ScrapGrant
+import com.towerofdarkness.app.domain.climb.ScrapPouch
 import com.towerofdarkness.app.domain.climb.SummaryBankCommit
+import com.towerofdarkness.app.domain.forge.Forge
+import com.towerofdarkness.app.domain.forge.ForgeBranch
+import com.towerofdarkness.app.domain.forge.ForgeSkillState
 import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.CombatBeat
@@ -140,6 +145,23 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var runWallet by mutableStateOf(0)
         private set
+    /** v0.1.58 run-only scrap (never MetaStore / remnants_bank). */
+    var scrapGoblin by mutableStateOf(0)
+        private set
+    var scrapOrc by mutableStateOf(0)
+        private set
+    /** v0.1.58 forge levels/picks — run-scoped. */
+    var forgeStates by mutableStateOf<Map<String, ForgeSkillState>>(emptyMap())
+        private set
+    /** Floor where Troll Tooth already spent; 0 = unused this climb. */
+    private var trollToothFloor: Int = 0
+    private var trollToothArmedFight: Boolean = false
+    /** Forge sheet open on Rest/Shop. */
+    var forgeOpen by mutableStateOf(false)
+        private set
+    /** Skill id awaiting A/B pick; null = skill list. */
+    var forgePickCardId by mutableStateOf<String?>(null)
+        private set
     var playerHp by mutableStateOf(Balance.PLAYER_MAX_HP)
         private set
     var nodesCleared by mutableStateOf(0)
@@ -183,6 +205,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
      */
     val climbMaxHp: Int
         get() = HubOffers.climbMaxHp(Balance.PLAYER_MAX_HP, metaHpBonus, unlockedCards)
+
+    /** Exact floor HUD: HP N · purse N · gN oN */
+    fun scrapHudLine(hp: Int = playerHp): String =
+        ScrapPouch.hudLine(hp, runWallet, scrapGoblin, scrapOrc)
+
+    fun scrapHudLineWithMax(hp: Int = playerHp, maxHp: Int = climbMaxHp): String =
+        ScrapPouch.hudLineWithMax(hp, maxHp, runWallet, scrapGoblin, scrapOrc)
     /**
      * Warm Ash: Brace applied into first CombatState of the climb, then cleared.
      * Not re-granted on FloorBreak or mid-run resume.
@@ -383,8 +412,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         // v0.1.28-hubkeep: Scout if owned; rumor = baseline 1/floor + Extra stack
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
-        // v0.1.29-hubmore: Warm Ash Brace into first combat only
-        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
+        // v0.1.58: scrap pouch + Warm Ash/Pauldron brace stack
+        applyClimbStartRelicsAndScrap()
         summary = null
         combatState = null
         clearMidRunSlotAsync()
@@ -395,6 +424,25 @@ class GameController(app: Application) : AndroidViewModel(app) {
     private fun resetRunIdentity() {
         runId = java.util.UUID.randomUUID().toString()
         runRngSeed = Random.Default.nextLong()
+    }
+
+    /** Climb start: zero scrap then Soot Rim +1g; clear forge; set brace stack. */
+    private fun applyClimbStartRelicsAndScrap() {
+        scrapGoblin = 0
+        scrapOrc = 0
+        forgeStates = emptyMap()
+        trollToothFloor = 0
+        forgeOpen = false
+        forgePickCardId = null
+        scrapGoblin = ScrapPouch.climbStartGoblin(unlockedCards)
+        pendingStartBrace = HubOffers.climbStartBrace(unlockedCards)
+    }
+
+    private fun grantScrap(grant: ScrapGrant) {
+        if (grant.goblin == 0 && grant.orc == 0) return
+        val (g, o) = ScrapPouch.applyGrant(scrapGoblin, scrapOrc, grant)
+        scrapGoblin = g
+        scrapOrc = o
     }
 
     // --- Tutorial ---
@@ -434,7 +482,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         weightHitchCardId = null
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
-        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
+        applyClimbStartRelicsAndScrap()
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -466,7 +514,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         weightHitchCardId = null
         freeScoutCharges = HubOffers.freeScoutChargesAtClimbStart(unlockedCards)
         rumorRerolls = HubOffers.rumorRerollsAtClimbStart(unlockedCards)
-        pendingStartBrace = HubOffers.warmAshBraceAtClimbStart(unlockedCards)
+        applyClimbStartRelicsAndScrap()
         combatState = null
         clearMidRunSlotAsync()
         nav = NavState.Path
@@ -608,18 +656,25 @@ class GameController(app: Application) : AndroidViewModel(app) {
         } else {
             hallwayEnemyFromCurrentNode(floor)
         }
-        val cards = effectiveLoadout()
+        val cards = Forge.applyLoadout(effectiveLoadout(), forgeStates)
         val maxHp = climbMaxHp
         val startBrace = pendingStartBrace
         pendingStartBrace = 0
+        val toothReady = ClimbKept.ID_TROLL_TOOTH in unlockedCards && trollToothFloor != floor
+        val weightBoost = forgeStates.filter { (id, st) ->
+            id == Forge.ID_DUST_VEIL && st.level >= 3 && st.l3 == ForgeBranch.B
+        }.keys
         combatState = engine.start(
             activeCards = cards,
             enemy = enemy,
             weapon = equippedWeapon.copy(charge = 0),
             maxHp = maxHp,
             playerHp = playerHp.coerceAtMost(maxHp),
-            initialBrace = startBrace
+            initialBrace = startBrace,
+            trollToothReady = toothReady,
+            pendingWeightBoostIds = weightBoost
         )
+        trollToothArmedFight = toothReady
         nav = NavState.Combat
         sound.play("dice")
         combatJob?.cancel()
@@ -889,7 +944,27 @@ class GameController(app: Application) : AndroidViewModel(app) {
             ShopOffer("heal_mid", "Mid Heal (+15)", 10, "heal_mid"),
             ShopOffer("card_swap", "Card Swap", 12, "card_swap"),
             ShopOffer("heal_full", "Full Heal", 15, "heal_full"),
-            ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus")
+            ShopOffer("card_swap_plus", "Premium Swap", 14, "card_swap_plus"),
+            // v0.1.58 scrap piles (always one each per shop gen)
+            ShopOffer(
+                ScrapPouch.SHOP_GOBLIN_PILE_ID, ScrapPouch.SHOP_GOBLIN_PILE_TITLE,
+                ScrapPouch.SHOP_GOBLIN_PILE_COST, "goblin_pile"
+            ),
+            ShopOffer(
+                ScrapPouch.SHOP_ORC_PILE_ID, ScrapPouch.SHOP_ORC_PILE_TITLE,
+                ScrapPouch.SHOP_ORC_PILE_COST, "orc_pile"
+            )
+        )
+
+        fun scrapPileOffers(): List<ShopOffer> = listOf(
+            ShopOffer(
+                ScrapPouch.SHOP_GOBLIN_PILE_ID, ScrapPouch.SHOP_GOBLIN_PILE_TITLE,
+                ScrapPouch.SHOP_GOBLIN_PILE_COST, "goblin_pile"
+            ),
+            ShopOffer(
+                ScrapPouch.SHOP_ORC_PILE_ID, ScrapPouch.SHOP_ORC_PILE_TITLE,
+                ScrapPouch.SHOP_ORC_PILE_COST, "orc_pile"
+            )
         )
 
         /**
@@ -898,7 +973,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
          */
         fun generateShopOffers(wallet: Int, seed: Int): List<ShopOffer> {
             val r = Random(seed)
-            val catalog = shopCatalog()
+            val catalog = shopCatalog().filter { it.kind !in setOf("goblin_pile", "orc_pile") }
             val picked = mutableListOf<ShopOffer>()
             val usedKinds = mutableSetOf<String>()
             var attempts = 0
@@ -939,7 +1014,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
                     picked += healSmall.copy(id = "heal_small_wallet")
                 }
             }
-            return picked
+            // v0.1.58: one Goblin pile + one Orc pile per shop generation
+            return picked.filter { it.kind !in setOf("goblin_pile", "orc_pile") } + scrapPileOffers()
         }
 
         fun nextWeaponLevelAfterFight(
@@ -1023,6 +1099,11 @@ class GameController(app: Application) : AndroidViewModel(app) {
     private fun onCombatEnd(s: CombatState) {
         val boss = s.enemy.isBoss
         val floor = path?.floor ?: 1
+        // Sync Troll Tooth spent when it fired this fight
+        if (trollToothArmedFight && !s.trollToothReady) {
+            trollToothFloor = floor
+        }
+        trollToothArmedFight = false
         if (s.playerWon) {
             // v0.1.54 climb_kept flags
             if (floor == 1) {
@@ -1037,6 +1118,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
             if (boss && "boss_bonus_2" in unlockedCards) gain += 2
             gainRemnants(gain)
+            grantScrap(ScrapPouch.dropForKill(s.enemy.kind, boss, rng))
             if (boss) {
                 path = path?.markCurrentCleared()
                 when (afterBossWinNav(floor)) {
@@ -1077,6 +1159,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         summary = null
         // v0.1.28-hubkeep: FloorBreak → next floor adds baseline 1 + Extra stack
         rumorRerolls += HubOffers.rumorRerollsOnFloorAdvance(unlockedCards)
+        // v0.1.58: Troll Tooth once-flag resets on floor advance
+        trollToothFloor = 0
         // v0.1.54 climb_kept entered flags
         if (nextFloor >= 2) {
             climbKept = climbKept.copy(floor2Entered = true)
@@ -1127,6 +1211,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
             "heal_full" -> playerHp = maxHp
             "rumor_peek" -> scoutAdjacent()
             "card_swap", "card_swap_plus" -> { /* UI handles swap sheet simply: auto-swap last */ autoSwap() }
+            "goblin_pile" -> grantScrap(ScrapGrant(goblin = ScrapPouch.SHOP_GOBLIN_PILE_GRANT_G))
+            "orc_pile" -> grantScrap(ScrapGrant(orc = ScrapPouch.SHOP_ORC_PILE_GRANT_O))
         }
         sound.play("ui")
     }
@@ -1140,6 +1226,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun leaveShop() {
+        closeForge()
         val nodeId = path?.currentId
         val floor = path?.floor ?: 1
         if (nodeId != null) {
@@ -1157,6 +1244,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun restHeal() {
+        closeForge()
         val maxHp = climbMaxHp
         // v0.1.10-bossrest: Rest Heal fills to MAX; Deep Breath does not overheal
         playerHp = applyRestHealToMax(maxHp)
@@ -1164,13 +1252,69 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun restScout() {
+        closeForge()
         scoutAdjacent()
         returnToPathAfterResolve()
     }
 
     /** Leave Rest without Heal/Scout. */
     fun leaveRest() {
+        closeForge()
         returnToPathAfterResolve()
+    }
+
+    // --- Forge (Rest + Shop only) v0.1.58 ---
+    fun openForge() {
+        if (nav != NavState.Rest && nav != NavState.Shop) return
+        forgeOpen = true
+        forgePickCardId = null
+    }
+
+    fun closeForge() {
+        forgeOpen = false
+        forgePickCardId = null
+    }
+
+    fun forgeSelectSkill(cardId: String) {
+        if (!forgeOpen) return
+        val row = Forge.rows(loadout, forgeStates, scrapGoblin, scrapOrc)
+            .find { it.cardId == cardId } ?: return
+        if (!row.enabled) return
+        forgePickCardId = cardId
+    }
+
+    fun forgeCancelPick() {
+        forgePickCardId = null
+    }
+
+    /** Confirm A/B chip — spends scrap only on confirm. Cancel spends nothing. */
+    fun forgeConfirmChoice(branch: ForgeBranch) {
+        val id = forgePickCardId ?: return
+        if (!Forge.isForgeable(id)) return
+        val st = Forge.stateOf(forgeStates, id)
+        if (st.level >= Forge.MAX_LEVEL) return
+        val spent = if (st.level == 1) {
+            Forge.spendL2(scrapGoblin, scrapOrc) ?: return
+        } else {
+            Forge.spendL3(scrapGoblin, scrapOrc) ?: return
+        }
+        scrapGoblin = spent.first
+        scrapOrc = spent.second
+        val next = if (st.level == 1) st.withL2(branch) else st.withL3(branch)
+        forgeStates = forgeStates + (id to next)
+        forgePickCardId = null
+        sound.play("ui")
+    }
+
+    fun forgeChoicesForSelected(): List<com.towerofdarkness.app.domain.forge.ForgeChoice> {
+        val id = forgePickCardId ?: return emptyList()
+        val card = loadout.find { it.id == id } ?: return emptyList()
+        return Forge.choicesFor(card, Forge.stateOf(forgeStates, id))
+    }
+
+    fun forgeGlossaryFor(cardId: String): String {
+        val card = loadout.find { it.id == cardId } ?: CardCatalog.byId(cardId) ?: return ""
+        return Forge.glossaryBody(card, Forge.stateOf(forgeStates, cardId))
     }
 
     /**
@@ -1268,6 +1412,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     fun treasureRemnants() {
         clearTreasureVisit()
         gainRemnants(Balance.TREASURE_REMNANTS)
+        grantScrap(ScrapPouch.dropTreasure(rng))
         returnToPathAfterResolve()
     }
 
@@ -1349,6 +1494,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
         summaryCommitJob = null
         runWallet = 0
         pendingStartBrace = 0
+        // v0.1.58: scrap + forge levels die with climb (never banked)
+        scrapGoblin = 0
+        scrapOrc = 0
+        forgeStates = emptyMap()
+        trollToothFloor = 0
+        closeForge()
         // Mid-run clear + BANK write deferred to leaveRunSummary (Menu + Continue both commit).
         nav = NavState.RunSummary
     }
@@ -1461,7 +1612,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
             seenF3Explainer = seenF3Explainer,
             floorLoadout = floorLoadout,
             floorRumors = floorRumors,
-            climbKept = climbKept
+            climbKept = climbKept,
+            scrapGoblin = scrapGoblin,
+            scrapOrc = scrapOrc,
+            forgeLevels = Forge.encodeLevels(forgeStates),
+            forgeBranches = Forge.encodeBranches(forgeStates),
+            trollToothFloor = trollToothFloor
         )
     }
 
@@ -1481,6 +1637,14 @@ class GameController(app: Application) : AndroidViewModel(app) {
         showF3Explainer = false
         floorRumors = slot.floorRumors
         climbKept = ClimbKeptFlags.migrate(slot.climbKept, slot.floor)
+        scrapGoblin = slot.scrapGoblin
+        scrapOrc = slot.scrapOrc
+        forgeStates = slot.forgeLevels.mapValues { (id, lvl) ->
+            Forge.decodeState(lvl, slot.forgeBranches[id])
+        }
+        trollToothFloor = slot.trollToothFloor
+        forgeOpen = false
+        forgePickCardId = null
         // F3+ locked floor loadout is authoritative for the five + weapon
         slot.floorLoadout?.takeIf { it.locked && it.floor == slot.floor }?.let { fl ->
             loadout = fl.cardIds.mapNotNull { CardCatalog.byId(it) }

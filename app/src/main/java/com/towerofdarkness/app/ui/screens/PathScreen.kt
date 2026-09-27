@@ -51,7 +51,7 @@ fun PathScreen(gc: GameController) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Floor ${path?.floor ?: 1}", color = Gold, fontSize = 20.sp)
-                Text("HP ${gc.playerHp} · purse ${gc.runWallet}", color = Bone, fontSize = 13.sp)
+                Text(gc.scrapHudLine(), color = Bone, fontSize = 13.sp)
             }
             Text(
                 when {

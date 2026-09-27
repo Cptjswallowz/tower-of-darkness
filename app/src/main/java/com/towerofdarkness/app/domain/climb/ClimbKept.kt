@@ -72,7 +72,7 @@ object ClimbKept {
      */
     /**
      * @param won victory-only "The seal breaks +3". Death: no seal line; other totals unchanged.
-     * Clear win (all climb lines, no Tithe) = 15.
+     * Clear win (all climb lines, no Tithe) = 16 (15 + Gate Sigil +1).
      */
     fun finishPayout(flags: ClimbKeptFlags, unlocks: Set<String>, won: Boolean = false): KeptPayout {
         val lines = mutableListOf<KeptLine>()
@@ -86,16 +86,19 @@ object ClimbKept {
         if (HubOffers.ID_ASH_TITHE in unlocks) {
             lines += KeptLine("ash_tithe", "Ash Tithe", HubOffers.ASH_TITHE_BONUS)
         }
-        val kept = lines.sumOf { it.amount }
-
+        // v0.1.58-forge: Gate Sigil +1 on win OR death if owned OR newly earned this climb
         val candidates = mutableListOf<Pair<String, String>>()
         if (flags.floor2Entered) candidates += ID_SOOT_RIM to NAME_SOOT_RIM
         if (flags.floor3Entered) candidates += ID_ASH_PAULDRON to NAME_ASH_PAULDRON
         if (flags.caveTrollKilled) candidates += ID_TROLL_TOOTH to NAME_TROLL_TOOTH
         if (flags.gateWardenBeaten) candidates += ID_GATE_SIGIL to NAME_GATE_SIGIL
-
         val newIds = candidates.map { it.first }.filter { it !in unlocks }
         val newNames = candidates.filter { it.first !in unlocks }.map { it.second }
+        val gateOwnedOrEarned = ID_GATE_SIGIL in unlocks || ID_GATE_SIGIL in newIds
+        if (gateOwnedOrEarned) {
+            lines += KeptLine("gate_sigil", "Gate Sigil", 1)
+        }
+        val kept = lines.sumOf { it.amount }
 
         return KeptPayout(
             kept = kept,

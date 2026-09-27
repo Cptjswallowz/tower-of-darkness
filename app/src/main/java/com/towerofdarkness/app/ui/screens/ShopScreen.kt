@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -24,10 +26,20 @@ fun ShopScreen(gc: GameController) {
     val maxHp = gc.climbMaxHp
     val hpFull = gc.playerHp >= maxHp
     val emptyWallet = GameController.shopShowsEmptyState(gc.runWallet)
-    Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
+    if (gc.forgeOpen) {
+        ForgeSheet(gc)
+        return
+    }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(VoidBg)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text("Shop", color = Gold, fontSize = 22.sp)
         Text(
-            "HP ${gc.playerHp} / $maxHp · purse ${gc.runWallet}",
+            gc.scrapHudLineWithMax(),
             color = Bone,
             fontSize = 14.sp
         )
@@ -57,6 +69,10 @@ fun ShopScreen(gc: GameController) {
             }
             Spacer(Modifier.height(16.dp))
         }
+        Button(onClick = { gc.openForge() }, modifier = Modifier.fillMaxWidth()) {
+            Text("Forge")
+        }
+        Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = { gc.leaveShop() }, modifier = Modifier.fillMaxWidth()) {
             Text("Leave")
         }

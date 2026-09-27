@@ -268,3 +268,7 @@ Hub prices / offer ids **unchanged** (Scout…Echo Lesson ladder).
 ---
 
 **Follow-on (v0.1.57):** Victory-only `"The seal breaks" +3` (full clear 15); Title bank from disk — [`titlebank-v0157.md`](titlebank-v0157.md).
+
+---
+
+**Follow-on:** Scrap pouch + relic combat/summary effects + Forge Rest/Shop — [`forge-v0158.md`](forge-v0158.md).

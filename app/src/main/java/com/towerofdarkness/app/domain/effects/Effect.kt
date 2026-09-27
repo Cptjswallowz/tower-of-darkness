@@ -49,7 +49,11 @@ sealed class SkillEffect : Effect() {
         override val rarity: Rarity,
         val damage: Int,
         val brace: Int,
-        val minPips: Int = 1
+        val minPips: Int = 1,
+        /** v0.1.58 forge: Soften after fire (damage template L2B). */
+        val extraSoften: Int = 0,
+        /** v0.1.58 forge: Brace after fire (damage template L3B). */
+        val afterFireBrace: Int = 0
     ) : SkillEffect()
 
     /**
@@ -70,7 +74,11 @@ sealed class SkillEffect : Effect() {
         /** After spark charge: if pipsBefore ≥ 1, add Soften (counterPenalty). */
         val softenIfBeforeGte1: Int = 0,
         /** After spark charge: if pipsBefore ≥ 1, spend 1 Spark and log "Spark spent". */
-        val titheSpendIfBeforeGte1: Boolean = false
+        val titheSpendIfBeforeGte1: Boolean = false,
+        /** v0.1.58 forge: Soften after fire (damage template L2B). */
+        val extraSoften: Int = 0,
+        /** v0.1.58 forge: Brace after fire (damage template L3B). */
+        val afterFireBrace: Int = 0
     ) : SkillEffect()
 }
 
@@ -81,7 +89,11 @@ sealed class Equipment : Effect() {
         override val name: String,
         override val description: String,
         override val rarity: Rarity,
-        val brace: Int
+        val brace: Int,
+        /** v0.1.58 forge: when this grants Brace, also deal N. */
+        val onBraceDeal: Int = 0,
+        /** v0.1.58 forge: after this fires, Soften N. */
+        val afterFireSoften: Int = 0
     ) : Equipment()
 
     data class HealOrBrace(

@@ -137,16 +137,18 @@ class BankoneV0156Test {
         val path = pathSource()
         val brk = floorBreakSource()
         val shop = shopSource()
-        assertTrue("Path HUD uses purse", path.contains("purse ${'$'}{gc.runWallet}"))
-        assertTrue("FloorBreak HUD uses purse", brk.contains("purse ${'$'}{gc.runWallet}"))
-        assertTrue("Shop HUD uses purse", shop.contains("purse ${'$'}{gc.runWallet}"))
-        assertFalse(path.contains("${'$'}{gc.runWallet} rem"))
-        assertFalse(brk.contains("${'$'}{gc.runWallet} rem"))
-        assertFalse(shop.contains("${'$'}{gc.runWallet} rem"))
+        // v0.1.58: HUD via scrapHudLine / scrapHudLineWithMax — still purse, never rem/remnants
+        assertTrue("Path HUD uses scrapHudLine (purse)", path.contains("scrapHudLine()"))
+        assertTrue("FloorBreak HUD uses scrapHudLine", brk.contains("scrapHudLine()"))
+        assertTrue("Shop HUD uses scrapHudLineWithMax", shop.contains("scrapHudLineWithMax()"))
+        assertFalse(path.contains(" rem"))
+        assertFalse(brk.contains(" rem"))
         assertFalse(path.lowercase().contains(" remnant"))
         assertFalse(brk.lowercase().contains(" remnant"))
-        val shopHud = shop.lines().first { it.contains("purse") || (it.contains("HP") && it.contains("maxHp")) }
-        assertTrue(shopHud.contains("purse"))
-        assertFalse(shopHud.contains(" rem\""))
+        val scrap = java.io.File("app/src/main/java/com/towerofdarkness/app/domain/climb/ScrapPouch.kt").takeIf { it.isFile }
+            ?: java.io.File("src/main/java/com/towerofdarkness/app/domain/climb/ScrapPouch.kt")
+        val scrapText = scrap.readText()
+        assertTrue(scrapText.contains("HP \$hp · purse \$purse · g\$goblin o\$orc"))
     }
+
 }

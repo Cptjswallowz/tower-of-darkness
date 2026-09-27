@@ -93,7 +93,9 @@ class TitlebankV0157Test {
             gateWardenBeaten = true
         )
         val win = ClimbKept.finishPayout(flags, emptySet(), won = true)
-        assertEquals(15, win.kept)
+        // v0.1.58: clear 15 + Gate Sigil +1 = 16
+        assertEquals(16, win.kept)
+        assertTrue(win.lines.any { it.id == "gate_sigil" && it.amount == 1 && it.label == "Gate Sigil" })
         assertTrue(win.lines.any { it.id == "seal_breaks" && it.amount == 3 && it.label == "The seal breaks" })
 
         val death = ClimbKept.finishPayout(flags.copy(gateWardenBeaten = false), emptySet(), won = false)

@@ -148,6 +148,19 @@ object HubOffers {
     fun warmAshBraceAtClimbStart(unlocks: Set<String>): Int =
         if (ID_WARM_ASH in unlocks) WARM_ASH_BRACE else 0
 
+    /**
+     * Climb-start Brace: Warm Ash (2) + Ash Pauldron (+1), stacks.
+     * v0.1.58-forge PART A. Mid-run resume must NOT re-grant.
+     */
+    const val ASH_PAULDRON_BRACE = 1
+    fun climbStartBrace(unlocks: Set<String>): Int {
+        var n = warmAshBraceAtClimbStart(unlocks)
+        if (com.towerofdarkness.app.domain.climb.ClimbKept.ID_ASH_PAULDRON in unlocks) {
+            n += ASH_PAULDRON_BRACE
+        }
+        return n
+    }
+
     /** Ash Tithe summary bank bonus (win or death). */
     fun ashTitheBonus(unlocks: Set<String>): Int =
         if (ID_ASH_TITHE in unlocks) ASH_TITHE_BONUS else 0

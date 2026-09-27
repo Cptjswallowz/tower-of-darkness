@@ -24,9 +24,13 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 fun RestScreen(gc: GameController) {
     val maxHp = gc.climbMaxHp
     val full = gc.playerHp >= maxHp
+    if (gc.forgeOpen) {
+        ForgeSheet(gc)
+        return
+    }
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Rest", color = Gold, fontSize = 22.sp)
-        Text("HP ${gc.playerHp} / $maxHp", color = Bone)
+        Text(gc.scrapHudLineWithMax(), color = Bone)
         Spacer(Modifier.height(8.dp))
         GlossaryText(
             "Choose Heal or Scout, or Leave. Scout reveals an adjacent node's type only.",
@@ -44,6 +48,10 @@ fun RestScreen(gc: GameController) {
         Spacer(Modifier.height(8.dp))
         Button(onClick = { gc.restScout() }, modifier = Modifier.fillMaxWidth()) {
             Text("Scout (type only)")
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = { gc.openForge() }, modifier = Modifier.fillMaxWidth()) {
+            Text("Forge")
         }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = { gc.leaveRest() }, modifier = Modifier.fillMaxWidth()) {

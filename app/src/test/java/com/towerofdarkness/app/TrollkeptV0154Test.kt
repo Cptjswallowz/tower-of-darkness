@@ -141,7 +141,7 @@ class TrollkeptV0154Test {
         assertEquals(listOf(ClimbKept.ID_SOOT_RIM), f2.newTrophyIds)
         assertEquals(listOf(ClimbKept.NAME_SOOT_RIM), f2.newTrophyNames)
 
-        // Reach F3 + troll + gate + seal (win) = clear 15; + tithe = 18
+        // Reach F3 + troll + gate + seal (win) + Gate Sigil = clear 16; + tithe = 19
         val maxFlags = ClimbKeptFlags(
             f1CombatWon = true,
             floor2Entered = true,
@@ -150,15 +150,15 @@ class TrollkeptV0154Test {
             gateWardenBeaten = true
         )
         val clear = ClimbKept.finishPayout(maxFlags, emptySet(), won = true)
-        assertEquals(15, clear.kept)
+        assertEquals(16, clear.kept)
         assertEquals(
-            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks"),
+            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks", "Gate Sigil"),
             clear.lines.map { it.label }
         )
         val max = ClimbKept.finishPayout(maxFlags, setOf(HubOffers.ID_ASH_TITHE), won = true)
-        assertEquals(18, max.kept)
+        assertEquals(19, max.kept)
         assertEquals(
-            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks", "Ash Tithe"),
+            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks", "Ash Tithe", "Gate Sigil"),
             max.lines.map { it.label }
         )
         assertEquals(
@@ -181,8 +181,8 @@ class TrollkeptV0154Test {
 
         // Wallet leftover is irrelevant — formula ignores it
         assertEquals(
-            ClimbKept.headline(15),
-            "Kept: 15 remnants"
+            ClimbKept.headline(16),
+            "Kept: 16 remnants"
         )
     }
 
@@ -204,7 +204,7 @@ class TrollkeptV0154Test {
         assertTrue(again.newTrophyIds.isEmpty())
         assertTrue(again.newTrophyNames.isEmpty())
         // Still pays Kept even when trophies owned
-        assertEquals(11, again.kept) // 2+3+1+5 (no f1, no tithe)
+        assertEquals(12, again.kept) // 2+3+1+5+GateSigil1 (no f1, no tithe)
 
         val partial = ClimbKept.finishPayout(flags, setOf(ClimbKept.ID_SOOT_RIM))
         assertEquals(

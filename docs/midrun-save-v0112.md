@@ -191,3 +191,15 @@ No economy number changes in this WO.
 ---
 
 **Related:** v0.1.24-rumorcharge — both `free_scout_charges` and `rumor_rerolls` must persist (never one shared boolean). See `rumorcharge-v0124.md`.
+
+---
+
+**Follow-on:** Scrap pouch + relic combat/summary effects + Forge Rest/Shop — [`forge-v0158.md`](forge-v0158.md).
+
+---
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-09-27 | v0.1.58-forge: additive `scrap_goblin`, `scrap_orc`, `forge_levels`, `forge_branches`, `troll_tooth_floor` (run-only; never MetaStore bank) |

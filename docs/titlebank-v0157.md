@@ -124,3 +124,7 @@ Ash Tithe still stacks when owned (max then 18). Do not retune Tithe this WO.
 | Date | Change |
 |------|--------|
 | 2026-09-27 | Meta lock from CoS WO v0.1.57-titlebank |
+
+---
+
+**Follow-on:** Scrap pouch + relic combat/summary effects + Forge Rest/Shop — [`forge-v0158.md`](forge-v0158.md).

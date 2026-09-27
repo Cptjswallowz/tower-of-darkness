@@ -96,7 +96,17 @@ data class MidRunSlot(
     /** v0.1.54 — F3 sticky floor rumors [troll, path]; empty on F1/F2. */
     val floorRumors: List<String> = emptyList(),
     /** v0.1.54 — climb_kept flags for Kept payout / trophies. */
-    val climbKept: ClimbKeptFlags = ClimbKeptFlags()
+    val climbKept: ClimbKeptFlags = ClimbKeptFlags(),
+    /** v0.1.58 — run-only goblin scrap (never banked). */
+    val scrapGoblin: Int = 0,
+    /** v0.1.58 — run-only orc scrap (never banked). */
+    val scrapOrc: Int = 0,
+    /** v0.1.58 — forge level per loadout skill id (missing = 1). */
+    val forgeLevels: Map<String, Int> = emptyMap(),
+    /** v0.1.58 — forge branch picks "A"/"AB"/etc per skill id. */
+    val forgeBranches: Map<String, String> = emptyMap(),
+    /** v0.1.58 — floor index where Troll Tooth already spent; 0 = unused. */
+    val trollToothFloor: Int = 0
 ) {
     companion object {
         const val SCHEMA = "v0.1.12"
@@ -236,6 +246,11 @@ data class MidRunSlot(
                     "\"gate_warden_beaten\":${if (ck.gateWardenBeaten) "true" else "false"}" +
                     "}"
             )
+            num("scrap_goblin", slot.scrapGoblin)
+            num("scrap_orc", slot.scrapOrc)
+            raw("forge_levels", encodeIntMap(slot.forgeLevels))
+            raw("forge_branches", encodeStringMap(slot.forgeBranches))
+            num("troll_tooth_floor", slot.trollToothFloor)
             sb.append('}')
             return sb.toString()
         }
@@ -293,7 +308,12 @@ data class MidRunSlot(
                     seenF3Explainer = seenF3,
                     floorLoadout = floorLoadout,
                     floorRumors = floorRumors,
-                    climbKept = climbKept
+                    climbKept = climbKept,
+                    scrapGoblin = o.int("scrap_goblin") ?: 0,
+                    scrapOrc = o.int("scrap_orc") ?: 0,
+                    forgeLevels = o.intMap("forge_levels"),
+                    forgeBranches = o.strMap("forge_branches"),
+                    trollToothFloor = o.int("troll_tooth_floor") ?: 0
                 )
             } catch (_: Exception) {
                 null
@@ -422,6 +442,11 @@ data class MidRunSlot(
                 "${jsonString(k)}:${jsonString(v)}"
             }
 
+        private fun encodeIntMap(map: Map<String, Int>): String =
+            map.entries.joinToString(",", "{", "}") { (k, v) ->
+                "${jsonString(k)}:$v"
+            }
+
         fun jsonString(s: String): String {
             val escaped = s
                 .replace("\\", "\\\\")
@@ -458,6 +483,17 @@ internal class JsonObj(private val map: Map<String, Any?>) {
     fun strMap(k: String): Map<String, String> {
         val o = map[k] as? JsonObj ?: return emptyMap()
         return o.map.mapNotNull { (key, v) -> (v as? String)?.let { key to it } }.toMap()
+    }
+    fun intMap(k: String): Map<String, Int> {
+        val o = map[k] as? JsonObj ?: return emptyMap()
+        return o.map.mapNotNull { (key, v) ->
+            when (v) {
+                is Int -> key to v
+                is Long -> key to v.toInt()
+                is Double -> key to v.toInt()
+                else -> null
+            }
+        }.toMap()
     }
 
     companion object {

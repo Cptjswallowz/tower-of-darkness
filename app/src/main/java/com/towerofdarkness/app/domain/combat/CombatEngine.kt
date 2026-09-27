@@ -81,7 +81,12 @@ data class CombatState(
     val enemySpentIds: Set<String> = emptySet(),
     val enemyHighlightedId: String? = null,
     /** Brace on the enemy (Hide / Rust Guard / Cinder Hide). Persists until eaten. */
-    val enemyBrace: Int = 0
+    val enemyBrace: Int = 0,
+    /** v0.1.58: Troll Tooth +2 on first damaging hit vs elite/boss this floor. */
+    val trollToothReady: Boolean = false,
+    /** v0.1.58: Dust Veil L3B — first fire this fight → weight +1 for rest of fight. */
+    val pendingWeightBoostIds: Set<String> = emptySet(),
+    val weightBoostedIds: Set<String> = emptySet()
 )
 
 class CombatEngine(private val rng: Random = Random.Default) {
@@ -92,14 +97,18 @@ class CombatEngine(private val rng: Random = Random.Default) {
         weapon: WeaponRuntime,
         maxHp: Int = Balance.PLAYER_MAX_HP,
         playerHp: Int = maxHp,
-        initialBrace: Int = 0
+        initialBrace: Int = 0,
+        trollToothReady: Boolean = false,
+        pendingWeightBoostIds: Set<String> = emptySet()
     ): CombatState = CombatState(
         playerHp = playerHp.coerceIn(1, maxHp),
         playerMaxHp = maxHp,
         brace = initialBrace.coerceAtLeast(0),
         enemy = enemy,
         activeCards = activeCards,
-        weapon = weapon
+        weapon = weapon,
+        trollToothReady = trollToothReady,
+        pendingWeightBoostIds = pendingWeightBoostIds
     )
 
     /** A — dice tumble: reset cycle if needed, pick unspent weighted slot. */
@@ -143,6 +152,17 @@ class CombatEngine(private val rng: Random = Random.Default) {
             lastSkillWasAttack = isAttack,
             beat = CombatBeat.AFTER_SKILL
         )
+        // v0.1.58 Dust Veil L3B: first fire → weight +1 rest of fight
+        if (card.id in s.pendingWeightBoostIds && card.id !in s.weightBoostedIds) {
+            val boosted = s.activeCards.map {
+                if (it.id == card.id) it.copy(weight = it.weight + 1) else it
+            }
+            s = s.copy(
+                activeCards = boosted,
+                pendingWeightBoostIds = s.pendingWeightBoostIds - card.id,
+                weightBoostedIds = s.weightBoostedIds + card.id
+            )
+        }
         if (isAttack) {
             val w = s.weapon
             s = s.copy(weapon = w.copy(charge = (w.charge + 1).coerceAtMost(w.threshold + 2)))
@@ -416,17 +436,26 @@ class CombatEngine(private val rng: Random = Random.Default) {
     private data class EnemyDmgResult(val state: CombatState, val hpDamage: Int, val absorbed: Int)
 
     private fun applyDamageToEnemy(state: CombatState, raw: Int): EnemyDmgResult {
+        var s = state
         var dmg = raw.coerceAtLeast(0)
-        var eBrace = state.enemyBrace
+        // v0.1.58 Troll Tooth: first damaging hit this floor vs elite OR boss +2 once
+        if (s.trollToothReady && dmg > 0 && isToothTarget(s.enemy)) {
+            dmg += 2
+            s = s.copy(trollToothReady = false)
+        }
+        var eBrace = s.enemyBrace
         var absorbed = 0
         if (eBrace > 0 && dmg > 0) {
             absorbed = minOf(eBrace, dmg)
             eBrace -= absorbed
             dmg -= absorbed
         }
-        val enemy = state.enemy.copy(hp = (state.enemy.hp - dmg).coerceAtLeast(0))
-        return EnemyDmgResult(state.copy(enemy = enemy, enemyBrace = eBrace), dmg, absorbed)
+        val enemy = s.enemy.copy(hp = (s.enemy.hp - dmg).coerceAtLeast(0))
+        return EnemyDmgResult(s.copy(enemy = enemy, enemyBrace = eBrace), dmg, absorbed)
     }
+
+    private fun isToothTarget(enemy: Enemy): Boolean =
+        enemy.isBoss || enemy.kind == EnemyKind.CAVE_TROLL
 
     private fun resolveCard(
         state: CombatState, card: Card, anim: CombatAnimStyle
@@ -479,7 +508,26 @@ class CombatEngine(private val rng: Random = Random.Default) {
                         braceGained = e.brace
                     )
                 }
-                s = s.copy(brace = brace)
+                if (e.afterFireBrace > 0) {
+                    brace += e.afterFireBrace
+                    events += CombatEvent(
+                        "Brace +${e.afterFireBrace}",
+                        FloatingText("BRACE", true), anim, "brace",
+                        glossaryHints = listOf("brace"),
+                        braceGained = e.afterFireBrace
+                    )
+                }
+                var soften = s.counterPenalty
+                if (e.extraSoften > 0) {
+                    soften += e.extraSoften
+                    events += CombatEvent(
+                        "Soften ${e.extraSoften}",
+                        sound = "soften",
+                        glossaryHints = listOf("soften"),
+                        softenApplied = e.extraSoften
+                    )
+                }
+                s = s.copy(brace = brace, counterPenalty = soften)
             }
             is SkillEffect.EmberPoolSkill -> {
                 // Damage (+ Wake Echo bonus) only; Brace/Soften/Tithe after charge++ in resolveSkill
@@ -498,6 +546,24 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     },
                     fxId = card.id, fxPlayer = true
                 )
+                if (e.afterFireBrace > 0) {
+                    s = s.copy(brace = s.brace + e.afterFireBrace)
+                    events += CombatEvent(
+                        "Brace +${e.afterFireBrace}",
+                        FloatingText("BRACE", true), anim, "brace",
+                        glossaryHints = listOf("brace"),
+                        braceGained = e.afterFireBrace
+                    )
+                }
+                if (e.extraSoften > 0) {
+                    s = s.copy(counterPenalty = s.counterPenalty + e.extraSoften)
+                    events += CombatEvent(
+                        "Soften ${e.extraSoften}",
+                        sound = "soften",
+                        glossaryHints = listOf("soften"),
+                        softenApplied = e.extraSoften
+                    )
+                }
             }
             is MoveEffect.DamageAndSoften -> {
                 isAttack = true
@@ -537,6 +603,24 @@ class CombatEngine(private val rng: Random = Random.Default) {
                     fxId = card.id, fxPlayer = true,
                     braceGained = e.brace
                 )
+                if (e.onBraceDeal > 0) {
+                    val applied = applyDamageToEnemy(s, e.onBraceDeal)
+                    s = applied.state
+                    events += CombatEvent(
+                        "On Brace: ${e.onBraceDeal} dmg",
+                        FloatingText("-${e.onBraceDeal}", true), anim, "impact",
+                        fxId = card.id, fxPlayer = true
+                    )
+                }
+                if (e.afterFireSoften > 0) {
+                    s = s.copy(counterPenalty = s.counterPenalty + e.afterFireSoften)
+                    events += CombatEvent(
+                        "Soften ${e.afterFireSoften}",
+                        sound = "soften",
+                        glossaryHints = listOf("soften"),
+                        softenApplied = e.afterFireSoften
+                    )
+                }
             }
             is Equipment.HealOrBrace -> {
                 isAttack = false

@@ -133,3 +133,7 @@ No Title/Hub duplicate pref keys to delete — audit found both already on `remn
 ---
 
 **Follow-on:** Title disk binding + victory seal Kept line — [`titlebank-v0157.md`](titlebank-v0157.md).
+
+---
+
+**Follow-on:** Scrap pouch + relic combat/summary effects + Forge Rest/Shop — [`forge-v0158.md`](forge-v0158.md).
