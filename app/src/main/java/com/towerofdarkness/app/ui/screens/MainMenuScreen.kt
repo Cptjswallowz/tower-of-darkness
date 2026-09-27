@@ -1,5 +1,6 @@
 package com.towerofdarkness.app.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +36,12 @@ import com.towerofdarkness.app.ui.theme.VoidBg
 @Composable
 fun MainMenuScreen(gc: GameController) {
     var confirmNewClimb by remember { mutableStateOf(false) }
+
+    // v0.1.57-titlebank: Title N from MetaStore remnants_bank via gc.remnantsBank (same as Hub).
+    // Not RunState.purse / summary Kept / run-dying cache.
+    LaunchedEffect(gc.remnantsBank) {
+        Log.i("TITLE", "TITLE bank=${gc.remnantsBank} source=metastore")
+    }
 
     Column(
         Modifier.fillMaxSize().background(VoidBg).padding(24.dp),
@@ -66,7 +74,7 @@ fun MainMenuScreen(gc: GameController) {
         OutlinedButton(
             onClick = { gc.goHub() },
             modifier = Modifier.fillMaxWidth(0.85f)
-        ) { Text(com.towerofdarkness.app.domain.hub.HubOffers.titleBankLine(gc.remnantsBank)) }
+        ) { Text(com.towerofdarkness.app.domain.hub.HubOffers.titleBankLine(gc.remnantsBank)) } // MetaStore remnants_bank
         Spacer(Modifier.height(8.dp))
         OutlinedButton(
             onClick = { /* settings stub */ },

@@ -141,7 +141,7 @@ class TrollkeptV0154Test {
         assertEquals(listOf(ClimbKept.ID_SOOT_RIM), f2.newTrophyIds)
         assertEquals(listOf(ClimbKept.NAME_SOOT_RIM), f2.newTrophyNames)
 
-        // Reach F3 + troll + gate + tithe = max 15
+        // Reach F3 + troll + gate + seal (win) = clear 15; + tithe = 18
         val maxFlags = ClimbKeptFlags(
             f1CombatWon = true,
             floor2Entered = true,
@@ -149,10 +149,16 @@ class TrollkeptV0154Test {
             caveTrollKilled = true,
             gateWardenBeaten = true
         )
-        val max = ClimbKept.finishPayout(maxFlags, setOf(HubOffers.ID_ASH_TITHE))
-        assertEquals(15, max.kept)
+        val clear = ClimbKept.finishPayout(maxFlags, emptySet(), won = true)
+        assertEquals(15, clear.kept)
         assertEquals(
-            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "Ash Tithe"),
+            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks"),
+            clear.lines.map { it.label }
+        )
+        val max = ClimbKept.finishPayout(maxFlags, setOf(HubOffers.ID_ASH_TITHE), won = true)
+        assertEquals(18, max.kept)
+        assertEquals(
+            listOf("Floor 1 combat", "Floor 2", "Floor 3", "Cave Troll", "Gate-Warden", "The seal breaks", "Ash Tithe"),
             max.lines.map { it.label }
         )
         assertEquals(

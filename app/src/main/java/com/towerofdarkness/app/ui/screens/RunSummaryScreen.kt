@@ -44,6 +44,13 @@ fun RunSummaryScreen(gc: GameController) {
             s.keptLines.forEach { line ->
                 Text("${line.label}  +${line.amount}", color = Bone.copy(0.9f), fontSize = 14.sp)
             }
+            // v0.1.57-titlebank: purse never banks; muted under Kept
+            Text(
+                "Shop purse ends with the climb.",
+                color = Bone.copy(0.55f),
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
             if (newTrophies.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 newTrophies.forEach { name ->

@@ -264,3 +264,7 @@ Hub prices / offer ids **unchanged** (Scout…Echo Lesson ladder).
 **Related (Hub UI):** v0.1.55-hubsplit — Relics / Perks / Skills sections; Relics display-only. See `hubsplit-v0155.md`. Kept formula unchanged.
 
 **Related:** v0.1.56-bankone — one `remnants_bank`; floor HUD must not say rem. See `bankone-v0156.md`.
+
+---
+
+**Follow-on (v0.1.57):** Victory-only `"The seal breaks" +3` (full clear 15); Title bank from disk — [`titlebank-v0157.md`](titlebank-v0157.md).

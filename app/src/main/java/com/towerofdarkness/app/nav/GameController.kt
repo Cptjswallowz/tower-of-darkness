@@ -272,6 +272,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
                     "BANK",
                     SummaryBankCommit.bankWriteLogLine(write.prev, write.add, write.now, source)
                 )
+                // Disk is source of truth for Title/Hub (v0.1.57-titlebank).
+                // Disk is source of truth for Title/Hub (v0.1.57-titlebank).
                 remnantsBank = write.now
                 unlockedCards = meta.unlockedCards.first()
             } else {
@@ -283,6 +285,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
             hasMidRunSlot = false
             summary = null
             nav = dest
+            // Title recomposed from MetaStore after Continue|Menu leave.
+            if (dest == NavState.MainMenu) {
+                Log.i("TITLE", "TITLE bank=$remnantsBank source=metastore")
+            }
         }
     }
 
@@ -1313,13 +1319,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
             climbKept = climbKept.copy(gateWardenBeaten = true)
         }
         // v0.1.54-trollkept: Kept formula; do NOT bank leftover run_wallet
-        val payout = ClimbKept.finishPayout(climbKept, unlockedCards)
+        // v0.1.57-titlebank: pass won for victory-only seal +3; do NOT inflate remnantsBank
+        // (Title/Hub read MetaStore only — lastPayout must not pollute Title until leave commit).
+        val payout = ClimbKept.finishPayout(climbKept, unlockedCards, won = won)
         // Near-miss only if boss reached AND boss HP remaining ≤ 8
         val bossFight = combatState?.enemy?.isBoss == true
         val bossHpLeft = combatState?.enemy?.hp ?: 999
         val near = !won && bossFight && bossHpLeft <= 8
         val bankBefore = remnantsBank
-        // Pure commit snapshot (invariant helper); MetaStore write tracked below.
+        // Pure commit snapshot (invariant helper); MetaStore write on leave only.
         val committed = SummaryBankCommit.apply(bankBefore, unlockedCards, payout)
         summary = RunSummaryData(
             won = won,
@@ -1333,8 +1341,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
             bankBefore = bankBefore,
             newTrophyIds = payout.newTrophyIds
         )
-        // Optimistic local bank/unlocks for sheet UI; MetaStore one-txn on leave (Continue|Menu).
-        remnantsBank = committed.remnantsBank
+        // v0.1.57: do NOT set remnantsBank = committed (that was lastPayout-as-bank).
+        // MetaStore remnants_bank updates only in leaveRunSummary; Title stays on disk value.
+        // Trophy ids still applied locally for sheet; bank write is leave-only one-txn.
         unlockedCards = committed.unlocks
         summaryBankWritten = false
         summaryCommitJob = null

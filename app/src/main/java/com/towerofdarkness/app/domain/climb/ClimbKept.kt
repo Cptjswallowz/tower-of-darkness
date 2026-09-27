@@ -70,13 +70,19 @@ object ClimbKept {
      * Pure payout: kept formula + first-time trophies.
      * Does not bank leftover run_wallet.
      */
-    fun finishPayout(flags: ClimbKeptFlags, unlocks: Set<String>): KeptPayout {
+    /**
+     * @param won victory-only "The seal breaks +3". Death: no seal line; other totals unchanged.
+     * Clear win (all climb lines, no Tithe) = 15.
+     */
+    fun finishPayout(flags: ClimbKeptFlags, unlocks: Set<String>, won: Boolean = false): KeptPayout {
         val lines = mutableListOf<KeptLine>()
         if (flags.f1CombatWon) lines += KeptLine("f1_combat", "Floor 1 combat", 1)
         if (flags.floor2Entered) lines += KeptLine("floor2", "Floor 2", 2)
         if (flags.floor3Entered) lines += KeptLine("floor3", "Floor 3", 3)
         if (flags.caveTrollKilled) lines += KeptLine("cave_troll", "Cave Troll", 1)
         if (flags.gateWardenBeaten) lines += KeptLine("gate_warden", "Gate-Warden", 5)
+        // v0.1.57-titlebank: victory-only seal break +3 (not on death)
+        if (won) lines += KeptLine("seal_breaks", "The seal breaks", 3)
         if (HubOffers.ID_ASH_TITHE in unlocks) {
             lines += KeptLine("ash_tithe", "Ash Tithe", HubOffers.ASH_TITHE_BONUS)
         }
