@@ -29,11 +29,48 @@ import com.towerofdarkness.app.ui.theme.Ember
 import com.towerofdarkness.app.ui.theme.Steel
 
 /**
+ * Shared title + Hub You bust: portrait_you + trophy overlays (stack order).
+ * Overlay stack: soot_rim → ash_pauldron → troll_tooth → gate_sigil.
+ * Clipped to CircleShape with the portrait crop — no cyan/teal frame, no glow/pulse.
+ * Combat must pass empty [trophyUnlocks] (no overlays).
+ */
+@Composable
+fun YouPortraitComposite(
+    modifier: Modifier = Modifier,
+    trophyUnlocks: Set<String> = emptySet()
+) {
+    val overlays = ClimbKept.unlockedOverlayDrawables(trophyUnlocks)
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(R.drawable.portrait_you),
+            contentDescription = "You",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+        )
+        // Trophy overlays — same 256 bounds / crop; edge embers stay inside circle clip.
+        overlays.forEach { name ->
+            val res = trophyOverlayRes(name)
+            if (res != 0) {
+                Image(
+                    painter = painterResource(res),
+                    contentDescription = name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Player portrait — circular soldier still ([R.drawable.portrait_you]).
  * v0.1.23-nobg: combat = PNG only on dark stage (no plate / fill / tint / ring).
- * Title may keep a teal circle via [showTitleCircle].
- * v0.1.54: Hub/title may stack trophy overlays via [trophyUnlocks]; combat omits.
- * [rarity] kept for call-site compat; unused (frozen rarity systems).
+ * v0.1.55-hubsplit: title teal circle OFF; title + Hub share [YouPortraitComposite].
+ * Combat omits trophies (empty [trophyUnlocks]).
  */
 @Composable
 fun HeroShowcase(
@@ -44,43 +81,24 @@ fun HeroShowcase(
     trophyUnlocks: Set<String> = emptySet()
 ) {
     val slot = BodyArt.PLAYER_SLOT_DP.dp
-    val overlays = ClimbKept.unlockedOverlayDrawables(trophyUnlocks)
     Box(
         modifier.then(Modifier.size(slot)),
         contentAlignment = Alignment.Center
     ) {
+        // Gated off by PortraitPlate.TITLE_TEAL_CIRCLE_ALLOWED = false (hubsplit).
         if (showTitleCircle && PortraitPlate.titleTealCircleAllowed()) {
             TitleTealCircle()
         }
         val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
-        // Volume chrome wraps the clipped still; drawBehind stays outside content box.
         Box(
             Modifier
                 .fillMaxSize(inset)
                 .then(if (VolumeArt.appliesToPlayerPortrait()) Modifier.volumeChrome(circular = true) else Modifier)
         ) {
-            Image(
-                painter = painterResource(R.drawable.portrait_you),
-                contentDescription = "You",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
+            YouPortraitComposite(
+                modifier = Modifier.fillMaxSize(),
+                trophyUnlocks = trophyUnlocks
             )
-            // Trophy overlays — same 256 bounds, stack bottom→top; Hub/title only.
-            overlays.forEach { name ->
-                val res = trophyOverlayRes(name)
-                if (res != 0) {
-                    Image(
-                        painter = painterResource(res),
-                        contentDescription = name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                    )
-                }
-            }
         }
     }
 }
@@ -95,8 +113,8 @@ private fun trophyOverlayRes(drawableName: String): Int = when (drawableName) {
 }
 
 /**
- * Title-only teal circle behind You (v0.1.23-nobg).
- * Static — no infinite pulse. Combat must not call this.
+ * Title-only teal circle (legacy v0.1.23-nobg).
+ * Disabled when [PortraitPlate.TITLE_TEAL_CIRCLE_ALLOWED] is false (v0.1.55-hubsplit).
  */
 @Composable
 private fun TitleTealCircle() {
@@ -170,8 +188,6 @@ fun EnemySilhouette(
                 )
             }
         } else if (portraitRes != null) {
-            // Asset-backed boss without volume (Seal-Warden F1) — PNG only, no plate.
-            // Pack looks also land here when Art PNGs are present.
             val inset = 1f - BodyArt.SPRITE_INSET_FRACTION
             Image(
                 painter = painterResource(portraitRes),
@@ -182,8 +198,6 @@ fun EnemySilhouette(
                     .clip(CircleShape)
             )
         } else {
-            // Trash / Wretch / Seal Spinner — Canvas placeholders, no volume.
-            // Silhouette shapes ARE the placeholder body (not a plate behind a PNG).
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 val body = if (isBoss) Ember else Steel

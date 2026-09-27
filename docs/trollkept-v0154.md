@@ -260,3 +260,5 @@ Hub prices / offer ids **unchanged** (Scout…Echo Lesson ladder).
 | Date | Change |
 |------|--------|
 | 2026-09-27 | Meta lock from CoS WO v0.1.54-trollkept PART B |
+
+**Related (Hub UI):** v0.1.55-hubsplit — Relics / Perks / Skills sections; Relics display-only. See `hubsplit-v0155.md`. Kept formula unchanged.

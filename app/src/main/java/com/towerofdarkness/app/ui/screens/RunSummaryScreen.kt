@@ -11,11 +11,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,23 +19,17 @@ import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.VoidBg
-import kotlinx.coroutines.delay
 
+/**
+ * Run Summary — v0.1.55-hubsplit PART C.
+ * Continue is ALWAYS enabled after payout is written in finishRun.
+ * Trophy names may still show under Kept; do not gate Continue on flash timing.
+ * Menu and Continue both leave via goMenu/goHub → leaveRunSummary (await commit).
+ */
 @Composable
 fun RunSummaryScreen(gc: GameController) {
     val s = gc.summary
     val newTrophies = s?.newTrophyNames.orEmpty()
-    var continueReady by remember(s) { mutableStateOf(newTrophies.isEmpty()) }
-
-    LaunchedEffect(s?.newTrophyNames) {
-        if (newTrophies.isNotEmpty()) {
-            continueReady = false
-            delay(2000)
-            continueReady = true
-        } else {
-            continueReady = true
-        }
-    }
 
     Column(Modifier.fillMaxSize().background(VoidBg).padding(16.dp)) {
         Text("Run Summary", color = Gold, fontSize = 22.sp)
@@ -70,12 +59,17 @@ fun RunSummaryScreen(gc: GameController) {
             }
         }
         Spacer(Modifier.height(24.dp))
+        // PART C: Continue always enabled once summary is shown (payout already written).
         Button(
             onClick = { gc.goHub() },
-            enabled = continueReady,
+            enabled = true,
             modifier = Modifier.fillMaxWidth()
         ) { Text("Continue") }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { gc.goMenu() }, modifier = Modifier.fillMaxWidth()) { Text("Menu") }
+        // PART C: Menu uses same leave-summary commit path (goMenu → leaveRunSummary).
+        OutlinedButton(
+            onClick = { gc.goMenu() },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Menu") }
     }
 }

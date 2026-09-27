@@ -20,6 +20,7 @@ import com.towerofdarkness.app.domain.climb.ClimbKept
 import com.towerofdarkness.app.domain.climb.ClimbKeptFlags
 import com.towerofdarkness.app.domain.climb.FloorRumors
 import com.towerofdarkness.app.domain.climb.KeptLine
+import com.towerofdarkness.app.domain.climb.SummaryBankCommit
 import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.CombatBeat
@@ -60,7 +61,11 @@ data class RunSummaryData(
     /** v0.1.54 Kept payout total (== remnantsEarned). */
     val kept: Int = remnantsEarned,
     val keptLines: List<KeptLine> = emptyList(),
-    val newTrophyNames: List<String> = emptyList()
+    val newTrophyNames: List<String> = emptyList(),
+    /** Bank before this sheet's Kept was applied (PART C invariant). */
+    val bankBefore: Int = 0,
+    /** Trophy unlock ids awarded on this sheet (for commit await). */
+    val newTrophyIds: List<String> = emptyList()
 ) {
     /** Floor 3 Gate-Warden clear is the victory path (v0.1.41); title kept. */
     val title: String
@@ -159,6 +164,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     var summary by mutableStateOf<RunSummaryData?>(null)
         private set
+    /** v0.1.55 PART C — MetaStore bank+trophy write launched in finishRun; leave awaits. */
+    private var summaryCommitJob: Job? = null
     var glossaryTerm by mutableStateOf<String?>(null)
         private set
     var weightHitchCardId by mutableStateOf<String?>(null)
@@ -222,14 +229,40 @@ class GameController(app: Application) : AndroidViewModel(app) {
         combatSpeedX = if (combatSpeedX == 1) 2 else 1
     }
 
-    fun goMenu() { nav = NavState.MainMenu }
+    fun goMenu() {
+        // v0.1.55 PART C: Menu from Summary must commit bank+trophies (no bare skip).
+        if (nav == NavState.RunSummary || summary != null) {
+            leaveRunSummary(NavState.MainMenu)
+        } else {
+            nav = NavState.MainMenu
+        }
+    }
 
     fun goHub() {
-        // Summary → Hub clears mid-run slot after bank (bank already in finishRun).
+        // Summary → Hub: await bank commit, clear mid-run, then navigate.
         if (nav == NavState.RunSummary || summary != null) {
-            clearMidRunSlotAsync()
+            leaveRunSummary(NavState.MetaHub)
+        } else {
+            nav = NavState.MetaHub
         }
-        nav = NavState.MetaHub
+    }
+
+    /**
+     * Leave Run Summary only after bank + trophy unlocks are committed.
+     * Used by Continue (Hub) and Menu — both paths clear mid-run then navigate.
+     */
+    fun leaveRunSummary(dest: NavState) {
+        viewModelScope.launch {
+            summaryCommitJob?.join()
+            summaryCommitJob = null
+            // Re-sync local from store so post-leave bank == bankBefore + Kept.
+            remnantsBank = meta.remnantsBank.first()
+            unlockedCards = meta.unlockedCards.first()
+            meta.clearMidRunSlot()
+            hasMidRunSlot = false
+            summary = null
+            nav = dest
+        }
     }
 
     /** Menu Continue — resume Path or FloorBreak from slot. */
@@ -1261,6 +1294,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
         val bossFight = combatState?.enemy?.isBoss == true
         val bossHpLeft = combatState?.enemy?.hp ?: 999
         val near = !won && bossFight && bossHpLeft <= 8
+        val bankBefore = remnantsBank
+        // Pure commit snapshot (invariant helper); MetaStore write tracked below.
+        val committed = SummaryBankCommit.apply(bankBefore, unlockedCards, payout)
         summary = RunSummaryData(
             won = won,
             nodesCleared = nodesCleared,
@@ -1269,9 +1305,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
             nearMiss = near,
             kept = payout.kept,
             keptLines = payout.lines,
-            newTrophyNames = payout.newTrophyNames
+            newTrophyNames = payout.newTrophyNames,
+            bankBefore = bankBefore,
+            newTrophyIds = payout.newTrophyIds
         )
-        viewModelScope.launch {
+        // Fire MetaStore writes; leaveRunSummary awaits this job before nav.
+        // Also apply optimistic local bank/unlocks so Hub CTA sees them if flow lags.
+        remnantsBank = committed.remnantsBank
+        unlockedCards = committed.unlocks
+        summaryCommitJob = viewModelScope.launch {
             for (id in payout.newTrophyIds) {
                 meta.unlockCard(id)
             }
@@ -1279,7 +1321,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
         runWallet = 0
         pendingStartBrace = 0
-        clearMidRunSlotAsync()
+        // Mid-run clear deferred to leaveRunSummary (Menu + Continue both clear).
         nav = NavState.RunSummary
     }
 

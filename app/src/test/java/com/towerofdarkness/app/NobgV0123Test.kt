@@ -11,8 +11,9 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.23-nobg — combat portraits PNG-only (no plate); title teal circle may remain;
- * trash placeholders stay as body; no victory/defeat ring behind figures.
+ * v0.1.23-nobg — combat portraits PNG-only (no plate);
+ * v0.1.55-hubsplit — title teal circle OFF; trash placeholders stay as body;
+ * no victory/defeat ring behind figures.
  */
 class NobgV0123Test {
 
@@ -59,18 +60,19 @@ class NobgV0123Test {
     }
 
     @Test
-    fun titleTealCircle_allowed_notCombatPlate() {
-        assertTrue(PortraitPlate.TITLE_TEAL_CIRCLE_ALLOWED)
-        assertTrue(PortraitPlate.titleTealCircleAllowed())
+    fun titleTealCircle_off_hubsplitSupersedes() {
+        // v0.1.55-hubsplit: no cyan/teal accent circle on title or Hub busts.
+        assertFalse(PortraitPlate.TITLE_TEAL_CIRCLE_ALLOWED)
+        assertFalse(PortraitPlate.titleTealCircleAllowed())
         assertEquals(0xFF38BDF8.toInt(), PortraitPlate.TITLE_CIRCLE_ARGB)
         val menu = mainMenuSource()
-        assertTrue(
-            "title HeroShowcase must opt into teal circle",
+        assertFalse(
+            "title must not pass showTitleCircle=true (hubsplit)",
             menu.contains("showTitleCircle = true")
         )
         val hero = heroShowcaseSource()
-        assertTrue(hero.contains("TitleTealCircle"))
-        assertTrue(hero.contains("PortraitPlate.TITLE_CIRCLE_ARGB") || hero.contains("TITLE_CIRCLE_ARGB"))
+        assertTrue(hero.contains("YouPortraitComposite"))
+        assertTrue(hero.contains("TitleTealCircle")) // kept gated; flag false
         assertFalse(
             "title circle must not use rememberInfiniteTransition",
             hero.contains("rememberInfiniteTransition")

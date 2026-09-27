@@ -7,7 +7,7 @@ package com.towerofdarkness.app.domain.combat
  * PNGs sit on the dark stage only. Defeat / victory: no extra ring behind the figure
  * (banner + Continue are enough).
  *
- * **Title:** teal circle behind You may remain (title screen only).
+ * **Title / Hub:** no cyan/teal accent circle (v0.1.55-hubsplit). Dark crop only.
  *
  * Trash Canvas placeholders are the placeholder body — not a plate; leave them.
  *
@@ -20,8 +20,8 @@ object PortraitPlate {
     /** Combat portraits draw PNG only — no disc / fill / tint under them. */
     const val COMBAT_PLATE_ENABLED = false
 
-    /** Title screen may keep a teal circle behind You (not a combat plate). */
-    const val TITLE_TEAL_CIRCLE_ALLOWED = true
+    /** Title/Hub teal circle removed — hubsplit supersedes title teal (v0.1.55). */
+    const val TITLE_TEAL_CIRCLE_ALLOWED = false
 
     /** GlowRare teal — title circle fill (static; no pulse). */
     const val TITLE_CIRCLE_ARGB = 0xFF38BDF8.toInt()
