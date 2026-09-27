@@ -4,8 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.53-wakeblade)
+## Status (v0.1.54-trollkept)
 
+- **v0.1.54-trollkept:** F3 floor rumors (sticky troll+path tells) + Kept remnants formula + trophy bust overlays (Hub/title). Combat FX/SFX LOCKED. Untagged until CoS. Still debug.
 - **v0.1.53-wakeblade:** P1 audio — Wake heavy swing+impact under sting (unmapped from Clash); keeps 1.52 slash volumes; visuals LOCKED. Tagged release. Still debug.
   - `wake_swing=IRONCLASH_02_Sword_Swing_Heavy_04_wake_plus3db.ogg`
   - `wake_impact=IRONCLASH_24_Flesh_Hit_Heavy_04_wake_plus3db.ogg`

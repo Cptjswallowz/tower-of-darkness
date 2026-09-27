@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,9 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.hub.HubCta
 import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.nav.GameController
+import com.towerofdarkness.app.ui.components.HeroShowcase
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.VoidBg
@@ -36,6 +39,13 @@ fun MetaHubScreen(gc: GameController) {
     ) {
         Text(HubOffers.hubScreenTitle(), color = Gold, fontSize = 22.sp)
         Text(HubOffers.hubBankLine(gc.remnantsBank), color = Bone)
+        Spacer(Modifier.height(12.dp))
+        // v0.1.54 — trophy bust overlays on Hub only (not combat)
+        HeroShowcase(
+            rarity = Rarity.RARE,
+            modifier = Modifier.size(120.dp),
+            trophyUnlocks = gc.unlockedCards
+        )
         Spacer(Modifier.height(16.dp))
 
         HubOffers.all.forEach { offer ->

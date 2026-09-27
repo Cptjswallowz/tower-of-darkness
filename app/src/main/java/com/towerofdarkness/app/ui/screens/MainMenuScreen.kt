@@ -44,7 +44,7 @@ fun MainMenuScreen(gc: GameController) {
         Text("Ashen Host · fallen kingdom", color = Bone.copy(0.7f), fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
         // v0.1.23-nobg: title teal circle OK (combat has no plate)
-        HeroShowcase(Rarity.RARE, Modifier.size(160.dp), showTitleCircle = true)
+        HeroShowcase(Rarity.RARE, Modifier.size(160.dp), showTitleCircle = true, trophyUnlocks = gc.unlockedCards)
         Spacer(Modifier.height(28.dp))
         if (gc.hasMidRunSlot) {
             Button(

@@ -30,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.towerofdarkness.app.R
+import com.towerofdarkness.app.domain.climb.FloorRumors
 import com.towerofdarkness.app.domain.path.FloorArt
 import com.towerofdarkness.app.domain.path.NodeType
 import com.towerofdarkness.app.domain.path.PathNode
@@ -91,6 +92,21 @@ fun PathScreen(gc: GameController) {
                 color = Bone.copy(0.55f),
                 fontSize = 11.sp
             )
+            // v0.1.54 — F3 map header two-line parchment strip (floor rumors)
+            if (floor >= 3 && gc.floorRumors.size == 2) {
+                Spacer(Modifier.height(8.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2A2418), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFF8B7355), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                        .padding(10.dp)
+                ) {
+                    gc.floorRumors.forEach { line ->
+                        Text(line, color = Bone.copy(0.9f), fontSize = 12.sp)
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             if (path == null) {
                 Text("No path.", color = Bone)
@@ -142,9 +158,7 @@ fun PathScreen(gc: GameController) {
                     Text("Floor loadout", color = Gold, fontSize = 20.sp)
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "On Floor 3+, pick 5 skills + weapon once. " +
-                            "Confirm locks them for every fight on this floor. " +
-                            "Map and rumors come first.",
+                        FloorRumors.F3_EXPLAINER,
                         color = Bone,
                         fontSize = 14.sp
                     )

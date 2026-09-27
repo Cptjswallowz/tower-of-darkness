@@ -139,3 +139,5 @@ Combat art, packs, Wake, path weights, 2x, trash/boss HP numbers, Cinder/Grave e
 
 **Related:** v0.1.35-emberpool — +4 skill Hub unlocks; see `emberpool-v0135.md`.
 | 2026-09-25 | Related emberpool-v0135 (+4 skill unlocks) |
+
+**Superseded (Ash Tithe bank path):** v0.1.54-trollkept — Tithe is +3 **inside** Kept formula; summary no longer banks `runWallet + tithe`. Offer cost/OWNED unchanged. See `trollkept-v0154.md`.

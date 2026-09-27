@@ -16,6 +16,10 @@ import com.towerofdarkness.app.data.MidRunSlot
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.climb.ClimbKept
+import com.towerofdarkness.app.domain.climb.ClimbKeptFlags
+import com.towerofdarkness.app.domain.climb.FloorRumors
+import com.towerofdarkness.app.domain.climb.KeptLine
 import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.CombatBeat
@@ -52,7 +56,11 @@ data class RunSummaryData(
     val nodesCleared: Int,
     val remnantsEarned: Int,
     val floorReached: Int,
-    val nearMiss: Boolean
+    val nearMiss: Boolean,
+    /** v0.1.54 Kept payout total (== remnantsEarned). */
+    val kept: Int = remnantsEarned,
+    val keptLines: List<KeptLine> = emptyList(),
+    val newTrophyNames: List<String> = emptyList()
 ) {
     /** Floor 3 Gate-Warden clear is the victory path (v0.1.41); title kept. */
     val title: String
@@ -115,6 +123,12 @@ class GameController(app: Application) : AndroidViewModel(app) {
         private set
     /** UI: show one-shot F3 loadout explainer sheet. */
     var showF3Explainer by mutableStateOf(false)
+        private set
+    /** v0.1.54 — F3 sticky floor rumors [troll, path]. */
+    var floorRumors by mutableStateOf<List<String>>(emptyList())
+        private set
+    /** v0.1.54 — climb_kept flags for Kept / trophies. */
+    var climbKept by mutableStateOf(ClimbKeptFlags())
         private set
     var pendingNodeId by mutableStateOf<String?>(null)
         private set
@@ -295,6 +309,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorLoadout = null
         seenF3Explainer = false
         showF3Explainer = false
+        floorRumors = emptyList()
+        climbKept = ClimbKeptFlags()
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -344,6 +360,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorLoadout = null
         seenF3Explainer = false
         showF3Explainer = false
+        floorRumors = emptyList()
+        climbKept = ClimbKeptFlags()
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -373,6 +391,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorLoadout = null
         seenF3Explainer = false
         showF3Explainer = false
+        floorRumors = emptyList()
+        climbKept = ClimbKeptFlags()
         pendingNodeId = null
         runWallet = 0
         runRemnantsEarned = 0
@@ -941,6 +961,16 @@ class GameController(app: Application) : AndroidViewModel(app) {
         val boss = s.enemy.isBoss
         val floor = path?.floor ?: 1
         if (s.playerWon) {
+            // v0.1.54 climb_kept flags
+            if (floor == 1) {
+                climbKept = climbKept.copy(f1CombatWon = true)
+            }
+            if (s.enemy.kind == EnemyKind.CAVE_TROLL) {
+                climbKept = climbKept.copy(caveTrollKilled = true)
+            }
+            if (boss && floor >= 3) {
+                climbKept = climbKept.copy(gateWardenBeaten = true)
+            }
             var gain = if (boss) Balance.BOSS_WIN_REMNANTS else Balance.COMBAT_WIN_REMNANTS
             if (boss && "boss_bonus_2" in unlockedCards) gain += 2
             gainRemnants(gain)
@@ -984,6 +1014,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
         summary = null
         // v0.1.28-hubkeep: FloorBreak → next floor adds baseline 1 + Extra stack
         rumorRerolls += HubOffers.rumorRerollsOnFloorAdvance(unlockedCards)
+        // v0.1.54 climb_kept entered flags
+        if (nextFloor >= 2) {
+            climbKept = climbKept.copy(floor2Entered = true)
+        }
+        if (nextFloor >= 3) {
+            climbKept = climbKept.copy(floor3Entered = true)
+            // PART A: generate exactly 2 floor rumors before Confirm; no wallet spend
+            if (!FloorRumors.isValidPair(floorRumors)) {
+                floorRumors = FloorRumors.generate(Random(MidRunSlot.floorSeed(runRngSeed, nextFloor) xor 0x54L))
+            }
+        }
         if (usesFloorLockedLoadout(nextFloor)) {
             // F3+: unlock for fresh floor pick; map/rumors first, then Loadout
             loadoutLocked = false
@@ -1210,16 +1251,32 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     // --- Summary / Hub ---
     private fun finishRun(won: Boolean) {
-        val earned = runWallet
-        // v0.1.29-hubmore: Ash Tithe +3 at summary (win or death); not mid-run wallet
-        val tithe = HubOffers.ashTitheBonus(unlockedCards)
-        val banked = earned + tithe
+        // Gate-Warden beaten only on win path into summary from F3 boss
+        if (won && (path?.floor ?: 1) >= 3) {
+            climbKept = climbKept.copy(gateWardenBeaten = true)
+        }
+        // v0.1.54-trollkept: Kept formula; do NOT bank leftover run_wallet
+        val payout = ClimbKept.finishPayout(climbKept, unlockedCards)
         // Near-miss only if boss reached AND boss HP remaining ≤ 8
         val bossFight = combatState?.enemy?.isBoss == true
         val bossHpLeft = combatState?.enemy?.hp ?: 999
         val near = !won && bossFight && bossHpLeft <= 8
-        summary = RunSummaryData(won, nodesCleared, banked, path?.floor ?: 1, near)
-        viewModelScope.launch { meta.addRemnants(banked) }
+        summary = RunSummaryData(
+            won = won,
+            nodesCleared = nodesCleared,
+            remnantsEarned = payout.kept,
+            floorReached = path?.floor ?: 1,
+            nearMiss = near,
+            kept = payout.kept,
+            keptLines = payout.lines,
+            newTrophyNames = payout.newTrophyNames
+        )
+        viewModelScope.launch {
+            for (id in payout.newTrophyIds) {
+                meta.unlockCard(id)
+            }
+            if (payout.kept > 0) meta.addRemnants(payout.kept)
+        }
         runWallet = 0
         pendingStartBrace = 0
         clearMidRunSlotAsync()
@@ -1332,7 +1389,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
             shopVisits = shopVisits,
             resume = resume,
             seenF3Explainer = seenF3Explainer,
-            floorLoadout = floorLoadout
+            floorLoadout = floorLoadout,
+            floorRumors = floorRumors,
+            climbKept = climbKept
         )
     }
 
@@ -1350,6 +1409,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         floorLoadout = slot.floorLoadout
         seenF3Explainer = slot.seenF3Explainer
         showF3Explainer = false
+        floorRumors = slot.floorRumors
+        climbKept = ClimbKeptFlags.migrate(slot.climbKept, slot.floor)
         // F3+ locked floor loadout is authoritative for the five + weapon
         slot.floorLoadout?.takeIf { it.locked && it.floor == slot.floor }?.let { fl ->
             loadout = fl.cardIds.mapNotNull { CardCatalog.byId(it) }

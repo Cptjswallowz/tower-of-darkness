@@ -121,6 +121,23 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
             }
         }
         Spacer(Modifier.height(10.dp))
+        // v0.1.54 — F3 floor rumors above Confirm
+        if (!tutorialMode && (gc.path?.floor ?: 1) >= 3 && gc.floorRumors.size == 2) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Panel, RoundedCornerShape(8.dp))
+                    .border(1.dp, Bone.copy(0.35f), RoundedCornerShape(8.dp))
+                    .padding(10.dp)
+            ) {
+                Text("Floor rumors", color = Gold, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                gc.floorRumors.forEach { line ->
+                    Text(line, color = Bone.copy(0.9f), fontSize = 12.sp)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
         Button(
             onClick = {
                 val cards = selected.mapNotNull { CardCatalog.byId(it) }

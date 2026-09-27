@@ -145,10 +145,17 @@ class HubMoreV0129Test {
         assertEquals(12, after.remnantsBank)
         assertEquals(3, HubOffers.ashTitheBonus(after.unlocks))
         assertEquals(0, HubOffers.ashTitheBonus(emptySet()))
-        val runWallet = 11
-        fun banked(unlocks: Set<String>): Int = runWallet + HubOffers.ashTitheBonus(unlocks)
-        assertEquals(14, banked(after.unlocks))
-        assertEquals(11, banked(emptySet()))
+        // v0.1.54: Ash Tithe is +3 inside Kept formula (not wallet + tithe)
+        val keptWith = com.towerofdarkness.app.domain.climb.ClimbKept.finishPayout(
+            com.towerofdarkness.app.domain.climb.ClimbKeptFlags(f1CombatWon = true),
+            after.unlocks
+        )
+        val keptWithout = com.towerofdarkness.app.domain.climb.ClimbKept.finishPayout(
+            com.towerofdarkness.app.domain.climb.ClimbKeptFlags(f1CombatWon = true),
+            emptySet()
+        )
+        assertEquals(4, keptWith.kept) // 1 + 3 tithe
+        assertEquals(1, keptWithout.kept)
         assertNull(HubOffers.applyBuy(after.remnantsBank, after.unlocks, HubOffers.ID_ASH_TITHE))
     }
 

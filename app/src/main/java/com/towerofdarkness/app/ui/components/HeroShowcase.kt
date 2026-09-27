@@ -18,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.Rarity
+import com.towerofdarkness.app.domain.climb.ClimbKept
 import com.towerofdarkness.app.domain.combat.BodyArt
 import com.towerofdarkness.app.domain.combat.EnemyKind
 import com.towerofdarkness.app.domain.combat.EnemyLook
@@ -31,15 +32,19 @@ import com.towerofdarkness.app.ui.theme.Steel
  * Player portrait — circular soldier still ([R.drawable.portrait_you]).
  * v0.1.23-nobg: combat = PNG only on dark stage (no plate / fill / tint / ring).
  * Title may keep a teal circle via [showTitleCircle].
+ * v0.1.54: Hub/title may stack trophy overlays via [trophyUnlocks]; combat omits.
  * [rarity] kept for call-site compat; unused (frozen rarity systems).
  */
 @Composable
 fun HeroShowcase(
     @Suppress("UNUSED_PARAMETER") rarity: Rarity = Rarity.UNCOMMON,
     modifier: Modifier = Modifier,
-    showTitleCircle: Boolean = false
+    showTitleCircle: Boolean = false,
+    /** Meta unlocks; only Hub/title pass trophies. Combat leaves empty. */
+    trophyUnlocks: Set<String> = emptySet()
 ) {
     val slot = BodyArt.PLAYER_SLOT_DP.dp
+    val overlays = ClimbKept.unlockedOverlayDrawables(trophyUnlocks)
     Box(
         modifier.then(Modifier.size(slot)),
         contentAlignment = Alignment.Center
@@ -62,8 +67,31 @@ fun HeroShowcase(
                     .fillMaxSize()
                     .clip(CircleShape)
             )
+            // Trophy overlays — same 256 bounds, stack bottom→top; Hub/title only.
+            overlays.forEach { name ->
+                val res = trophyOverlayRes(name)
+                if (res != 0) {
+                    Image(
+                        painter = painterResource(res),
+                        contentDescription = name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                }
+            }
         }
     }
+}
+
+@DrawableRes
+private fun trophyOverlayRes(drawableName: String): Int = when (drawableName) {
+    "overlay_soot_rim" -> R.drawable.overlay_soot_rim
+    "overlay_ash_pauldron" -> R.drawable.overlay_ash_pauldron
+    "overlay_troll_tooth" -> R.drawable.overlay_troll_tooth
+    "overlay_gate_sigil" -> R.drawable.overlay_gate_sigil
+    else -> 0
 }
 
 /**

@@ -4,6 +4,7 @@ import com.towerofdarkness.app.domain.path.NodeType
 import com.towerofdarkness.app.domain.path.PathEdge
 import com.towerofdarkness.app.domain.path.PathNode
 import com.towerofdarkness.app.domain.path.TowerPath
+import com.towerofdarkness.app.domain.climb.ClimbKeptFlags
 import com.towerofdarkness.app.nav.NavState
 
 /** Resume target after cold start / Menu Continue. Never mid-combat. */
@@ -91,7 +92,11 @@ data class MidRunSlot(
     /** v0.1.41 — first F3 explainer dismissed this climb. */
     val seenF3Explainer: Boolean = false,
     /** v0.1.41 — floor-locked five + weapon; null on F1/F2. */
-    val floorLoadout: MidRunFloorLoadout? = null
+    val floorLoadout: MidRunFloorLoadout? = null,
+    /** v0.1.54 — F3 sticky floor rumors [troll, path]; empty on F1/F2. */
+    val floorRumors: List<String> = emptyList(),
+    /** v0.1.54 — climb_kept flags for Kept payout / trophies. */
+    val climbKept: ClimbKeptFlags = ClimbKeptFlags()
 ) {
     companion object {
         const val SCHEMA = "v0.1.12"
@@ -219,6 +224,18 @@ data class MidRunSlot(
             } else {
                 raw("floor_loadout", "null")
             }
+            raw("floor_rumors", encodeStringList(slot.floorRumors))
+            val ck = slot.climbKept
+            raw(
+                "climb_kept",
+                "{" +
+                    "\"f1_combat_won\":${if (ck.f1CombatWon) "true" else "false"}," +
+                    "\"floor2_entered\":${if (ck.floor2Entered) "true" else "false"}," +
+                    "\"floor3_entered\":${if (ck.floor3Entered) "true" else "false"}," +
+                    "\"cave_troll_killed\":${if (ck.caveTrollKilled) "true" else "false"}," +
+                    "\"gate_warden_beaten\":${if (ck.gateWardenBeaten) "true" else "false"}" +
+                    "}"
+            )
             sb.append('}')
             return sb.toString()
         }
@@ -243,6 +260,9 @@ data class MidRunSlot(
                 }
                 val seenF3 = o.bool("seen_f3_explainer") ?: false
                 val floorLoadout = decodeFloorLoadout(o.obj("floor_loadout"))
+                val floorRumors = o.strList("floor_rumors")
+                val climbKeptRaw = decodeClimbKept(o.obj("climb_kept"))
+                val climbKept = ClimbKeptFlags.migrate(climbKeptRaw, floor)
                 MidRunSlot(
                     schema = schema,
                     runId = runId,
@@ -271,11 +291,24 @@ data class MidRunSlot(
                     shopVisits = decodeShopVisits(o.arr("shop_visits")),
                     resume = resume,
                     seenF3Explainer = seenF3,
-                    floorLoadout = floorLoadout
+                    floorLoadout = floorLoadout,
+                    floorRumors = floorRumors,
+                    climbKept = climbKept
                 )
             } catch (_: Exception) {
                 null
             }
+        }
+
+        private fun decodeClimbKept(o: JsonObj?): ClimbKeptFlags {
+            if (o == null) return ClimbKeptFlags()
+            return ClimbKeptFlags(
+                f1CombatWon = o.bool("f1_combat_won") ?: false,
+                floor2Entered = o.bool("floor2_entered") ?: false,
+                floor3Entered = o.bool("floor3_entered") ?: false,
+                caveTrollKilled = o.bool("cave_troll_killed") ?: false,
+                gateWardenBeaten = o.bool("gate_warden_beaten") ?: false
+            )
         }
 
         private fun decodeFloorLoadout(o: JsonObj?): MidRunFloorLoadout? {
