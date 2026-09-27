@@ -17,10 +17,10 @@ Hub + title `HeroShowcase` only — not combat, not enemy busts.
 
 | File | bytes | md5 | Content bbox | coverage |
 |------|------:|-----|--------------|---------:|
-| `assets/portraits/overlay_soot_rim.png` (+ drawable) | 7172 | `6d9431fac60ace69e7d1cefd06055655` | `(41, 17, 213, 240)` | 1.66% |
-| `assets/portraits/overlay_ash_pauldron.png` (+ drawable) | 11678 | `6a9575f95b9ec0d0cfb99dfd43e890b2` | `(58, 93, 110, 182)` | 3.52% |
-| `assets/portraits/overlay_troll_tooth.png` (+ drawable) | 9409 | `aa53bba8de86e3f089bfcab5764243ea` | `(162, 138, 206, 209)` | 2.53% |
-| `assets/portraits/overlay_gate_sigil.png` (+ drawable) | 10969 | `f404372aa68e583fb792d76fdd328e8c` | `(92, 140, 163, 209)` | 3.46% |
+| `assets/portraits/overlay_soot_rim.png` (+ drawable) | 7172 | `6d9431fac60ace69e7d1cefd06055655` | `(42, 19, 211, 237)` | 1.76% |
+| `assets/portraits/overlay_ash_pauldron.png` (+ drawable) | 13410 | `bd1bf237f3174b870ecd573a70e6830d` | `(46, 91, 115, 187)` | 4.59% |
+| `assets/portraits/overlay_troll_tooth.png` (+ drawable) | 11184 | `ef34f2f6d31975d2e674fec65d5e0e4c` | `(156, 134, 205, 210)` | 3.70% |
+| `assets/portraits/overlay_gate_sigil.png` (+ drawable) | 27622 | `3d0add7b710e6d8cf7d7677e5f4f3976` | `(76, 113, 179, 216)` | 12.32% |
 
 ## Stack order (bottom → top)
 
