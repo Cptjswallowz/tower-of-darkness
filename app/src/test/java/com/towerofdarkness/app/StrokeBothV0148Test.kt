@@ -24,8 +24,8 @@ class StrokeBothV0148Test {
 
     @Test
     fun tag_isStrokeBothV0148() {
-        assertEquals("v0.1.49-plumegarnish", CombatFx.TAG)
-        assertEquals("v0.1.49-plumegarnish", CleaveKit.TAG)
+        assertEquals("v0.1.50-puffhold", CombatFx.TAG)
+        assertEquals("v0.1.50-puffhold", CleaveKit.TAG)
     }
 
     @Test

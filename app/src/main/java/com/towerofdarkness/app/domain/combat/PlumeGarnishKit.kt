@@ -1,7 +1,7 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * PLUME + Kenney particle garnish kit — v0.1.49-plumegarnish.
+ * PLUME + Kenney particle garnish kit — v0.1.50-puffhold.
  * Pure domain (drawable names / scales / durations / ability→garnish map).
  * Compose draws via [CombatFxOverlay] cell playback (same engine as CLEAVE).
  * Does NOT touch CombatStrokeOverlay stroke width / crescentBladePath / peaks / colors.
@@ -11,8 +11,8 @@ package com.towerofdarkness.app.domain.combat
  * `app/src/main/res/drawable/` as underscore names (see tools/prep_plumegarnish_v0149.py).
  * Do NOT commit /workspace/tod-particle-packs store packs.
  * PLUME sheets: sand/ash, dust puff, sparks (+ additive). Kenney: spark_NN / circle_NN / smoke_NN / flare_01.
- * Full pack flint/welding/ember-drift/ash-puff may still be pending — sheet ID map ready for swap-in.
- * NEVER wire Kenney slash/twirl/magic/muzzle as hits. See docs/plumegarnish-v0149.md.
+ * ash-puff (Sand & Ash) wired for Dust Veil / Ash Press; footstep-puff = Cinder land only.
+ * NEVER wire Kenney slash/twirl/magic/muzzle as hits. See docs/puffhold-v0150.md.
  */
 enum class GarnishKind {
     /** Tip spark at stroke / Wake tip (20–30% bust). */
@@ -57,7 +57,7 @@ data class GarnishSpec(
 )
 
 object PlumeGarnishKit {
-    const val TAG = "v0.1.49-plumegarnish"
+    const val TAG = "v0.1.50-puffhold"
 
     /** logcat / combat-log prefixes (keep stroke separate). */
     const val PLUME_DEBUG_FMT = "FX plume "
@@ -68,13 +68,13 @@ object PlumeGarnishKit {
     const val PLUME_GRINDER_SPARKS = "fx_plume_grinder_sparks"
     const val PLUME_SAND_KICK = "fx_plume_sand_kick"
     const val PLUME_FOOTSTEP_PUFF = "fx_plume_footstep_puff"
+    const val PLUME_ASH_PUFF = "fx_plume_ash_puff"
     const val PLUME_GROUND_FOG = "fx_plume_ground_fog"
     const val PLUME_THIN_WISP = "fx_plume_thin_wisp"
 
-    /** Intended full-pack sheet ids (NOT on disk — swap-in when Elliott drops). */
+    /** Remaining full-pack sheet ids (on disk under assets/fx/plume; not primary maps). */
     val PLUME_FULL_PENDING: Set<String> = setOf(
-        "flint-strike", "welding-burst", "looping-ember-drift", "ash-fall",
-        "ash-puff", "dust-haze"
+        "flint-strike", "welding-burst", "ember-drift", "ash-fall", "dust-haze"
     )
 
     // --- Kenney allowed drawable basenames ---
@@ -113,7 +113,7 @@ object PlumeGarnishKit {
 
     val IMPORTED_PLUME_DRAWABLES: Set<String> = setOf(
         PLUME_GRINDER_SPARKS, PLUME_SAND_KICK, PLUME_FOOTSTEP_PUFF,
-        PLUME_THIN_WISP
+        PLUME_ASH_PUFF, PLUME_THIN_WISP
     )
 
     /** Banned as stage fog wall (may exist on disk; never primary dust garnish). */
@@ -125,15 +125,19 @@ object PlumeGarnishKit {
     const val COLOR_DIRTY_GREEN = 0xFF6B7A3AL
     const val COLOR_EMBER_RUST = 0xFFC45A2DL
 
-    // --- Timing @1x (WO windows) ---
-    /** Dust puff 350–450ms. */
-    const val PUFF_MS = 400L
-    const val PUFF_MS_LO = 350L
-    const val PUFF_MS_HI = 450L
-    /** Ember/spark 200–300ms. */
-    const val EMBER_MS = 250L
-    const val EMBER_MS_LO = 200L
-    const val EMBER_MS_HI = 300L
+    // --- Timing @1x (WO windows) — v0.1.50 puffhold: both in 400–500ms ---
+    /** Dust puff 400–500ms (TARGET bust only; screenshotable peak). */
+    const val PUFF_MS = 450L
+    const val PUFF_MS_LO = 400L
+    const val PUFF_MS_HI = 500L
+    /** Tip spark / ember 400–500ms (was short ember — caused 1-frame smear). */
+    const val EMBER_MS = 450L
+    const val EMBER_MS_LO = 400L
+    const val EMBER_MS_HI = 500L
+    /** Alias — spark hold shares puffhold band. */
+    const val SPARK_MS = EMBER_MS
+    const val SPARK_MS_LO = EMBER_MS_LO
+    const val SPARK_MS_HI = EMBER_MS_HI
     /** Brace flare pulse (GAIN only). */
     const val BRACE_FLARE_MS = 280L
     /** Soften pip holds while status active — pulse refresh budget. */
@@ -233,8 +237,9 @@ object PlumeGarnishKit {
     }
 
     /**
-     * Dust puff on TARGET — PLUME sand-kick preferred; footstep-puff alt;
-     * Kenney soft smoke fallback. Never both-bust / fog wall.
+     * Dust puff on TARGET — ash-puff for Dust Veil / Ash Press; footstep-puff for
+     * Cinder Step land ONLY; Kenney soft smoke fallback. Never both-bust / fog wall.
+     * sand-kick kept on disk as fallback if ash-puff drawable absent (prefer ash-puff).
      */
     fun dustPuffSpec(
         abilityId: String = "dust_veil",
@@ -245,11 +250,12 @@ object PlumeGarnishKit {
                 "cinder_step" -> DustAtlas(
                     PLUME_FOOTSTEP_PUFF, "footstep-puff", 10, 8, 3, 24, 0.5f, 0.86f
                 )
-                "ash_press" -> DustAtlas(
-                    PLUME_SAND_KICK, "sand-kick", 8, 8, 3, 24, 0.5f, 0.86f
+                // Dust Veil / Ash Press → ash-puff (Sand & Ash); NOT footstep-puff
+                "ash_press", "dust_veil" -> DustAtlas(
+                    PLUME_ASH_PUFF, "ash-puff", 10, 8, 3, 24, 0.5f, 0.86f
                 )
                 else -> DustAtlas(
-                    PLUME_SAND_KICK, "sand-kick", 8, 8, 3, 24, 0.5f, 0.86f
+                    PLUME_ASH_PUFF, "ash-puff", 10, 8, 3, 24, 0.5f, 0.86f
                 )
             }
             return GarnishSpec(
@@ -340,15 +346,20 @@ object PlumeGarnishKit {
         return (f % cols) * cellPx to (f / cols) * cellPx
     }
 
-    /** Play-frame list spanning peak (compact for short holds). */
+    /**
+     * Play-frame list with peak dwell so stills are not a 1-frame smear.
+     * Ramp in → hold peak several slots → ramp out (duration = [holdMs] on overlay).
+     */
     fun atlasPlayFrames(frames: Int, peak: Int): IntArray {
         val last = (frames - 1).coerceAtLeast(0)
         val p = peak.coerceIn(0, last)
-        val a = (p - 2).coerceAtLeast(0)
-        val b = p
-        val c = (p + 2).coerceAtMost(last)
-        val d = (p + 4).coerceAtMost(last)
-        return intArrayOf(a, b, c, d).distinct().toIntArray()
+        val a = (p - 3).coerceAtLeast(0)
+        val b = (p - 1).coerceAtLeast(0)
+        val c = p
+        val d = (p + 2).coerceAtMost(last)
+        val e = (p + 4).coerceAtMost(last)
+        // Peak repeated = longer on-screen still within the same holdMs budget
+        return intArrayOf(a, b, c, c, c, c, d, e)
     }
 
     fun frameAt(playFrames: IntArray, progress: Float): Int {

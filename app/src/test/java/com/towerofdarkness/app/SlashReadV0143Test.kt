@@ -24,8 +24,8 @@ class SlashReadV0143Test {
 
     @Test
     fun tag_isSlashReadV0143() {
-        assertEquals("v0.1.49-plumegarnish", CombatFx.TAG)
-        assertEquals("v0.1.49-plumegarnish", CleaveKit.TAG)
+        assertEquals("v0.1.50-puffhold", CombatFx.TAG)
+        assertEquals("v0.1.50-puffhold", CleaveKit.TAG)
     }
 
     @Test

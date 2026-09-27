@@ -1,0 +1,130 @@
+{
+  "pack": "PLUME full pack \u2014 v0.1.50 garnish upgrade (delta)",
+  "source_zip": "/workspace/tod-particle-packs/plume-full/plume-smoke-dust-debris-vfx-pack.zip",
+  "source_zip_md5": "fe2ef2a01acffee7c16298b9d65b014b",
+  "note": "NEW sheets only for next upgrade. Keep 0.1.49 sampler sheets. No zip/engine committed.",
+  "cell_px": 256,
+  "new_effects": [
+    {
+      "id": "dust-haze",
+      "category": "Fog & Mist Banks",
+      "index": 29,
+      "frames": 32,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 4,
+      "cell_px": 256,
+      "loop": true,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.5
+      ],
+      "tileable_x": true,
+      "note": "perfect loop, tiles horizontally",
+      "peak_frame": 26
+    },
+    {
+      "id": "flint-strike",
+      "category": "Sparks & Embers",
+      "index": 32,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "additive",
+      "anchor_xy": [
+        0.44,
+        0.44
+      ],
+      "tileable_x": false,
+      "note": "",
+      "peak_frame": 4
+    },
+    {
+      "id": "ember-drift",
+      "category": "Sparks & Embers",
+      "index": 33,
+      "frames": 32,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 4,
+      "cell_px": 256,
+      "loop": true,
+      "blend": "additive",
+      "anchor_xy": [
+        0.5,
+        0.5
+      ],
+      "tileable_x": false,
+      "note": "perfect loop",
+      "peak_frame": 14
+    },
+    {
+      "id": "welding-burst",
+      "category": "Sparks & Embers",
+      "index": 35,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "additive",
+      "anchor_xy": [
+        0.5,
+        0.56
+      ],
+      "tileable_x": false,
+      "note": "",
+      "peak_frame": 11
+    },
+    {
+      "id": "ash-fall",
+      "category": "Sparks & Embers",
+      "index": 36,
+      "frames": 32,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 4,
+      "cell_px": 256,
+      "loop": true,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.5
+      ],
+      "tileable_x": true,
+      "note": "perfect loop, tiles horizontally",
+      "peak_frame": 7
+    },
+    {
+      "id": "ash-puff",
+      "category": "Sand & Ash Bursts",
+      "index": 39,
+      "frames": 24,
+      "fps": 24,
+      "grid_cols": 8,
+      "grid_rows": 3,
+      "cell_px": 256,
+      "loop": false,
+      "blend": "alpha",
+      "anchor_xy": [
+        0.5,
+        0.86
+      ],
+      "tileable_x": false,
+      "note": "",
+      "peak_frame": 10
+    }
+  ],
+  "sampler_kept": [
+    "footstep-puff",
+    "grinder-sparks",
+    "ground-fog",
+    "sand-kick",
+    "thin-wisp"
+  ]
+}

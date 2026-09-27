@@ -114,7 +114,7 @@ fun CombatScreen(gc: GameController) {
     var slashDebugLine by remember { mutableStateOf<String?>(null) }
     var slashDebugTarget by remember { mutableStateOf("foe") }
     var sparkStroke by remember { mutableStateOf(false) }
-    // v0.1.49-plumegarnish: tip spark / dust puff / Soften kenney / Brace flare
+    // v0.1.50-puffhold: tip spark / dust puff / Soften kenney / Brace flare
     var tipGarnishSpec by remember { mutableStateOf<GarnishSpec?>(null) }
     var tipGarnishVisible by remember { mutableStateOf(false) }
     var tipGarnishRecipient by remember { mutableStateOf<FxRecipient?>(null) }
@@ -235,26 +235,28 @@ fun CombatScreen(gc: GameController) {
                         hitFlashTint = CombatFx.colorArgb(spec.role)
                         hitFlashVisible = true
                     }
-                    // v0.1.49: tip spark / dust puff alongside locked stroke (TARGET bust / tip)
+                    // v0.1.50: tip spark / dust puff alongside locked stroke (TARGET bust / tip)
+                    // Hold garnish for their own 400–500ms even when spark stroke is shorter.
                     val kinds = PlumeGarnishKit.kindsForAbility(fxId)
+                    var tipHoldScaled = 0L
+                    var dustHoldScaled = 0L
                     if (GarnishKind.TIP_SPARK in kinds || sparkStroke) {
-                        val tip = if (sparkStroke || fxId == CombatFx.ID_ASHBRAND_SPARK) {
-                            PlumeGarnishKit.tipSparkSpec()
-                        } else {
-                            // optional hit-confirm: PLUME tip if sampler present else Kenney
-                            PlumeGarnishKit.tipSparkSpec()
-                        }
+                        val tip = PlumeGarnishKit.tipSparkSpec()
                         tipGarnishSpec = tip
                         tipGarnishRecipient = spec.stroke!!.recipient
-                        tipGarnishHoldMs = CombatFx.fxHoldMs(tip.holdMs, speed)
+                        tipHoldScaled = CombatFx.fxHoldMs(tip.holdMs, speed)
+                        tipGarnishHoldMs = tipHoldScaled
                         tipGarnishVisible = true
                     }
                     if (GarnishKind.DUST_PUFF in kinds) {
                         val dust = PlumeGarnishKit.dustPuffSpec(fxId ?: "dust_veil")
                         dustGarnishSpec = dust
-                        dustGarnishHoldMs = CombatFx.fxHoldMs(dust.holdMs, speed)
+                        dustHoldScaled = CombatFx.fxHoldMs(dust.holdMs, speed)
+                        dustGarnishHoldMs = dustHoldScaled
                         dustGarnishVisible = true
                     }
+                    val garnishHold = maxOf(tipHoldScaled, dustHoldScaled)
+                    val stageHold = maxOf(strokeHoldMs, garnishHold)
                     delay(strokeHoldMs)
                     strokeVisible = false
                     strokeSpec = null
@@ -263,6 +265,9 @@ fun CombatScreen(gc: GameController) {
                     slashDebugLine = null
                     hitFlashVisible = false
                     hitFlashRecipient = null
+                    // Keep puff/sparks on TARGET for remaining hold (screenshotable still)
+                    val remain = (stageHold - strokeHoldMs).coerceAtLeast(0L)
+                    if (remain > 0L) delay(remain)
                     tipGarnishVisible = false
                     tipGarnishSpec = null
                     tipGarnishRecipient = null
@@ -287,7 +292,7 @@ fun CombatScreen(gc: GameController) {
                     // First visible frame at progress 0 → full alpha via bracePipAlpha
                     bracePipProgress = 0f
                     bracePipVisible = true
-                    // v0.1.49: Brace GAIN flare only — does NOT replace floating pips
+                    // v0.1.50: Brace GAIN flare only — does NOT replace floating pips
                     val flare = PlumeGarnishKit.braceFlareSpec()
                     braceFlareSpec = flare
                     braceFlareHoldMs = CombatFx.fxHoldMs(flare.holdMs, speed)
@@ -403,20 +408,24 @@ fun CombatScreen(gc: GameController) {
         for (step in WakeArt.stageSequence()) {
             wakeIconPhase = WakeArt.iconPhase(s, elapsed, speed)
             wakeStageFrame = step.frame
-            // v0.1.49: Wake tip spark (PLUME grinder-sparks additive) on IMPACT
+            // v0.1.50: Wake tip spark (PLUME grinder-sparks additive) on IMPACT
+            var tipHoldScaled = 0L
             if (step.frame == WakeStageFrame.IMPACT) {
                 val tip = PlumeGarnishKit.tipSparkSpec()
                 tipGarnishSpec = tip
                 tipGarnishRecipient = FxRecipient.FOE
-                tipGarnishHoldMs = CombatFx.fxHoldMs(tip.holdMs, speed)
+                tipHoldScaled = CombatFx.fxHoldMs(tip.holdMs, speed)
+                tipGarnishHoldMs = tipHoldScaled
                 tipGarnishVisible = true
                 slashDebugTarget = CombatFx.strokeTargetLabel(
                     FxRecipient.FOE, s.enemy.kind.displayName
                 )
             }
             val budget = WakeArt.holdMs(step.baseMs, speed)
-            delay(budget)
-            elapsed += budget
+            // IMPACT step: stretch to tip hold so stills catch 400–500ms spark
+            val wait = if (tipHoldScaled > 0L) maxOf(budget, tipHoldScaled) else budget
+            delay(wait)
+            elapsed += wait
         }
         wakeStageFrame = WakeStageFrame.NONE
         tipGarnishVisible = false
@@ -553,7 +562,7 @@ fun CombatScreen(gc: GameController) {
                     .height(140.dp)
                     .align(Alignment.TopCenter)
             )
-            // v0.1.49-plumegarnish: tip spark at stroke tip (PLUME grinder-sparks / Kenney spark)
+            // v0.1.50-puffhold: tip spark at stroke tip (PLUME grinder-sparks / Kenney spark)
             CombatParticleGarnishOverlay(
                 spec = tipGarnishSpec,
                 recipient = tipGarnishRecipient,

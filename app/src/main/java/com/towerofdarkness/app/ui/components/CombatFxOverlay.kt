@@ -42,7 +42,7 @@ import kotlin.math.min
 import kotlinx.coroutines.delay
 
 /**
- * Presentation layer for v0.1.49-plumegarnish — drawn Wake-family stroke PRIMARY (LOCKED).
+ * Presentation layer for v0.1.50-puffhold — drawn Wake-family stroke PRIMARY (LOCKED).
  * Filled crescent blade (outer+inner quadratic arcs; NOT StrokeCap.Round stadium pill)
  * with glow + core layers on recipient bust (same family as Wake arc language).
  * Optional CLEAVE slash-light tip garnish at stroke TIP only — never the slash.
@@ -512,23 +512,29 @@ fun CombatParticleGarnishOverlay(
             onDebug?.invoke(line)
         }
     }
-    var progress by remember(visible, hold, spec.drawable) { mutableFloatStateOf(0f) }
-    LaunchedEffect(visible, hold, spec.drawable) {
+    var progress by remember(visible, hold, spec.drawable, underHp) { mutableFloatStateOf(0f) }
+    LaunchedEffect(visible, hold, spec.drawable, underHp) {
         if (!visible) {
             progress = 0f
+            return@LaunchedEffect
+        }
+        // Soften under HP: hold mid plateau while status visible (not a one-shot fade-out)
+        if (underHp && spec.kind == GarnishKind.SOFTEN_PIP) {
+            progress = 0.45f
             return@LaunchedEffect
         }
         val steps = if (spec.atlas) {
             PlumeGarnishKit.atlasPlayFrames(spec.atlasFrames, spec.atlasPeakFrame).size
         } else {
-            6
+            8
         }
         val step = (hold / steps.coerceAtLeast(1)).coerceAtLeast(1L)
         for (i in 1..steps) {
             progress = i.toFloat() / steps
             delay(step)
         }
-        progress = 1f
+        // End on late-peak frame (still readable) rather than empty fade
+        progress = 0.72f
     }
     val tint = Color(spec.tintArgb)
     Canvas(modifier.fillMaxSize()) {

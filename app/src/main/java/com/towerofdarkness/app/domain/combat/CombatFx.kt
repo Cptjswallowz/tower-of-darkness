@@ -1,7 +1,7 @@
 package com.towerofdarkness.app.domain.combat
 
 /**
- * Shared combat FX kernel — v0.1.49-plumegarnish (fat crescent blade BOTH sides).
+ * Shared combat FX kernel — v0.1.50-puffhold (fat crescent blade BOTH sides).
  * Aim / clip / Brace pips stay v0.1.40-fxfix (target bust only / half-stage / no screen flash).
  * Readable cut = filled crescent Path (outer+inner arc; NOT Round-cap stadium pill) on recipient bust.
  * v0.1.48: stronger Wake-like bow; player peak 500ms / enemy 450ms; keep You-Shiv ENEMY core 0.10;
@@ -127,7 +127,7 @@ data class SlashCutGeom(
 }
 
 object CombatFx {
-    const val TAG = "v0.1.49-plumegarnish"
+    const val TAG = "v0.1.50-puffhold"
 
     /** logcat tag for stroke / slash-light debug. */
     const val LOG_TAG_TOD_FX = "TodFx"

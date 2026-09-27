@@ -54,6 +54,7 @@ def main() -> int:
         (add / "grinder-sparks.png", "fx_plume_grinder_sparks.png"),
         (rgba / "sand-kick.png", "fx_plume_sand_kick.png"),
         (rgba / "footstep-puff.png", "fx_plume_footstep_puff.png"),
+        (rgba / "ash-puff.png", "fx_plume_ash_puff.png"),
         (rgba / "thin-wisp.png", "fx_plume_thin_wisp.png"),
         # ground-fog on disk for completeness — Kotlin bans as fog wall
         (rgba / "ground-fog.png", "fx_plume_ground_fog.png"),
