@@ -1,3 +1,5 @@
+> Combat slash/Wake/Brace roles superseded by `IRONCLASH_SFX_v0.1.52.md` (slashlayer). Lentikula Soften/fire + Kenney click still valid.
+
 # IRONCLASH SFX — v0.1.51-ironclash (Art)
 
 P1 audio curation. Combat FX art LOCKED (stroke / puff / Wake) — not touched.

@@ -1,12 +1,13 @@
 package com.towerofdarkness.app.domain.sound
 
 /**
- * v0.1.51-ironclash — curated one-shot roles → asset paths + same-frame duck rule.
+ * v0.1.52-slashlayer — swing+impact layer, heavier Wake clash under sting.
  * Presentation only; no combat math.
  */
 object IronclashSfx {
-    const val TAG = "v0.1.51-ironclash"
+    const val TAG = "v0.1.52-slashlayer"
 
+    const val KEY_SWING = "slash_swing"
     const val KEY_IMPACT = "impact"
     const val KEY_LEGENDARY = "legendary"
     const val KEY_EMBER = "ember"
@@ -18,8 +19,9 @@ object IronclashSfx {
     /** Internal layer under legendary sting (Wake clash ≤400ms). */
     const val KEY_WAKE_CLASH = "wake_clash"
 
-    const val FILE_IMPACT = "ironclash/IRONCLASH_23_Flesh_Hit_Light_05.ogg"
-    const val FILE_WAKE_CLASH = "ironclash/IRONCLASH_03_Sword_Clash_04_wake380.ogg"
+    const val FILE_SWING = "ironclash/IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg"
+    const val FILE_IMPACT = "ironclash/IRONCLASH_23_Flesh_Hit_Light_08.ogg"
+    const val FILE_WAKE_CLASH = "ironclash/IRONCLASH_28_Critical_Hit_Stinger_01_wake380.ogg"
     const val FILE_BRACE = "ironclash/IRONCLASH_14_Shield_Block_Metal_02_brace350.ogg"
     const val FILE_EMBER = "lentikula/lentikula_fire_impact_5_short220.ogg"
     const val FILE_SOFTEN = "lentikula/lentikula_heal_impact_4_soften.ogg"
@@ -29,6 +31,7 @@ object IronclashSfx {
     const val FILE_MISS = "sfx_miss.wav"
 
     /** Runtime asset paths under app/src/main/assets/ (canonical). */
+    const val PATH_SWING = "audio/$FILE_SWING"
     const val PATH_IMPACT = "audio/$FILE_IMPACT"
     const val PATH_WAKE_CLASH = "audio/$FILE_WAKE_CLASH"
     const val PATH_BRACE = "audio/$FILE_BRACE"
@@ -39,10 +42,19 @@ object IronclashSfx {
     const val PATH_STING = "audio/$FILE_STING"
     const val PATH_MISS = "audio/$FILE_MISS"
 
+    /**
+     * Swing starts this many ms before impact (band 40–80; mid-band default).
+     * SoundPool has no built-in delay — SoundBus schedules via Handler.
+     */
+    const val SWING_LEAD_MS = 60L
+
     /** Role → filename (under assets/sfx/ curated source / audio/ runtime). */
     val ROLE_TO_FILENAME: Map<String, String> = mapOf(
+        KEY_SWING to FILE_SWING.substringAfter('/'),
         KEY_IMPACT to FILE_IMPACT.substringAfter('/'),
+        "slash_impact" to FILE_IMPACT.substringAfter('/'),
         "wake" to FILE_WAKE_CLASH.substringAfter('/'),
+        KEY_WAKE_CLASH to FILE_WAKE_CLASH.substringAfter('/'),
         KEY_BRACE to FILE_BRACE.substringAfter('/'),
         KEY_EMBER to FILE_EMBER.substringAfter('/'),
         KEY_SOFTEN to FILE_SOFTEN.substringAfter('/'),
@@ -54,6 +66,7 @@ object IronclashSfx {
 
     /** SoundPool load map: play key → asset path. */
     val LOAD_MAP: Map<String, String> = mapOf(
+        KEY_SWING to PATH_SWING,
         KEY_IMPACT to PATH_IMPACT,
         KEY_WAKE_CLASH to PATH_WAKE_CLASH,
         KEY_BRACE to PATH_BRACE,
@@ -73,35 +86,53 @@ object IronclashSfx {
     const val VOL_GARNISH_DUCK = 0.35f
     const val VOL_WAKE_CLASH = 0.70f
 
+    data class ResolvedClip(
+        val key: String,
+        val volume: Float,
+        val delayMs: Long = 0L
+    )
+
     /**
-     * Same-frame rule: Impact (and legendary layers) play full;
+     * Same-frame rule: Impact expands to swing (t=0) + impact (t=SWING_LEAD_MS);
      * garnish (ember/soften) duck to ~0.35 when Impact or legendary is present.
-     * Soften alone plays ~0.55–0.7. Empty / blank keys dropped.
+     * Legendary expands to sting + wake380 clash under. Soften alone ~0.55–0.7.
+     * Empty / blank keys dropped. No extra mixer gain on swing (+3dB baked in file).
      */
-    fun resolveFrame(sounds: List<String>): List<Pair<String, Float>> {
+    fun resolveFrame(sounds: List<String>): List<ResolvedClip> {
         val keys = sounds.map { it.trim() }.filter { it.isNotEmpty() }
         if (keys.isEmpty()) return emptyList()
-        val hasImpact = keys.any { it == KEY_IMPACT }
+        val hasImpact = keys.any { it == KEY_IMPACT || it == KEY_SWING || it == "slash_impact" }
         val hasLegendary = keys.any { it == KEY_LEGENDARY }
         val duckGarnish = hasImpact || hasLegendary
-        val out = mutableListOf<Pair<String, Float>>()
+        val out = mutableListOf<ResolvedClip>()
         val seen = mutableSetOf<String>()
         for (key in keys) {
-            if (!seen.add(key)) continue
-            when (key) {
+            val normalized = when (key) {
+                "slash_impact" -> KEY_IMPACT
+                else -> key
+            }
+            if (!seen.add(normalized)) continue
+            when (normalized) {
+                KEY_IMPACT, KEY_SWING -> {
+                    // Emit once even if both slash_swing and impact appear in the list.
+                    if (out.none { it.key == KEY_SWING }) {
+                        out += ResolvedClip(KEY_SWING, VOL_FULL, 0L)
+                        out += ResolvedClip(KEY_IMPACT, VOL_FULL, SWING_LEAD_MS)
+                    }
+                }
                 KEY_LEGENDARY -> {
-                    out += KEY_LEGENDARY to VOL_FULL
-                    out += KEY_WAKE_CLASH to VOL_WAKE_CLASH
+                    out += ResolvedClip(KEY_LEGENDARY, VOL_FULL, 0L)
+                    out += ResolvedClip(KEY_WAKE_CLASH, VOL_WAKE_CLASH, 0L)
                 }
                 KEY_SOFTEN -> {
                     val vol = if (duckGarnish) VOL_GARNISH_DUCK else VOL_SOFTEN_SOLO
-                    out += KEY_SOFTEN to vol
+                    out += ResolvedClip(KEY_SOFTEN, vol, 0L)
                 }
                 KEY_EMBER -> {
                     val vol = if (duckGarnish) VOL_GARNISH_DUCK else VOL_FULL
-                    out += KEY_EMBER to vol
+                    out += ResolvedClip(KEY_EMBER, vol, 0L)
                 }
-                else -> out += key to VOL_FULL
+                else -> out += ResolvedClip(normalized, VOL_FULL, 0L)
             }
         }
         return out

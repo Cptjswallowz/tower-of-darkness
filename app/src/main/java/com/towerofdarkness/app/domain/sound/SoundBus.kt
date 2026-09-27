@@ -6,6 +6,8 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.SoundPool
 import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 
 interface SoundBus {
@@ -25,6 +27,7 @@ class AssetSoundBus(context: Context) : SoundBus {
                 .build()
         ).build()
     private val ids = mutableMapOf<String, Int>()
+    private val handler = Handler(Looper.getMainLooper())
     private val tone: ToneGenerator? = try {
         ToneGenerator(AudioManager.STREAM_MUSIC, 40)
     } catch (_: Exception) {
@@ -50,8 +53,12 @@ class AssetSoundBus(context: Context) : SoundBus {
 
     override fun playFrame(sounds: List<String>) {
         val resolved = IronclashSfx.resolveFrame(sounds)
-        for ((key, vol) in resolved) {
-            playKey(key, vol)
+        for (clip in resolved) {
+            if (clip.delayMs <= 0L) {
+                playKey(clip.key, clip.volume)
+            } else {
+                handler.postDelayed({ playKey(clip.key, clip.volume) }, clip.delayMs)
+            }
         }
     }
 
@@ -79,6 +86,7 @@ class AssetSoundBus(context: Context) : SoundBus {
 
     private fun logPlay(key: String) {
         val clip = when (key) {
+            IronclashSfx.KEY_SWING -> IronclashSfx.FILE_SWING
             IronclashSfx.KEY_IMPACT -> IronclashSfx.FILE_IMPACT
             IronclashSfx.KEY_WAKE_CLASH -> IronclashSfx.FILE_WAKE_CLASH
             IronclashSfx.KEY_BRACE -> IronclashSfx.FILE_BRACE
@@ -91,14 +99,17 @@ class AssetSoundBus(context: Context) : SoundBus {
             else -> key
         }
         val role = when (key) {
-            IronclashSfx.KEY_WAKE_CLASH -> "wake"
-            IronclashSfx.KEY_LEGENDARY -> "wake"
+            IronclashSfx.KEY_SWING -> "swing"
+            IronclashSfx.KEY_IMPACT -> "impact"
+            IronclashSfx.KEY_WAKE_CLASH -> "clash"
+            IronclashSfx.KEY_LEGENDARY -> "sting"
             else -> key
         }
         Log.d("SFX", "$role $clip")
     }
 
     override fun release() {
+        handler.removeCallbacksAndMessages(null)
         pool.release()
         try {
             tone?.release()
