@@ -43,7 +43,7 @@ Art doc: `docs/art-audio/IRONCLASH_SFX_v0.1.53.md`. Curated: `assets/sfx/ironcla
 
 - No CombatStrokeOverlay / puff / Kenney pips / skill math / Floor3 / Hub / shop / CombatFx stroke / PLUME / Wake art.
 - Pack zips under `/workspace/tod-sfx-v0151/` **not** committed.
-- Tag **HELD**; push `origin/main` OK (no force).
+- Tag **`v0.1.53-wakeblade`** LIVE; push `origin/main` OK (no force).
 - Real `./gradlew :app:assembleDebug` only.
 - No dex-swap. Same debug keystore.
 

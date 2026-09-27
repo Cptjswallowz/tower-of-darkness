@@ -6,7 +6,12 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 ## Status (v0.1.53-wakeblade)
 
-- **v0.1.53-wakeblade:** P1 audio — Wake heavy swing+impact under sting (unmapped from Clash/Critical); keeps 1.52 slash volumes; visuals LOCKED. Feature tip (tag HELD). Still debug.
+- **v0.1.53-wakeblade:** P1 audio — Wake heavy swing+impact under sting (unmapped from Clash); keeps 1.52 slash volumes; visuals LOCKED. Tagged release. Still debug.
+  - `wake_swing=IRONCLASH_02_Sword_Swing_Heavy_04_wake_plus3db.ogg`
+  - `wake_impact=IRONCLASH_24_Flesh_Hit_Heavy_04_wake_plus3db.ogg`
+  - `sting=sfx_legendary_sting`
+  - `slash_swing=IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg`
+  - `slash_impact=IRONCLASH_23_Flesh_Hit_Light_08.ogg`
 - **v0.1.52-slashlayer:** P1 audio remap — swing+impact layer (60ms lead), heavier Wake clash under sting (superseded by wakeblade), Brace shield only; visuals LOCKED. Tagged release.
   - `slash_swing=IRONCLASH_01_Sword_Swing_Light_09_plus3db.ogg`
   - `slash_impact=IRONCLASH_23_Flesh_Hit_Light_08.ogg`
