@@ -17,7 +17,10 @@ interface SoundBus {
     fun release()
 }
 
-class AssetSoundBus(context: Context) : SoundBus {
+class AssetSoundBus(
+    context: Context,
+    private val music: MusicPlayer? = null
+) : SoundBus {
     private val pool: SoundPool = SoundPool.Builder()
         .setMaxStreams(8)
         .setAudioAttributes(
@@ -63,6 +66,9 @@ class AssetSoundBus(context: Context) : SoundBus {
     }
 
     private fun playKey(key: String, volume: Float) {
+        if (key in MusicMap.DUCK_KEYS) {
+            music?.duck()
+        }
         val id = ids[key]
         if (id != null) {
             pool.play(id, volume, volume, 1, 0, 1f)

@@ -114,10 +114,10 @@ class ContinueV0161Test {
     }
 
     @Test
-    fun packaging_vc62_vnContinue() {
+    fun packaging_vc63_vnScore() {
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 62"))
-        assertTrue(g.contains("versionName = \"0.1.61-continue\""))
+        assertTrue(g.contains("versionCode = 63"))
+        assertTrue(g.contains("versionName = \"0.1.62-score\""))
     }
 
     @Test
