@@ -192,6 +192,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
     /** Guard: Kept payout applied to MetaStore once per summary sheet. */
     private var summaryBankWritten: Boolean = false
     var glossaryTerm by mutableStateOf<String?>(null)
+    /** Optional body override (skill long-press → Forge upgraded sentence). */
+    var glossaryBodyOverride by mutableStateOf<String?>(null)
         private set
     var weightHitchCardId by mutableStateOf<String?>(null)
         private set
@@ -254,7 +256,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { meta.metaHpBonus.collect { metaHpBonus = it } }
     }
 
-    fun showGlossary(term: String?) { glossaryTerm = term }
+    fun showGlossary(term: String?, bodyOverride: String? = null) {
+        glossaryTerm = term
+        glossaryBodyOverride = if (term == null) null else bodyOverride
+    }
+
+    /** Combat long-press: glossary title + Forge upgraded body for current forge level. */
+    fun showSkillGlossary(cardTitle: String, upgradedBody: String) {
+        showGlossary(cardTitle, bodyOverride = upgradedBody.replace("**", ""))
+    }
 
     /** Toggle combat pace 1x ↔ 2x. Applies to the NEXT hold beat (current delay already committed). */
     fun toggleCombatSpeed() {

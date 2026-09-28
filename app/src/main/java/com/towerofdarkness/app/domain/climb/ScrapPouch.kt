@@ -22,6 +22,12 @@ object ScrapPouch {
     const val SHOP_GOBLIN_PILE_GRANT_G = 3
     const val SHOP_ORC_PILE_GRANT_O = 2
 
+    /** Climb-wallet shop price unit — never "rem" (Hub remnants wording unchanged). */
+    const val SHOP_PRICE_UNIT = "purse"
+
+    /** Exact shop button line: "Goblin pile · 8 purse". */
+    fun shopPriceLine(title: String, price: Int): String = "$title · $price $SHOP_PRICE_UNIT"
+
     /** Exact HUD form: HP N · purse N · gN oN */
     fun hudLine(hp: Int, purse: Int, goblin: Int, orc: Int): String =
         "HP $hp · purse $purse · g$goblin o$orc"

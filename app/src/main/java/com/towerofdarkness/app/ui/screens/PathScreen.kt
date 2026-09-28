@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import com.towerofdarkness.app.R
 import com.towerofdarkness.app.domain.climb.FloorRumors
 import com.towerofdarkness.app.domain.path.FloorArt
+import com.towerofdarkness.app.domain.art.SharedTilePlate
+import com.towerofdarkness.app.ui.components.SharedTilePlateBox
 import com.towerofdarkness.app.domain.path.NodeType
 import com.towerofdarkness.app.domain.path.PathNode
 import com.towerofdarkness.app.nav.GameController
@@ -233,29 +235,35 @@ private fun PathNodeChip(
     val tokenName = FloorArt.tokenDrawableName(node.type, showType = showType && !node.cleared)
     val tokenRes = resolveTokenResId(tokenName)
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(4.dp)) {
-        Box(
-            Modifier
-                .size(52.dp)
-                .background(Panel, CircleShape)
-                .border(2.dp, color, CircleShape)
-                // Selectable choices still enter; otherwise Scout-first / rumor dispatcher
-                .clickable(enabled = selectable || canFoggedAct) {
-                    when {
-                        selectable -> onClick()
-                        canFoggedAct -> onFoggedTap()
-                    }
-                },
-            contentAlignment = Alignment.Center
+        SharedTilePlateBox(
+            modifier = Modifier.size(52.dp),
+            circular = true,
+            plateAlpha = SharedTilePlate.NODE_DISC_PLATE_ALPHA
         ) {
-            if (tokenRes != 0 && !node.cleared) {
-                Image(
-                    painter = painterResource(tokenRes),
-                    contentDescription = tokenName,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(FloorArt.TOKEN_SIZE_DP.dp)
-                )
-            } else {
-                Text(label, color = Bone, fontSize = 12.sp)
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Panel.copy(alpha = SharedTilePlate.PANEL_OVER_PLATE_ALPHA), CircleShape)
+                    .border(2.dp, color, CircleShape)
+                    // Selectable choices still enter; otherwise Scout-first / rumor dispatcher
+                    .clickable(enabled = selectable || canFoggedAct) {
+                        when {
+                            selectable -> onClick()
+                            canFoggedAct -> onFoggedTap()
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (tokenRes != 0 && !node.cleared) {
+                    Image(
+                        painter = painterResource(tokenRes),
+                        contentDescription = tokenName,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(FloorArt.TOKEN_SIZE_DP.dp)
+                    )
+                } else {
+                    Text(label, color = Bone, fontSize = 12.sp)
+                }
             }
         }
         // Free Scout / revealed: icon + type name like row-1 (no extra rumor line)

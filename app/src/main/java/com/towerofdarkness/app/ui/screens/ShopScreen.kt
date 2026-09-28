@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towerofdarkness.app.domain.climb.ScrapPouch
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
@@ -62,7 +63,7 @@ fun ShopScreen(gc: GameController) {
                         when {
                             offer.sold -> "${offer.title} — SOLD"
                             healBlocked -> "${offer.title} — already full"
-                            else -> "${offer.title} · ${offer.price} rem"
+                            else -> ScrapPouch.shopPriceLine(offer.title, offer.price)
                         }
                     )
                 }

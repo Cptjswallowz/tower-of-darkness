@@ -79,6 +79,7 @@ fun TowerRoot(gc: GameController) {
     GlossaryDialog(
         term = gc.glossaryTerm,
         onDismiss = { gc.showGlossary(null) },
-        onTerm = { gc.showGlossary(it) }
+        onTerm = { gc.showGlossary(it) },
+        bodyOverride = gc.glossaryBodyOverride
     )
 }

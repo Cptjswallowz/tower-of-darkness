@@ -66,6 +66,16 @@ object Forge {
         else -> "III"
     }
 
+    /**
+     * Combat skill-tile roman pip (v0.1.59-tilepolish).
+     * Lv1: none. Lv2: II. Lv3: III. Forge list still uses [pipLabel] (I/II/III).
+     */
+    fun combatPipLabel(level: Int): String? = when (level.coerceAtLeast(1)) {
+        1 -> null
+        2 -> "II"
+        else -> "III"
+    }
+
     fun levelOf(map: Map<String, ForgeSkillState>, cardId: String): Int =
         map[cardId]?.level ?: 1
 

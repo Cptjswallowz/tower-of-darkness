@@ -23,10 +23,12 @@ import com.towerofdarkness.app.ui.theme.Gold
 fun GlossaryDialog(
     term: String?,
     onDismiss: () -> Unit,
-    onTerm: (String) -> Unit = {}
+    onTerm: (String) -> Unit = {},
+    /** When set (combat skill long-press), show Forge upgraded sentence instead of static Glossary. */
+    bodyOverride: String? = null
 ) {
     if (term == null) return
-    val def = Glossary.definition(term) ?: "No entry."
+    val def = bodyOverride?.takeIf { it.isNotBlank() } ?: Glossary.definition(term) ?: "No entry."
     val title = when {
         term.equals("ashbrand", ignoreCase = true) -> "Ashbrand"
         else -> term.replaceFirstChar { it.uppercase() }

@@ -24,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towerofdarkness.app.domain.art.SharedTilePlate
 import com.towerofdarkness.app.domain.forge.Forge
+import com.towerofdarkness.app.ui.components.SharedTilePlateBox
+import com.towerofdarkness.app.ui.components.sharedTilePlateAvailable
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.ui.theme.Bone
 import com.towerofdarkness.app.ui.theme.Gold
@@ -53,34 +56,42 @@ fun ForgeSheet(gc: GameController) {
             rows.forEach { row ->
                 val enabled = row.enabled
                 val tint = if (enabled) Bone else Bone.copy(0.45f)
-                Box(
-                    Modifier
+                val plateOn = sharedTilePlateAvailable()
+                SharedTilePlateBox(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .border(1.dp, if (enabled) Gold.copy(0.5f) else Bone.copy(0.25f), RoundedCornerShape(8.dp))
-                        .background(Panel, RoundedCornerShape(8.dp))
-                        .clickable(enabled = enabled) { gc.forgeSelectSkill(row.cardId) }
-                        .padding(12.dp)
+                        .padding(vertical = 4.dp),
+                    cornerRadius = 8.dp
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, if (enabled) Gold.copy(0.5f) else Bone.copy(0.25f), RoundedCornerShape(8.dp))
+                            .background(Panel.copy(alpha = if (plateOn) SharedTilePlate.PANEL_OVER_PLATE_ALPHA else 1f), RoundedCornerShape(8.dp))
+                            .clickable(enabled = enabled) { gc.forgeSelectSkill(row.cardId) }
+                            .padding(12.dp)
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(row.title, color = tint, fontSize = 16.sp)
-                            Text(
-                                row.greyReason ?: (row.costLine ?: ""),
-                                color = tint.copy(0.75f),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                gc.forgeGlossaryFor(row.cardId).replace("**", ""),
-                                color = tint.copy(0.65f),
-                                fontSize = 11.sp
-                            )
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(row.title, color = tint, fontSize = 16.sp)
+                                Text(
+                                    row.greyReason ?: (row.costLine ?: ""),
+                                    color = tint.copy(0.75f),
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    gc.forgeGlossaryFor(row.cardId).replace("**", ""),
+                                    color = tint.copy(0.65f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                            // Forge list keeps I/II/III (existing)
+                            Text(row.pip, color = Gold, fontSize = 18.sp)
                         }
-                        Text(row.pip, color = Gold, fontSize = 18.sp)
                     }
                 }
             }

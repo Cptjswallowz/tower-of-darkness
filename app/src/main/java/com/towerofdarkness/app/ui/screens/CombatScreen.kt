@@ -54,6 +54,13 @@ import com.towerofdarkness.app.domain.combat.WakeArt
 import com.towerofdarkness.app.domain.combat.WakeIconPhase
 import com.towerofdarkness.app.domain.combat.WakeStageFrame
 import androidx.compose.foundation.clickable
+import com.towerofdarkness.app.ui.components.sharedTilePlateAvailable
+import com.towerofdarkness.app.ui.components.SharedTilePlateBox
+import com.towerofdarkness.app.domain.art.SharedTilePlate
+import com.towerofdarkness.app.domain.forge.Forge
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
 import com.towerofdarkness.app.ui.components.CombatBracePipsOverlay
 import com.towerofdarkness.app.ui.components.CombatHitFlashOverlay
@@ -635,11 +642,16 @@ fun CombatScreen(gc: GameController) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             state.activeCards.take(5).forEach { card ->
                 val isCurrent = card.id == state.highlightedId
+                val forgeLv = Forge.levelOf(gc.forgeStates, card.id)
                 Box(Modifier.weight(1f)) {
                     SkillSlot(
                         card = card,
                         spent = card.id in state.spentIds,
                         current = isCurrent,
+                        forgeLevel = forgeLv,
+                        onLongPressGlossary = {
+                            gc.showSkillGlossary(card.title, card.effect.description)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                     // Fired tile flash — this skill tile only (not whole combat row)
@@ -747,8 +759,16 @@ fun CombatScreen(gc: GameController) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Modifier = Modifier) {
+private fun SkillSlot(
+    card: Card,
+    spent: Boolean,
+    current: Boolean,
+    forgeLevel: Int = 1,
+    onLongPressGlossary: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     // Brace-job skills keep Moss/green outline (WO v0.1.19); current still Gold.
     val border = when {
         current -> Gold
@@ -759,19 +779,55 @@ private fun SkillSlot(card: Card, spent: Boolean, current: Boolean, modifier: Mo
         else -> Bone.copy(0.35f)
     }
     val dimmed = spent && !current
-    Column(
-        modifier
-            .height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp)
-            .background(Panel.copy(alpha = if (dimmed) 0.85f else 1f), RoundedCornerShape(6.dp))
-            .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(6.dp))
-            .padding(horizontal = 2.dp, vertical = 3.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    // v0.1.59: gold roman pip TOP-RIGHT inside border (not on glyph). Lv1 none.
+    val pip = Forge.combatPipLabel(forgeLevel)
+    val plateOn = sharedTilePlateAvailable()
+    val panelAlpha = when {
+        dimmed && plateOn -> SharedTilePlate.PANEL_OVER_PLATE_ALPHA * 0.85f
+        dimmed -> 0.85f
+        plateOn -> SharedTilePlate.PANEL_OVER_PLATE_ALPHA
+        else -> 1f
+    }
+    val hold = if (onLongPressGlossary != null) {
+        Modifier.combinedClickable(
+            onClick = {},
+            onLongClick = onLongPressGlossary
+        )
+    } else Modifier
+    SharedTilePlateBox(
+        modifier = modifier.height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp),
+        cornerRadius = 6.dp
     ) {
-        // Glyph ABOVE name; spent greys at VolumeArt.DIMMED_GLYPH_ALPHA (readable, no crush).
-        SkillGlyphIcon(cardId = card.id, spent = dimmed, size = SkillGlyph.GLYPH_SIZE_DP.dp)
-        Text(card.title, color = if (dimmed) Bone.copy(0.65f) else Bone, fontSize = 9.sp, maxLines = 2)
-        Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .then(hold)
+                .background(Panel.copy(alpha = panelAlpha), RoundedCornerShape(6.dp))
+                .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(6.dp))
+                .padding(horizontal = 2.dp, vertical = 3.dp)
+        ) {
+            Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Glyph ABOVE name; spent greys at VolumeArt.DIMMED_GLYPH_ALPHA (readable, no crush).
+                SkillGlyphIcon(cardId = card.id, spent = dimmed, size = SkillGlyph.GLYPH_SIZE_DP.dp)
+                Text(card.title, color = if (dimmed) Bone.copy(0.65f) else Bone, fontSize = 9.sp, maxLines = 2)
+                Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
+            }
+            if (pip != null) {
+                Text(
+                    pip,
+                    color = Gold,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 1.dp, end = 2.dp)
+                )
+            }
+        }
     }
 }
 
@@ -787,10 +843,15 @@ private fun WeaponBar(
         WeaponTag.Notch -> Accent
         WeaponTag.Guard -> Moss
     }
+    val plateOn = sharedTilePlateAvailable()
+    SharedTilePlateBox(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 8.dp
+    ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Panel, RoundedCornerShape(8.dp))
+            .background(Panel.copy(alpha = if (plateOn) SharedTilePlate.PANEL_OVER_PLATE_ALPHA else 1f), RoundedCornerShape(8.dp))
             .border(if (flashed) 2.dp else 1.dp, if (flashed) Gold else tagColor, RoundedCornerShape(8.dp))
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -818,6 +879,7 @@ private fun WeaponBar(
             }
         }
     }
+    } // SharedTilePlateBox
 }
 
 
