@@ -30,6 +30,7 @@ import com.towerofdarkness.app.domain.forge.ForgeSkillState
 import com.towerofdarkness.app.domain.hub.HubOffers
 import com.towerofdarkness.app.domain.combat.CombatEngine
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.CombatPhase
 import com.towerofdarkness.app.domain.combat.WeaponCatalog
 import com.towerofdarkness.app.domain.combat.WeaponRuntime
 import com.towerofdarkness.app.domain.Rarity
@@ -699,59 +700,78 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     private suspend fun runCombatBeats() {
         var s = combatState ?: return
-        while (!s.finished) {
+        // v0.1.61-continue: stop on VICTORY/DEFEAT phase (not only finished flag)
+        while (s.phase == CombatPhase.COMBAT && !s.finished) {
             // A — dice tumble
             val diceFrom = s.log.size
             s = engine.diceTumble(s)
+            s = engine.applyWinCheck(s) // every beat: foeHp<=0 → VICTORY
             combatState = s
             playLogSounds(s, diceFrom)
+            if (s.phase != CombatPhase.COMBAT) break
             combatHold(Balance.DICE_MS)
+            s = engine.applyWinCheck(combatState ?: s)
+            combatState = s
+            if (s.phase != CombatPhase.COMBAT) break
             // B — slot already highlighted
 
             // C — skill
             val skillFrom = s.log.size
             s = engine.resolveSkill(s)
+            s = engine.applyWinCheck(s)
             combatState = s
             playLogSounds(s, skillFrom)
             val skillMs = if (s.lastFiredCard?.rarity == Rarity.RARE ||
                 s.lastFiredCard?.rarity == Rarity.LEGENDARY
             ) Balance.SKILL_RARE_MS else Balance.SKILL_COMMON_MS
 
-            // v0.1.60-unstick: foe dead mid skill — stop dice loop; stroke/log ≤600ms; force win
-            if (s.enemy.hp <= 0 || s.finished) {
-                if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
-                    // Killing blow still queued Wake/Spark — resolve weapon, then end
+            // v0.1.61-continue: foe dead mid skill — stop dice; ≤400ms; force VICTORY
+            // 2x speed must not skip this win check (applyWinCheck is sync, not held).
+            if (s.enemy.hp <= 0 || s.finished || s.phase != CombatPhase.COMBAT) {
+                if (s.phase == CombatPhase.COMBAT &&
+                    (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark)
+                ) {
                     val fullWake = s.pendingFullWake
                     val weaponFrom = s.log.size
                     s = engine.resolveWeapon(s)
+                    s = engine.applyWinCheck(s)
                     combatState = s
                     playLogSounds(s, weaponFrom)
                     val wHold = if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS
                     combatHold(minOf(wHold, Balance.COMBAT_END_FORCE_MS))
-                } else {
+                } else if (s.phase == CombatPhase.COMBAT) {
                     combatHold(minOf(skillMs, Balance.COMBAT_END_FORCE_MS))
                 }
-                s = forceCombatWinIfNeeded(s)
+                s = forceCombatWinIfNeeded(combatState ?: s)
                 combatState = s
                 break
             }
 
             combatHold(skillMs)
+            s = engine.applyWinCheck(combatState ?: s)
+            combatState = s
+            if (s.phase != CombatPhase.COMBAT) break
 
             // D — read hold
             combatHold(Balance.READ_HOLD_MS)
+            s = engine.applyWinCheck(combatState ?: s)
+            combatState = s
+            if (s.phase != CombatPhase.COMBAT) break
 
             // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms @1x
             if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
                 val fullWake = s.pendingFullWake
                 val weaponFrom = s.log.size
                 s = engine.resolveWeapon(s)
+                s = engine.applyWinCheck(s)
                 combatState = s
                 playLogSounds(s, weaponFrom)
                 combatHold(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
+                s = engine.applyWinCheck(combatState ?: s)
+                combatState = s
             }
 
-            if (s.finished || s.enemy.hp <= 0) {
+            if (s.finished || s.enemy.hp <= 0 || s.phase != CombatPhase.COMBAT) {
                 s = forceCombatWinIfNeeded(s)
                 combatState = s
                 break
@@ -760,51 +780,64 @@ class GameController(app: Application) : AndroidViewModel(app) {
             // F — enemy counter
             val enemyFrom = s.log.size
             s = engine.resolveEnemy(s)
+            s = engine.applyWinCheck(s)
             combatState = s
             playLogSounds(s, enemyFrom)
             combatHold(Balance.ENEMY_HOLD_MS)
+            s = engine.applyWinCheck(combatState ?: s)
+            combatState = s
 
-            if (s.finished) break
+            if (s.finished || s.phase != CombatPhase.COMBAT) break
             s = engine.readyNext(s)
             combatState = s
         }
+        // Failsafe: foe dead but phase still COMBAT (anim blocked) → force VICTORY
+        s = forceCombatWinIfNeeded(combatState ?: s)
+        combatState = s
         playerHp = s.playerHp
         // Apply this-run weapon level-up rules before Continue
         applyWeaponLevelUp(s)
-        s = s.copy(beat = CombatBeat.AWAITING_CONTINUE)
+        s = (combatState ?: s).let { cur ->
+            val synced = engine.applyWinCheck(cur)
+            synced.copy(
+                beat = CombatBeat.AWAITING_CONTINUE,
+                phase = when {
+                    synced.playerHp <= 0 -> CombatPhase.DEFEAT
+                    synced.enemy.hp <= 0 || synced.playerWon -> CombatPhase.VICTORY
+                    else -> synced.phase
+                }
+            )
+        }
         combatState = s
-        val outcome = if (s.playerWon || (s.enemy.hp <= 0 && s.playerHp > 0)) "win" else "lose"
-        Log.d("COMBAT", "COMBAT_END $outcome foeHp=${s.enemy.hp} youHp=${s.playerHp}")
+        val outcome = if (s.phase == CombatPhase.VICTORY || s.playerWon ||
+            (s.enemy.hp <= 0 && s.playerHp > 0)
+        ) "win" else "lose"
+        // Exact phone-gate line: COMBAT_END win foe=0 you=N phase=VICTORY
+        Log.d(
+            "COMBAT",
+            "COMBAT_END $outcome foe=${s.enemy.hp} you=${s.playerHp} phase=${s.phase.name}"
+        )
         // Wait for Continue — do not auto-nav
     }
 
     /**
-     * v0.1.60-unstick: ensure win flags + Victory log line when foe is dead but
-     * engine did not already call finishVictory (e.g. hp<=0 guard path).
+     * v0.1.61-continue: ensure VICTORY phase + Victory log when foe is dead.
+     * Anim / 2x must not block — delegates to [CombatEngine.forceVictory].
      */
     private fun forceCombatWinIfNeeded(state: CombatState): CombatState {
-        if (state.playerHp <= 0) return state
-        if (state.enemy.hp > 0 && !state.finished) return state
-        if (state.finished && state.playerWon) return state.copy(beat = CombatBeat.AWAITING_CONTINUE)
-        val hasVictory = state.log.any { it.message.startsWith("Victory") }
-        val log = if (hasVictory) {
-            state.log
-        } else {
-            state.log + com.towerofdarkness.app.domain.combat.CombatEvent(
-                "Victory!",
-                com.towerofdarkness.app.domain.combat.FloatingText("WIN", true, true),
-                com.towerofdarkness.app.domain.combat.CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
-                "legendary"
+        if (state.playerHp <= 0) {
+            return if (state.phase == CombatPhase.DEFEAT) state
+            else state.copy(
+                phase = CombatPhase.DEFEAT,
+                finished = true,
+                playerWon = false,
+                beat = CombatBeat.AWAITING_CONTINUE
             )
         }
-        return state.copy(
-            log = log,
-            finished = true,
-            playerWon = true,
-            highlightedId = null,
-            awaitingWeapon = false,
-            beat = CombatBeat.AWAITING_CONTINUE
-        )
+        if (state.enemy.hp > 0 && !state.finished && state.phase == CombatPhase.COMBAT) {
+            return state
+        }
+        return engine.forceVictory(state)
     }
 
     /**
@@ -1130,9 +1163,38 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     fun continueAfterCombat() {
-        val s = combatState ?: return
+        var s = combatState ?: return
+        // Promote foe-dead → VICTORY if UI Continue tapped before loop finished flags
+        if (s.enemy.hp <= 0 && s.playerHp > 0 && !s.finished) {
+            s = forceCombatWinIfNeeded(s)
+            combatState = s
+        }
         if (!s.finished) return
         onCombatEnd(s)
+    }
+
+    /**
+     * v0.1.61-continue: UI 400ms failsafe entry — foeHp<=0 while phase still COMBAT.
+     * Anim must not block; safe to call from CombatScreen LaunchedEffect.
+     */
+    fun forceVictoryFromUi() {
+        val s = combatState ?: return
+        if (s.enemy.hp > 0 || s.playerHp <= 0) return
+        if (s.phase == CombatPhase.VICTORY || s.phase == CombatPhase.DEFEAT) return
+        combatState = forceCombatWinIfNeeded(s)
+        // Stop dice loop if still running
+        if (combatState?.phase == CombatPhase.VICTORY) {
+            combatJob?.cancel()
+            combatJob = null
+            val won = combatState ?: return
+            applyWeaponLevelUp(won)
+            val end = forceCombatWinIfNeeded(won).copy(beat = CombatBeat.AWAITING_CONTINUE)
+            combatState = end
+            Log.d(
+                "COMBAT",
+                "COMBAT_END win foe=${end.enemy.hp} you=${end.playerHp} phase=${end.phase.name}"
+            )
+        }
     }
 
     private fun effectiveLoadout(): List<Card> {
