@@ -3,7 +3,6 @@ package com.towerofdarkness.app.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -23,6 +22,9 @@ import com.towerofdarkness.app.domain.art.SharedTilePlate
  * Skill / Ashbrand / Forge: plate as-is (baked center α ≈ 0.35).
  * Node discs: same drawable at [SharedTilePlate.NODE_DISC_PLATE_ALPHA].
  * No FX packs drawn on the plate.
+ *
+ * v0.1.61-continue: Image uses [matchParentSize] (not fillMaxSize) so a wrap-content
+ * host (WeaponBar) cannot expand the stone plate into the log+bottom well under Ashbrand.
  */
 @Composable
 fun SharedTilePlateBox(
@@ -36,12 +38,13 @@ fun SharedTilePlateBox(
     val shape: Shape = if (circular) CircleShape else RoundedCornerShape(cornerRadius)
     Box(modifier) {
         if (SharedTilePlate.HOOKS_READY) {
+            // matchParentSize: size to content-measured Box; do NOT propose maxHeight upward
             Image(
                 painter = painterResource(R.drawable.ui_tile_plate),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .clip(shape)
                     .alpha(SharedTilePlate.opacityInBand(plateAlpha))
             )

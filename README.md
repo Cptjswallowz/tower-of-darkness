@@ -4,7 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.60-unstick)
+## Status (v0.1.61-continue)
+
+- **v0.1.61-continue:** P0 phone Continue — CombatPhase VICTORY; foeHp<=0 every-beat win check; 400ms UI failsafe; Continue purple full-width (Flee hidden); SharedTilePlateBox Image matchParentSize (stops stone expand under Ashbrand into log well). vc62. HOLD tag. Still debug.
 
 - **v0.1.60-unstick:** P0 combat-end softlock — Continue replaces Flee on foeHp<=0; Victory in log; plate allow-list skill/Ashbrand/Forge only (SharedTilePlateBox off log well / bottom slot / HP / pips / foe chips / path nodes); COMBAT_END debug. HOLD tag. Still debug.
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +38,7 @@ import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.combat.CombatPhase
 import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.EnemyKits
 import com.towerofdarkness.app.domain.combat.EnemySkill
@@ -441,6 +444,20 @@ fun CombatScreen(gc: GameController) {
         wakeIconPhase = WakeIconPhase.IDLE
     }
 
+    // v0.1.61-continue: UI failsafe — foeHp<=0 for 400ms while phase still COMBAT → force VICTORY
+    // (anim / FX holds must not block Continue). 2x does not skip: wall-clock 400ms.
+    LaunchedEffect(state?.enemy?.hp, state?.phase, state?.finished) {
+        val s0 = state ?: return@LaunchedEffect
+        if (s0.enemy.hp > 0) return@LaunchedEffect
+        if (s0.phase == CombatPhase.VICTORY || s0.phase == CombatPhase.DEFEAT) return@LaunchedEffect
+        if (s0.playerHp <= 0) return@LaunchedEffect
+        delay(Balance.COMBAT_END_FORCE_MS)
+        val s1 = gc.combatState ?: return@LaunchedEffect
+        if (s1.enemy.hp <= 0 && s1.phase == CombatPhase.COMBAT && s1.playerHp > 0) {
+            gc.forceVictoryFromUi()
+        }
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -669,8 +686,10 @@ fun CombatScreen(gc: GameController) {
         WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase, onAshbrandTap = { gc.showGlossary("ashbrand") })
 
         Spacer(Modifier.height(8.dp))
+        // Combat log well UNDER Ashbrand — plate-free (GlossaryText only).
         Column(Modifier.weight(1f)) {
             // Pin FULL Wake line so it stays visible for the Wake hold beat
+            // v0.1.61: restore ≥3 log lines (was empty stone well when plate expanded).
             val recent = state.log.takeLast(6).toMutableList()
             state.pinnedWakeLine?.let { pin ->
                 if (recent.none { it.message == pin }) {
@@ -737,15 +756,36 @@ fun CombatScreen(gc: GameController) {
             }
         }
 
-        // v0.1.60-unstick: Continue replaces Flee in the SAME bottom slot when combat
-        // ended (foeHp<=0 / finished / AWAITING_CONTINUE). Bound to combat-end state —
-        // NOT log click. Do not add extra Victory/Continue chrome below (clips off-screen).
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val combatEnded = state.finished || state.beat == CombatBeat.AWAITING_CONTINUE
+        // v0.1.61-continue: log well = GlossaryText only — NO tile-plate Image / Panel stone.
+        // (Stone under Ashbrand was WeaponBar plate fillMaxSize expand — fixed in
+        // TilePlateBackdrop.kt via matchParentSize.) Min 3 log lines kept visible above.
+
+        // v0.1.61-continue: Continue is OWN button in bottom slot (not a log line).
+        // VICTORY → Continue enabled purple full width, Flee hidden; z-order above bg.
+        // Bound to phase/finished/foeHp — NOT log click.
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .zIndex(2f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val combatEnded = state.phase == CombatPhase.VICTORY ||
+                state.phase == CombatPhase.DEFEAT ||
+                state.finished ||
+                state.beat == CombatBeat.AWAITING_CONTINUE ||
+                (state.enemy.hp <= 0 && state.playerHp > 0)
             if (combatEnded) {
                 Button(
                     onClick = { gc.continueAfterCombat() },
-                    modifier = Modifier.weight(1f)
+                    enabled = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .zIndex(3f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Accent,
+                        contentColor = Bone
+                    )
                 ) { Text("Continue") }
             } else {
                 OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f)) {

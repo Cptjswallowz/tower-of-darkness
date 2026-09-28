@@ -53,7 +53,7 @@ object Balance {
     /** FULL Wake only — legendary hold */
     const val WEAPON_FULL_HOLD_MS = 2300L
     const val ENEMY_HOLD_MS = 1500L
-    /** v0.1.60-unstick: max hold after foe dead mid skill anim before force-win / Continue. */
-    const val COMBAT_END_FORCE_MS = 600L
+    /** v0.1.61-continue: foeHp<=0 for 400ms while phase still COMBAT → force VICTORY. */
+    const val COMBAT_END_FORCE_MS = 400L
 }
 

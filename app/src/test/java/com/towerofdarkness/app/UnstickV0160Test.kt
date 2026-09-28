@@ -40,8 +40,13 @@ class UnstickV0160Test {
             combat.contains("if (state.playerWon) \"Victory\" else \"Defeat\"")
         )
         // Continue click is continueAfterCombat — not a log onClick
-        val logBlock = combat.substringAfter("Column(Modifier.weight(1f))")
-            .substringBefore("Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp))")
+        val logBlock = if ("Combat log well UNDER Ashbrand" in combat) {
+            combat.substringAfter("Combat log well UNDER Ashbrand")
+                .substringBefore("Continue is OWN button")
+        } else {
+            combat.substringAfter("Column(Modifier.weight(1f))")
+                .substringBefore("Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp))")
+        }
         assertFalse("Log well must not click-to-Continue", logBlock.contains("continueAfterCombat"))
         assertFalse("Log well must not be clickable for Continue", logBlock.contains("clickable"))
         val gc = gcSrc()
@@ -49,7 +54,7 @@ class UnstickV0160Test {
         assertTrue(gc.contains("if (!s.finished) return"))
         assertTrue(gc.contains("COMBAT_END"))
         assertTrue(gc.contains("forceCombatWinIfNeeded"))
-        assertEquals(600L, Balance.COMBAT_END_FORCE_MS)
+        assertEquals(400L, Balance.COMBAT_END_FORCE_MS)
     }
 
     @Test
@@ -63,15 +68,15 @@ class UnstickV0160Test {
         val enemyKit = combat.substringAfter("private fun EnemyKitSlot")
             .substringBefore("private fun HpBar")
         val hpBar = combat.substringAfter("private fun HpBar")
-        val logWell = combat.substringAfter("Column(Modifier.weight(1f))")
-            .substringBefore("Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp))")
-        val bottomRow = combat.substringAfter(
-            "Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp))"
-        ).substringBefore("@OptIn").substringBefore("@Composable\nprivate fun SkillSlot")
+        val logWell = combat.substringAfter("Combat log well UNDER Ashbrand")
+            .substringBefore("Continue is OWN button")
+        val bottomRow = combat.substringAfter("combatEnded")
+            .substringBefore("@OptIn")
+            .substringBefore("private fun SkillSlot")
 
         assertTrue("SkillSlot must keep SharedTilePlateBox", skillSlot.contains("SharedTilePlateBox"))
         assertTrue("WeaponBar must keep SharedTilePlateBox", weaponBar.contains("SharedTilePlateBox"))
-        assertFalse("Log well must not use SharedTilePlateBox", logWell.contains("SharedTilePlateBox"))
+        assertFalse("Log well must not call SharedTilePlateBox(", logWell.contains("SharedTilePlateBox("))
         assertFalse("Bottom Flee/Continue slot must not use SharedTilePlateBox", bottomRow.contains("SharedTilePlateBox"))
         assertFalse("EnemyKitSlot must not use SharedTilePlateBox", enemyKit.contains("SharedTilePlateBox"))
         assertFalse("HpBar must not use SharedTilePlateBox", hpBar.contains("SharedTilePlateBox"))
@@ -87,6 +92,7 @@ class UnstickV0160Test {
         val backdrop = File("src/main/java/com/towerofdarkness/app/ui/components/TilePlateBackdrop.kt").readText()
         assertTrue(backdrop.contains("fun SharedTilePlateBox"))
         assertTrue(backdrop.contains("R.drawable.ui_tile_plate"))
+        assertTrue("v0.1.61: plate Image must matchParentSize", backdrop.contains("matchParentSize()"))
     }
 
     @Test
@@ -107,12 +113,12 @@ class UnstickV0160Test {
     }
 
     @Test
-    fun packaging_vc61_vnUnstick() {
+    fun packaging_vc62_vnContinue() {
         val gradle = File("../build.gradle.kts").takeIf { it.isFile }
             ?: File("build.gradle.kts")
         // test cwd is app/
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 61"))
-        assertTrue(g.contains("versionName = \"0.1.60-unstick\""))
+        assertTrue(g.contains("versionCode = 62"))
+        assertTrue(g.contains("versionName = \"0.1.61-continue\""))
     }
 }

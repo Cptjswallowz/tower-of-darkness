@@ -19,6 +19,16 @@ enum class CombatBeat {
     AWAITING_CONTINUE
 }
 
+/**
+ * v0.1.61-continue: coarse combat UI phase.
+ * Every tick: if allFoesHp <= 0 && phase != DEFEAT → VICTORY (anim must not block).
+ */
+enum class CombatPhase {
+    COMBAT,
+    VICTORY,
+    DEFEAT
+}
+
 data class FloatingText(val text: String, val isPlayer: Boolean, val isCrit: Boolean = false)
 
 data class CombatEvent(
@@ -65,6 +75,8 @@ data class CombatState(
     val counterPenalty: Int = 0,
     val finished: Boolean = false,
     val playerWon: Boolean = false,
+    /** v0.1.61-continue: COMBAT / VICTORY / DEFEAT — drives Continue + dice stop. */
+    val phase: CombatPhase = CombatPhase.COMBAT,
     val lastFiredCard: Card? = null,
     val beat: CombatBeat = CombatBeat.READY,
     val weaponFlashed: Boolean = false,
@@ -113,7 +125,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
 
     /** A — dice tumble: reset cycle if needed, pick unspent weighted slot. */
     fun diceTumble(state: CombatState): CombatState {
-        if (state.finished || state.beat == CombatBeat.AWAITING_CONTINUE) return state
+        if (state.finished || state.phase != CombatPhase.COMBAT ||
+            state.beat == CombatBeat.AWAITING_CONTINUE
+        ) return state
         var spent = state.spentIds
         val events = mutableListOf<CombatEvent>()
         if (spent.size >= state.activeCards.size && state.activeCards.isNotEmpty()) {
@@ -385,6 +399,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 log = state.log + events,
                 finished = true,
                 playerWon = false,
+                phase = CombatPhase.DEFEAT,
                 highlightedId = null,
                 enemyHighlightedId = skill.id,
                 enemySpentIds = spent + skill.id,
@@ -406,14 +421,63 @@ class CombatEngine(private val rng: Random = Random.Default) {
 
     private fun finishVictory(state: CombatState): CombatState {
         val events = listOf(
-            CombatEvent("Victory!", FloatingText("WIN", true, true), CombatAnimStyle.CHARGE_SHAKE_SLOWMO, "legendary")
+            CombatEvent("Victory", FloatingText("WIN", true, true), CombatAnimStyle.CHARGE_SHAKE_SLOWMO, "legendary")
         )
         return state.copy(
             log = state.log + events,
             finished = true,
             playerWon = true,
+            phase = CombatPhase.VICTORY,
             highlightedId = null,
             awaitingWeapon = false,
+            beat = CombatBeat.AWAITING_CONTINUE
+        )
+    }
+
+    /**
+     * v0.1.61-continue win check — call every beat / frame.
+     * if (allFoesHp <= 0 && phase != DEFEAT) phase = VICTORY
+     */
+    fun applyWinCheck(state: CombatState): CombatState {
+        if (state.phase == CombatPhase.DEFEAT || state.playerHp <= 0) {
+            return if (state.phase == CombatPhase.DEFEAT) state
+            else state.copy(
+                phase = CombatPhase.DEFEAT,
+                finished = true,
+                playerWon = false,
+                beat = CombatBeat.AWAITING_CONTINUE
+            )
+        }
+        if (state.enemy.hp <= 0 && state.phase != CombatPhase.DEFEAT) {
+            if (state.phase == CombatPhase.VICTORY && state.finished && state.playerWon) {
+                return state.copy(beat = CombatBeat.AWAITING_CONTINUE)
+            }
+            return forceVictory(state)
+        }
+        return state
+    }
+
+    /** Public force-win used by GC failsafe + mid-anim path. */
+    fun forceVictory(state: CombatState): CombatState {
+        if (state.playerHp <= 0) return state
+        val hasVictory = state.log.any {
+            it.message == "Victory" || it.message.startsWith("Victory")
+        }
+        val log = if (hasVictory) state.log else state.log + CombatEvent(
+            "Victory",
+            FloatingText("WIN", true, true),
+            CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
+            "legendary"
+        )
+        return state.copy(
+            log = log,
+            finished = true,
+            playerWon = true,
+            phase = CombatPhase.VICTORY,
+            highlightedId = null,
+            awaitingWeapon = false,
+            pendingFullWake = false,
+            pendingSpark = false,
             beat = CombatBeat.AWAITING_CONTINUE
         )
     }
