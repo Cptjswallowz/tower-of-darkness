@@ -716,6 +716,26 @@ class GameController(app: Application) : AndroidViewModel(app) {
             val skillMs = if (s.lastFiredCard?.rarity == Rarity.RARE ||
                 s.lastFiredCard?.rarity == Rarity.LEGENDARY
             ) Balance.SKILL_RARE_MS else Balance.SKILL_COMMON_MS
+
+            // v0.1.60-unstick: foe dead mid skill — stop dice loop; stroke/log ≤600ms; force win
+            if (s.enemy.hp <= 0 || s.finished) {
+                if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
+                    // Killing blow still queued Wake/Spark — resolve weapon, then end
+                    val fullWake = s.pendingFullWake
+                    val weaponFrom = s.log.size
+                    s = engine.resolveWeapon(s)
+                    combatState = s
+                    playLogSounds(s, weaponFrom)
+                    val wHold = if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS
+                    combatHold(minOf(wHold, Balance.COMBAT_END_FORCE_MS))
+                } else {
+                    combatHold(minOf(skillMs, Balance.COMBAT_END_FORCE_MS))
+                }
+                s = forceCombatWinIfNeeded(s)
+                combatState = s
+                break
+            }
+
             combatHold(skillMs)
 
             // D — read hold
@@ -731,17 +751,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
                 combatHold(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
             }
 
-            if (s.finished) break
-            if (s.enemy.hp <= 0) {
-                if (!s.finished) {
-                    // Ensure win flags so weapon XP applies (Spinner → Warden Lv2)
-                    s = s.copy(
-                        finished = true,
-                        playerWon = true,
-                        beat = com.towerofdarkness.app.domain.combat.CombatBeat.AWAITING_CONTINUE
-                    )
-                    combatState = s
-                }
+            if (s.finished || s.enemy.hp <= 0) {
+                s = forceCombatWinIfNeeded(s)
+                combatState = s
                 break
             }
 
@@ -759,8 +771,40 @@ class GameController(app: Application) : AndroidViewModel(app) {
         playerHp = s.playerHp
         // Apply this-run weapon level-up rules before Continue
         applyWeaponLevelUp(s)
-        combatState = s.copy(beat = CombatBeat.AWAITING_CONTINUE)
+        s = s.copy(beat = CombatBeat.AWAITING_CONTINUE)
+        combatState = s
+        val outcome = if (s.playerWon || (s.enemy.hp <= 0 && s.playerHp > 0)) "win" else "lose"
+        Log.d("COMBAT", "COMBAT_END $outcome foeHp=${s.enemy.hp} youHp=${s.playerHp}")
         // Wait for Continue — do not auto-nav
+    }
+
+    /**
+     * v0.1.60-unstick: ensure win flags + Victory log line when foe is dead but
+     * engine did not already call finishVictory (e.g. hp<=0 guard path).
+     */
+    private fun forceCombatWinIfNeeded(state: CombatState): CombatState {
+        if (state.playerHp <= 0) return state
+        if (state.enemy.hp > 0 && !state.finished) return state
+        if (state.finished && state.playerWon) return state.copy(beat = CombatBeat.AWAITING_CONTINUE)
+        val hasVictory = state.log.any { it.message.startsWith("Victory") }
+        val log = if (hasVictory) {
+            state.log
+        } else {
+            state.log + com.towerofdarkness.app.domain.combat.CombatEvent(
+                "Victory!",
+                com.towerofdarkness.app.domain.combat.FloatingText("WIN", true, true),
+                com.towerofdarkness.app.domain.combat.CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
+                "legendary"
+            )
+        }
+        return state.copy(
+            log = log,
+            finished = true,
+            playerWon = true,
+            highlightedId = null,
+            awaitingWeapon = false,
+            beat = CombatBeat.AWAITING_CONTINUE
+        )
     }
 
     /**

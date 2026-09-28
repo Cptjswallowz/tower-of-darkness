@@ -91,9 +91,9 @@ class TilepolishV0159Test {
         assertFalse("No FX packs on plate", backdrop.contains("plume") || backdrop.contains("kenney"))
         val forge = File("src/main/java/com/towerofdarkness/app/ui/screens/ForgeSheet.kt").readText()
         assertTrue(forge.contains("SharedTilePlateBox"))
+        // v0.1.60-unstick supersedes path node discs — plate allow-list is skill/Ashbrand/Forge only
         val path = File("src/main/java/com/towerofdarkness/app/ui/screens/PathScreen.kt").readText()
-        assertTrue(path.contains("NODE_DISC_PLATE_ALPHA"))
-        assertTrue(path.contains("SharedTilePlateBox"))
+        assertFalse("Path nodes must not use SharedTilePlateBox after unstick", path.contains("SharedTilePlateBox"))
     }
 
     @Test
