@@ -671,48 +671,48 @@ fun CombatScreen(gc: GameController) {
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
             // Pin FULL Wake line so it stays visible for the Wake hold beat
-            val recent = state.log.takeLast(5).toMutableList()
+            val recent = state.log.takeLast(6).toMutableList()
             state.pinnedWakeLine?.let { pin ->
                 if (recent.none { it.message == pin }) {
                     recent.add(0, com.towerofdarkness.app.domain.combat.CombatEvent(pin, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             // v0.1.48-strokeboth: prove drawn stroke (primary) + optional tip garnish
             strokeDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             tipGarnishDebug?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             dustGarnishDebug?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             braceFlareDebug?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             softenGarnishDebug?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             slashDebugLine?.let { dbg ->
                 if (recent.none { it.message == dbg }) {
                     recent.add(com.towerofdarkness.app.domain.combat.CombatEvent(dbg, goldLog = true))
-                    while (recent.size > 5) recent.removeAt(0)
+                    while (recent.size > 6) recent.removeAt(0)
                 }
             }
             recent.forEachIndexed { idx, ev ->
@@ -737,24 +737,21 @@ fun CombatScreen(gc: GameController) {
             }
         }
 
+        // v0.1.60-unstick: Continue replaces Flee in the SAME bottom slot when combat
+        // ended (foeHp<=0 / finished / AWAITING_CONTINUE). Bound to combat-end state —
+        // NOT log click. Do not add extra Victory/Continue chrome below (clips off-screen).
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f)) {
-                Text("Flee (locked)")
+            val combatEnded = state.finished || state.beat == CombatBeat.AWAITING_CONTINUE
+            if (combatEnded) {
+                Button(
+                    onClick = { gc.continueAfterCombat() },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Continue") }
+            } else {
+                OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f)) {
+                    Text("Flee (locked)")
+                }
             }
-        }
-        if (state.finished || state.beat == CombatBeat.AWAITING_CONTINUE) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                if (state.playerWon) "Victory" else "Defeat",
-                color = Gold,
-                fontSize = 20.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = { gc.continueAfterCombat() },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Continue") }
         }
     }
 }

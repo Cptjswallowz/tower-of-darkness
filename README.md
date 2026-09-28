@@ -4,7 +4,9 @@ Android vertical slice — Kotlin + Jetpack Compose (`com.towerofdarkness.app`).
 
 **Separate** from Tower of the World: no shared code, assets, or design.
 
-## Status (v0.1.59-tilepolish)
+## Status (v0.1.60-unstick)
+
+- **v0.1.60-unstick:** P0 combat-end softlock — Continue replaces Flee on foeHp<=0; Victory in log; plate allow-list skill/Ashbrand/Forge only (SharedTilePlateBox off log well / bottom slot / HP / pips / foe chips / path nodes); COMBAT_END debug. HOLD tag. Still debug.
 
 - **v0.1.58-forge:** Relic effects (Soot/Pauldron/Tooth/Gate Sigil +1 Kept); run-only scrap pouch + HUD `HP N · purse N · gN oN`; Forge on Rest+Shop (3g / 2g+2o, Architect chips). remnants_bank/Title/FX LOCKED. HOLD tag. Still debug.
 - **v0.1.57-titlebank:** Title/Hub bank from MetaStore only; victory-only Kept seal +3; death no seal; Summary muted purse. FX/SFX/Hub/overlays LOCKED.
