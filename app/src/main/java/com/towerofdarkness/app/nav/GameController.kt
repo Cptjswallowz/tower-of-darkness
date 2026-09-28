@@ -44,6 +44,7 @@ import com.towerofdarkness.app.domain.path.PathGenerator
 import com.towerofdarkness.app.domain.path.RumorPools
 import com.towerofdarkness.app.domain.path.TowerPath
 import com.towerofdarkness.app.domain.sound.AssetSoundBus
+import com.towerofdarkness.app.domain.sound.MusicPlayer
 import com.towerofdarkness.app.domain.sound.SoundBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -104,7 +105,8 @@ data class FloorBreakPersist(
 
 class GameController(app: Application) : AndroidViewModel(app) {
     val meta = MetaStore(app)
-    val sound: SoundBus = AssetSoundBus(app)
+    val music = MusicPlayer(app)
+    val sound: SoundBus = AssetSoundBus(app, music)
 
     var nav by mutableStateOf<NavState>(NavState.MainMenu)
         private set
@@ -1164,6 +1166,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     fun continueAfterCombat() {
         var s = combatState ?: return
+        // v0.1.62-score: Continue tap leaves VICTORY wait — victory.ogg sting plays only
+        // after this path reaches RunSummary win (MusicMap), never during Combat VICTORY wait.
         // Promote foe-dead → VICTORY if UI Continue tapped before loop finished flags
         if (s.enemy.hp <= 0 && s.playerHp > 0 && !s.finished) {
             s = forceCombatWinIfNeeded(s)
@@ -1793,6 +1797,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        music.release()
         combatJob?.cancel()
         sound.release()
         super.onCleared()

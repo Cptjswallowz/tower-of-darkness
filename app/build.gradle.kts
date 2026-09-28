@@ -12,8 +12,8 @@ android {
         applicationId = "com.towerofdarkness.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 62
-        versionName = "0.1.61-continue"
+        versionCode = 63
+        versionName = "0.1.62-score"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

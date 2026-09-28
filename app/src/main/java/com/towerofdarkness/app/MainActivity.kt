@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import com.towerofdarkness.app.domain.sound.MusicMap
 import com.towerofdarkness.app.nav.GameController
 import com.towerofdarkness.app.nav.NavState
 import com.towerofdarkness.app.ui.components.GlossaryDialog
@@ -53,6 +55,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        gc.music.onAppBackground()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        gc.music.onAppForeground()
+    }
 }
 
 @Composable
@@ -60,6 +72,14 @@ fun TowerRoot(gc: GameController) {
     if (!gc.midRunBootstrapped) {
         // Wait for DataStore mid-run read so Continue/cold-start does not flash Menu.
         return
+    }
+    // v0.1.62-score: one place observes nav + combat enemy + summary for bed/sting.
+    // Combat VICTORY wait keeps combat/elite/boss bed — victory sting only on RunSummary win.
+    val combatEnemyKind = gc.combatState?.enemy?.kind
+    val combatIsBoss = gc.combatState?.enemy?.isBoss
+    val summaryWon = gc.summary?.won
+    LaunchedEffect(gc.nav, combatEnemyKind, combatIsBoss, summaryWon) {
+        gc.music.apply(MusicMap.resolve(gc.nav, gc.combatState, gc.summary))
     }
     when (gc.nav) {
         NavState.MainMenu -> MainMenuScreen(gc)

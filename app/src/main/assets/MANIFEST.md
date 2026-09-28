@@ -41,3 +41,9 @@ No Tower of the World / Eldermark art, music, or asset reuse as ToD deliverables
 - audio/sfx_dice.wav / audio/sfx_legendary_sting.wav / audio/sfx_miss.wav — kept (sting = Wake lead)
 - Leftover unused: IRONCLASH_03_…wake380, IRONCLASH_28_…wake380, IRONCLASH_23_…_05
 - See docs/art-audio/IRONCLASH_SFX_v0.1.53.md + docs/wakeblade-v0153.md
+
+## Music — `music/` (v0.1.62-score beds)
+- music/title.ogg, hub.ogg, path.ogg, loadout.ogg, combat.ogg, elite.ogg, boss.ogg, shop.ogg, rest.ogg
+- music/victory.ogg, defeat.ogg — one-shot stingers (not looped)
+- See docs/art-audio/SCORE_MAP_v0.1.62.md + docs/score-v0162.md
+
