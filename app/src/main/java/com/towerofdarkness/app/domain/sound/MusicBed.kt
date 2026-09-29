@@ -1,20 +1,25 @@
 package com.towerofdarkness.app.domain.sound
 
 /**
- * v0.1.62-score — app-wide music bed slots.
+ * v0.1.63-scorefade — app-wide music bed slots.
  * Runtime assets: `app/src/main/assets/music/<slot>.ogg`
  * Curated mirror: `assets/music/<slot>.ogg`
+ *
+ * ONCE (loops=false): title, loadout, shop, rest, victory, defeat —
+ * play once with tail fade, then silence on that screen.
+ * LOOP (loops=true): hub, path, combat, elite, boss —
+ * dual-player crossfade (never MediaPlayer.isLooping).
  */
 enum class MusicBed(val slot: String, val loops: Boolean) {
-    TITLE("title", true),
+    TITLE("title", false),
     HUB("hub", true),
     PATH("path", true),
-    LOADOUT("loadout", true),
+    LOADOUT("loadout", false),
     COMBAT("combat", true),
     ELITE("elite", true),
     BOSS("boss", true),
-    SHOP("shop", true),
-    REST("rest", true),
+    SHOP("shop", false),
+    REST("rest", false),
     VICTORY("victory", false),
     DEFEAT("defeat", false);
 
