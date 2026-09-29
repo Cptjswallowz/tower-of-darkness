@@ -36,8 +36,8 @@ class ScoreV0162Test {
     @Test
     fun packaging_vc63_vnScore() {
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 63"))
-        assertTrue(g.contains("versionName = \"0.1.62-score\""))
+        assertTrue(g.contains("versionCode = 64"))
+        assertTrue(g.contains("versionName = \"0.1.63-scorefade\""))
     }
 
     @Test
