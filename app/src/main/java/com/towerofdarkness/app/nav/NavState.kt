@@ -16,4 +16,6 @@ sealed class NavState {
     data object FloorBreak : NavState()
     data object RunSummary : NavState()
     data object MetaHub : NavState()
+    /** v0.1.64 — Assist specials row (stub title OK). */
+    data object Settings : NavState()
 }

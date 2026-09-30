@@ -3,6 +3,7 @@ package com.towerofdarkness.app.domain.combat
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
+import com.towerofdarkness.app.domain.specials.Specials
 import com.towerofdarkness.app.domain.effects.Equipment
 import com.towerofdarkness.app.domain.effects.MoveEffect
 import com.towerofdarkness.app.domain.effects.SkillEffect
@@ -98,7 +99,23 @@ data class CombatState(
     val trollToothReady: Boolean = false,
     /** v0.1.58: Dust Veil L3B — first fire this fight → weight +1 for rest of fight. */
     val pendingWeightBoostIds: Set<String> = emptySet(),
-    val weightBoostedIds: Set<String> = emptySet()
+    val weightBoostedIds: Set<String> = emptySet(),
+    /** v0.1.64: Assist specials snapshot at fight start (Wake / Grave Brand / Ash Vow). */
+    val assistSpecials: Boolean = true,
+    /** Grave Brand charge 0..3; +1 on regular resolve only. */
+    val graveBrandCharge: Int = 0,
+    /** Ash Vow once/fight — true after fired or unused end. */
+    val ashVowSpent: Boolean = false,
+    /** Next damaging regular gets +4 then clears. */
+    val ashVowBonusPending: Boolean = false,
+    /** 1-based exhaust cycle of the 3 regulars; 2 = after first full reset. */
+    val regularCycleIndex: Int = 1,
+    /** Assist ON: auto Grave Brand queued at 3. */
+    val pendingGraveBrand: Boolean = false,
+    /** Assist ON: Ash Vow queued at start of cycle 2. */
+    val pendingAshVow: Boolean = false,
+    /** Assist OFF: combat waits for Ashbrand plate tap when Wake full. */
+    val awaitingWakeTap: Boolean = false
 )
 
 class CombatEngine(private val rng: Random = Random.Default) {
@@ -111,7 +128,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
         playerHp: Int = maxHp,
         initialBrace: Int = 0,
         trollToothReady: Boolean = false,
-        pendingWeightBoostIds: Set<String> = emptySet()
+        pendingWeightBoostIds: Set<String> = emptySet(),
+        assistSpecials: Boolean = true
     ): CombatState = CombatState(
         playerHp = playerHp.coerceIn(1, maxHp),
         playerMaxHp = maxHp,
@@ -120,28 +138,47 @@ class CombatEngine(private val rng: Random = Random.Default) {
         activeCards = activeCards,
         weapon = weapon,
         trollToothReady = trollToothReady,
-        pendingWeightBoostIds = pendingWeightBoostIds
+        pendingWeightBoostIds = pendingWeightBoostIds,
+        assistSpecials = assistSpecials,
+        // Ash Vow available when mythic is in the loadout and unspent
+        ashVowSpent = activeCards.none { it.id == Specials.ID_ASH_VOW }
     )
 
-    /** A — dice tumble: reset cycle if needed, pick unspent weighted slot. */
+    /** A — dice tumble: bag = 3 regulars only; L/M/Wake never rolled. */
     fun diceTumble(state: CombatState): CombatState {
         if (state.finished || state.phase != CombatPhase.COMBAT ||
             state.beat == CombatBeat.AWAITING_CONTINUE
         ) return state
-        var spent = state.spentIds
-        val events = mutableListOf<CombatEvent>()
-        if (spent.size >= state.activeCards.size && state.activeCards.isNotEmpty()) {
-            spent = emptySet()
-            events += CombatEvent("Cycle reset", sound = "")
+        var s = state
+        var spent = s.spentIds
+        val bag = Specials.bagCards(s.activeCards)
+        val bagIds = bag.map { it.id }.toSet()
+        val spentRegs = spent.intersect(bagIds)
+        if (spentRegs.size >= bag.size && bag.isNotEmpty()) {
+            spent = spent - bagIds
+            val nextCycle = s.regularCycleIndex + 1
+            s = s.copy(
+                spentIds = spent,
+                regularCycleIndex = nextCycle,
+                log = s.log + CombatEvent("Cycle reset", sound = "")
+            )
+            // Ash Vow Assist ON: fire at start of cycle 2 if still unspent
+            if (nextCycle == 2 && s.assistSpecials && !s.ashVowSpent &&
+                s.activeCards.any { it.id == Specials.ID_ASH_VOW }
+            ) {
+                s = fireAshVow(s, viaAssist = true)
+                spent = s.spentIds
+            }
         }
-        events += CombatEvent("Dice tumble…", sound = "dice")
-        val live = state.activeCards.filter { it.id !in spent }
-        val card = pickWeighted(live) { it.weight } ?: return state.copy(log = state.log + events)
-        return state.copy(
+        val tumble = CombatEvent("Dice tumble…", sound = "dice")
+        val live = bag.filter { it.id !in spent }
+        val card = pickWeighted(live) { it.weight }
+            ?: return s.copy(log = s.log + tumble, spentIds = spent)
+        return s.copy(
             spentIds = spent,
             highlightedId = card.id,
             lastFiredCard = card,
-            log = state.log + events,
+            log = s.log + tumble,
             beat = CombatBeat.AFTER_DICE,
             weaponFlashed = false,
             pinnedWakeLine = null
@@ -212,15 +249,31 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 )
             }
         }
+        // v0.1.64: Grave Brand charges on YOUR regular resolve only (not L/M/Wake)
+        if (Specials.isRegular(card)) {
+            val hasGb = s.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }
+            if (hasGb) {
+                val ch = (s.graveBrandCharge + 1).coerceAtMost(Specials.GRAVE_BRAND_CAP)
+                s = s.copy(graveBrandCharge = ch)
+                if (ch >= Specials.GRAVE_BRAND_CAP) {
+                    if (s.assistSpecials) {
+                        s = s.copy(pendingGraveBrand = true)
+                    }
+                }
+            }
+        }
         s = s.copy(log = state.log + allEvents)
         // CHAIN full and SPARK are independent — both may queue same beat (after tithe)
         val mustFull = s.weapon.charge >= s.weapon.threshold
         val sparkChance = 0.08f + 0.04f * s.weapon.level
         val spark = rng.nextFloat() < sparkChance
+        // Assist OFF + full Wake: mark awaiting tap; still queue pending flags
+        val awaitTap = mustFull && !s.assistSpecials
         s = s.copy(
             awaitingWeapon = mustFull || spark,
             pendingFullWake = mustFull,
-            pendingSpark = spark
+            pendingSpark = spark,
+            awaitingWakeTap = awaitTap
         )
         if (s.enemy.hp <= 0 && !s.awaitingWeapon) {
             return finishVictory(s)
@@ -233,13 +286,20 @@ class CombatEngine(private val rng: Random = Random.Default) {
      * full Wake resets charge to 0; SPARK deals half and does not touch charge
      * (including after a same-beat reset).
      */
-    fun resolveWeapon(state: CombatState): CombatState {
-        if (!state.awaitingWeapon && !state.pendingFullWake && !state.pendingSpark) {
+    /**
+     * @param wakeViaAssist true → log "Ashbrand Wake (assist)"; false → "(tap)".
+     * Ignored when no full Wake fires.
+     */
+    fun resolveWeapon(state: CombatState, wakeViaAssist: Boolean = true): CombatState {
+        if (!state.awaitingWeapon && !state.pendingFullWake && !state.pendingSpark &&
+            !state.pendingGraveBrand
+        ) {
             return state.copy(
                 beat = CombatBeat.AFTER_WEAPON,
                 awaitingWeapon = false,
                 pendingFullWake = false,
-                pendingSpark = false
+                pendingSpark = false,
+                awaitingWakeTap = false
             )
         }
         var s = state
@@ -255,8 +315,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
             val dmg = w.def.fullDmg(w.level)
             val applied = applyDamageToEnemy(s, dmg)
             s = applied.state
-            // Exact CHAIN FULL Wake payoff line (gold + WAKE float + legendary anim)
-            val wakeLine = "ASHBRAND — WAKE $dmg"
+            val wakeLine = if (wakeViaAssist) "Ashbrand Wake (assist)" else "Ashbrand Wake (tap)"
             events += CombatEvent(
                 message = wakeLine,
                 floating = FloatingText("WAKE", true, true),
@@ -266,7 +325,8 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 fxId = CombatFx.ID_ASHBRAND_WAKE,
                 fxPlayer = true
             )
-            pinned = wakeLine
+            // Keep legacy gold pin line for UI last-5 during hold
+            pinned = "ASHBRAND — WAKE $dmg"
             fullProc = true
             if (s.enemy.hp <= 0) fullKill = true
             w = w.copy(charge = 0)
@@ -297,9 +357,16 @@ class CombatEngine(private val rng: Random = Random.Default) {
             awaitingWeapon = false,
             pendingFullWake = false,
             pendingSpark = false,
+            awaitingWakeTap = false,
             pinnedWakeLine = pinned,
             beat = CombatBeat.AFTER_WEAPON
         )
+        // Grave Brand Assist ON: auto on next eligible (weapon) beat when charged to 3
+        if (s.pendingGraveBrand && s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP &&
+            s.enemy.hp > 0
+        ) {
+            s = fireGraveBrand(s, viaAssist = true)
+        }
         if (s.enemy.hp <= 0) return finishVictory(s)
         return s
     }
@@ -478,6 +545,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
             awaitingWeapon = false,
             pendingFullWake = false,
             pendingSpark = false,
+            awaitingWakeTap = false,
+            pendingGraveBrand = false,
+            pendingAshVow = false,
             beat = CombatBeat.AWAITING_CONTINUE
         )
     }
@@ -532,34 +602,51 @@ class CombatEngine(private val rng: Random = Random.Default) {
         when (val e = card.effect) {
             is SkillEffect.Damage -> {
                 isAttack = true
-                val applied = applyDamageToEnemy(s, e.damage)
+                var dmg = e.damage
+                var vowNote = ""
+                if (Specials.isRegular(card) && s.ashVowBonusPending) {
+                    dmg += Specials.ASH_VOW_NEXT_REGULAR_BONUS
+                    vowNote = " (+${Specials.ASH_VOW_NEXT_REGULAR_BONUS} Ash Vow)"
+                    s = s.copy(ashVowBonusPending = false)
+                }
+                val applied = applyDamageToEnemy(s, dmg)
                 s = applied.state
                 events += CombatEvent(
-                    "${card.title} deals ${e.damage}",
-                    FloatingText("-${e.damage}", true, card.rarity == Rarity.RARE),
+                    "${card.title} deals $dmg$vowNote",
+                    FloatingText("-$dmg", true, card.rarity == Rarity.RARE),
                     anim, sound,
                     fxId = card.id, fxPlayer = true
                 )
             }
             is SkillEffect.DamageAndHeal -> {
                 isAttack = true
-                val applied = applyDamageToEnemy(s, e.damage)
+                var dmg = e.damage
+                if (Specials.isRegular(card) && s.ashVowBonusPending) {
+                    dmg += Specials.ASH_VOW_NEXT_REGULAR_BONUS
+                    s = s.copy(ashVowBonusPending = false)
+                }
+                val applied = applyDamageToEnemy(s, dmg)
                 s = applied.state
                 val nh = (s.playerHp + e.heal).coerceAtMost(s.playerMaxHp)
                 events += CombatEvent(
-                    "${card.title}: ${e.damage} dmg, +${e.heal} HP",
-                    FloatingText("-${e.damage}", true), anim, sound,
+                    "${card.title}: $dmg dmg, +${e.heal} HP",
+                    FloatingText("-$dmg", true), anim, sound,
                     fxId = card.id, fxPlayer = true
                 )
                 s = s.copy(playerHp = nh)
             }
             is SkillEffect.DamageAndBraceIfAshPips -> {
                 isAttack = true
-                val applied = applyDamageToEnemy(s, e.damage)
+                var dmg = e.damage
+                if (Specials.isRegular(card) && s.ashVowBonusPending) {
+                    dmg += Specials.ASH_VOW_NEXT_REGULAR_BONUS
+                    s = s.copy(ashVowBonusPending = false)
+                }
+                val applied = applyDamageToEnemy(s, dmg)
                 s = applied.state
                 events += CombatEvent(
-                    "${card.title} deals ${e.damage}",
-                    FloatingText("-${e.damage}", true), anim, sound,
+                    "${card.title} deals $dmg",
+                    FloatingText("-$dmg", true), anim, sound,
                     fxId = card.id, fxPlayer = true
                 )
                 var brace = s.brace
@@ -600,6 +687,10 @@ class CombatEngine(private val rng: Random = Random.Default) {
                 if (e.echoBonusIfWakeFired > 0 && s.fullProcThisCombat) {
                     dmg += e.echoBonusIfWakeFired
                 }
+                if (Specials.isRegular(card) && s.ashVowBonusPending) {
+                    dmg += Specials.ASH_VOW_NEXT_REGULAR_BONUS
+                    s = s.copy(ashVowBonusPending = false)
+                }
                 val applied = applyDamageToEnemy(s, dmg)
                 s = applied.state
                 events += CombatEvent(
@@ -631,12 +722,17 @@ class CombatEngine(private val rng: Random = Random.Default) {
             }
             is MoveEffect.DamageAndSoften -> {
                 isAttack = true
-                val applied = applyDamageToEnemy(s, e.damage)
+                var dmg = e.damage
+                if (Specials.isRegular(card) && s.ashVowBonusPending) {
+                    dmg += Specials.ASH_VOW_NEXT_REGULAR_BONUS
+                    s = s.copy(ashVowBonusPending = false)
+                }
+                val applied = applyDamageToEnemy(s, dmg)
                 s = applied.state
                 val brace = s.brace + e.braceGain
                 events += CombatEvent(
-                    "${card.title} deals ${e.damage}",
-                    FloatingText("-${e.damage}", true), anim, sound,
+                    "${card.title} deals $dmg",
+                    FloatingText("-$dmg", true), anim, sound,
                     fxId = card.id, fxPlayer = true
                 )
                 if (e.braceGain > 0) {
@@ -709,6 +805,73 @@ class CombatEngine(private val rng: Random = Random.Default) {
             }
         }
         return Triple(s, events, isAttack)
+    }
+
+
+    /** Grave Brand: 12 dmg + Soften 2; resets charge; assist/tap log. */
+    fun fireGraveBrand(state: CombatState, viaAssist: Boolean): CombatState {
+        if (state.graveBrandCharge < Specials.GRAVE_BRAND_CAP) return state
+        if (state.finished || state.phase != CombatPhase.COMBAT) return state
+        var s = state
+        val dmg = Specials.GRAVE_BRAND_DAMAGE
+        val applied = applyDamageToEnemy(s, dmg)
+        s = applied.state
+        s = s.copy(counterPenalty = s.counterPenalty + Specials.GRAVE_BRAND_SOFTEN)
+        val suffix = if (viaAssist) "assist" else "tap"
+        val events = listOf(
+            CombatEvent(
+                message = "Grave Brand ($suffix)",
+                floating = FloatingText("-$dmg", true, true),
+                animStyle = CombatAnimStyle.CHARGE_SHAKE_SLOWMO,
+                sound = "impact",
+                goldLog = true,
+                fxId = Specials.ID_GRAVE_BRAND,
+                fxPlayer = true,
+                softenApplied = Specials.GRAVE_BRAND_SOFTEN
+            ),
+            CombatEvent(
+                "Counter softened −${Specials.GRAVE_BRAND_SOFTEN}",
+                sound = "soften",
+                glossaryHints = listOf("soften"),
+                softenApplied = Specials.GRAVE_BRAND_SOFTEN
+            )
+        )
+        s = s.copy(
+            log = s.log + events,
+            graveBrandCharge = 0,
+            pendingGraveBrand = false
+        )
+        if (s.enemy.hp <= 0) return finishVictory(s)
+        return s
+    }
+
+    /** Ash Vow: Brace 4 + arm next regular +4; once/fight. */
+    fun fireAshVow(state: CombatState, viaAssist: Boolean): CombatState {
+        if (state.ashVowSpent) return state
+        if (state.activeCards.none { it.id == Specials.ID_ASH_VOW }) return state
+        if (state.finished && state.phase != CombatPhase.COMBAT) return state
+        val suffix = if (viaAssist) "assist" else "tap"
+        val brace = Specials.ASH_VOW_BRACE
+        val events = listOf(
+            CombatEvent(
+                message = "Ash Vow ($suffix)",
+                floating = FloatingText("BRACE $brace", true),
+                animStyle = CombatAnimStyle.QUICK,
+                sound = "brace",
+                goldLog = true,
+                glossaryHints = listOf("brace"),
+                fxId = Specials.ID_ASH_VOW,
+                fxPlayer = true,
+                braceGained = brace
+            )
+        )
+        return state.copy(
+            brace = state.brace + brace,
+            ashVowSpent = true,
+            ashVowBonusPending = true,
+            pendingAshVow = false,
+            log = state.log + events
+        )
     }
 
     private fun <T> pickWeighted(items: List<T>, weightOf: (T) -> Int): T? {

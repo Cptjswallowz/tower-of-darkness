@@ -194,7 +194,8 @@ class EnemyKitV0132Test {
             pendingSpark = false
         )
         s = engine.resolveWeapon(s)
-        assertEquals("ASHBRAND — WAKE 4", s.log.first { it.message.startsWith("ASHBRAND — WAKE") }.message)
+        assertTrue(s.log.any { it.message == "Ashbrand Wake (assist)" || it.message.startsWith("ASHBRAND — WAKE") })
+        assertEquals("Ashbrand Wake (assist)", s.log.first { it.message.startsWith("Ashbrand Wake (") }.message)
         assertEquals(0, s.weapon.charge)
 
         // Player bar dice still picks among unspent only

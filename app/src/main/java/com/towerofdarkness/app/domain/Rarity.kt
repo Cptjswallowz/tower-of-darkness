@@ -5,5 +5,7 @@ enum class Rarity(val displayName: String) {
     UNCOMMON("Uncommon"),
     RARE("Rare"),
     EPIC("Epic"),
-    LEGENDARY("Legendary")
+    LEGENDARY("Legendary"),
+    /** v0.1.64-specials — Ash Vow tier; never in dice bag. */
+    MYTHIC("Mythic")
 }

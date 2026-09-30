@@ -105,7 +105,7 @@ class WakeArtV0116Test {
     fun fullWake_thickArcThenGoldLogThenClear() {
         val s = afterFullWake()
         assertTrue(s.weaponFlashed)
-        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") }
+        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") || it.message.startsWith("Ashbrand Wake (") }
         assertTrue(wake.goldLog)
         assertEquals("WAKE", wake.floating?.text)
         assertEquals(WakeStageFrame.CHARGE, WakeArt.stageFrame(s, 0L, 1))

@@ -77,9 +77,9 @@ fun MainMenuScreen(gc: GameController) {
         ) { Text(com.towerofdarkness.app.domain.hub.HubOffers.titleBankLine(gc.remnantsBank)) } // MetaStore remnants_bank
         Spacer(Modifier.height(8.dp))
         OutlinedButton(
-            onClick = { /* settings stub */ },
+            onClick = { gc.openSettings() },
             modifier = Modifier.fillMaxWidth(0.85f)
-        ) { Text("Settings (stub)") }
+        ) { Text("Settings") }
     }
 
     if (confirmNewClimb) {

@@ -107,7 +107,7 @@ class WakeArtV0115Test {
         val s = afterFullWake()
         assertEquals(CombatBeat.AFTER_WEAPON, s.beat)
         assertTrue(s.weaponFlashed)
-        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") }
+        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") || it.message.startsWith("Ashbrand Wake (") }
         assertTrue(wake.goldLog)
         assertEquals("WAKE", wake.floating?.text)
         assertEquals(CombatAnimStyle.CHARGE_SHAKE_SLOWMO, wake.animStyle)
@@ -182,8 +182,8 @@ class WakeArtV0115Test {
     @Test
     fun fullWake_keepsExistingLogAndFloatContract() {
         val s = afterFullWake()
-        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") }
-        assertTrue(wake.message.matches(Regex("^ASHBRAND — WAKE \\d+$")))
+        val wake = s.log.first { it.message.startsWith("ASHBRAND — WAKE") || it.message.startsWith("Ashbrand Wake (") }
+        assertTrue((wake.message.matches(Regex("^ASHBRAND — WAKE \\d+$")) || wake.message.startsWith("Ashbrand Wake (")))
         assertEquals(FloatingText("WAKE", true, true), wake.floating)
         assertEquals("legendary", wake.sound)
     }

@@ -106,11 +106,26 @@ object CardCatalog {
                     Rarity.UNCOMMON, damage = 5, echoBonusIfWakeFired = 4
                 ),
                 Rarity.UNCOMMON, 3, unlockCost = 12),
+            // v0.1.64-specials — Legendary / Mythic (weight 0, never in dice bag; climb-available)
+            Card("grave_brand", "Grave Brand",
+                SkillEffect.Damage(
+                    "grave_brand", "Grave Brand",
+                    "Deal 12. Soften 2. Charges on your regular resolves (cap 3).",
+                    Rarity.LEGENDARY, 12
+                ),
+                Rarity.LEGENDARY, 0),
+            Card("ash_vow", "Ash Vow",
+                Equipment.GainBrace(
+                    "ash_vow", "Ash Vow",
+                    "Once per fight: Brace 4. Your next damaging regular deals +4.",
+                    Rarity.MYTHIC, 4
+                ),
+                Rarity.MYTHIC, 0),
         )
     }
 
     val defaultLoadoutIds: List<String> =
-        listOf("hostflint", "cinder_step", "iron_mantle", "emberbrand", "dust_veil")
+        listOf("hostflint", "cinder_step", "iron_mantle", "grave_brand", "ash_vow")
 
     fun starterUnlockedIds(): Set<String> =
         all.filter { it.unlockCost == 0 }.map { it.id }.toSet()

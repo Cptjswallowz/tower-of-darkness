@@ -27,7 +27,7 @@ object MusicMap {
         combat: CombatState?,
         summary: RunSummaryData?
     ): MusicIntent = when (nav) {
-        NavState.MainMenu -> MusicIntent.Loop(MusicBed.TITLE)
+        NavState.MainMenu, NavState.Settings -> MusicIntent.Loop(MusicBed.TITLE)
         NavState.MetaHub -> MusicIntent.Loop(MusicBed.HUB)
         NavState.ClimbIntro -> MusicIntent.Silence
         NavState.Path, NavState.FloorBreak, NavState.Tutorial,

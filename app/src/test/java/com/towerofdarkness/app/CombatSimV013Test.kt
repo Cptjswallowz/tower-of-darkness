@@ -98,7 +98,8 @@ class CombatSimV013Test {
             // Mirror exhaust_onlyUnspentPicked: never pick already fired this cycle
             if (hid in firedThisCycle) greyViolations++
             // Also: if no cycle reset and hid was in spent before tumble, violation
-            if (spentBefore.size < s.activeCards.size && hid in spentBefore) greyViolations++
+            val bagSize = s.activeCards.count { it.weight > 0 }
+            if (spentBefore.size < bagSize && hid in spentBefore) greyViolations++
 
             firedThisCycle += hid
             skillBeats++
@@ -197,7 +198,7 @@ class CombatSimV013Test {
         // --- Skip → 5 skills + Ashbrand ---
         assertEquals(5, CardCatalog.defaultLoadoutIds.size)
         val expectedIds = listOf(
-            "hostflint", "cinder_step", "iron_mantle", "emberbrand", "dust_veil"
+            "hostflint", "cinder_step", "iron_mantle", "grave_brand", "ash_vow"
         )
         assertEquals(expectedIds, CardCatalog.defaultLoadoutIds)
         assertTrue(

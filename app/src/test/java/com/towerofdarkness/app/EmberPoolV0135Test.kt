@@ -225,7 +225,7 @@ class EmberPoolV0135Test {
         assertEquals("glyph_spark_tithe", SkillGlyph.drawableName(HubOffers.CARD_SPARK_TITHE))
         assertEquals("glyph_wake_echo", SkillGlyph.drawableName(HubOffers.CARD_WAKE_ECHO))
         assertTrue(SkillGlyph.catalogFullyMapped())
-        assertEquals(17, CardCatalog.all.size)
+        assertEquals(19, CardCatalog.all.size)
         for (name in listOf("glyph_ember_draw", "glyph_brand_mark", "glyph_spark_tithe", "glyph_wake_echo")) {
             val f = listOf(
                 java.io.File("app/src/main/res/drawable/$name.png"),

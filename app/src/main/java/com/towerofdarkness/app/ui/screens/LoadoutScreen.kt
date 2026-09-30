@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.towerofdarkness.app.domain.Balance
+import com.towerofdarkness.app.domain.specials.Specials
 import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
@@ -42,12 +43,15 @@ import com.towerofdarkness.app.ui.theme.Ember
 import com.towerofdarkness.app.ui.theme.Moss
 import com.towerofdarkness.app.ui.theme.Gold
 import com.towerofdarkness.app.ui.theme.GlowRare
+import com.towerofdarkness.app.ui.theme.GlowLegendary
+import com.towerofdarkness.app.ui.theme.GlowMythic
 import com.towerofdarkness.app.ui.theme.GlowUncommon
 import com.towerofdarkness.app.ui.theme.Panel
 import com.towerofdarkness.app.ui.theme.VoidBg
 
 @Composable
 fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
+    androidx.compose.runtime.LaunchedEffect(Unit) { gc.ensureSpecialsGranted() }
     val pool = remember(gc.unlockedCards) { CardCatalog.poolForRun(gc.unlockedCards) }
     val selected = remember {
         mutableStateListOf<String>().also { list ->
@@ -61,7 +65,10 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
         mutableStateOf(gc.equippedWeapon.def.id.ifBlank { WeaponCatalog.ashbrand.id })
     }
     val count = selected.size
-    val ok = count == Balance.LOADOUT_MAX && weaponId.value.isNotBlank()
+    val selectedCards = selected.mapNotNull { CardCatalog.byId(it) }
+    val compositionOk = Specials.loadoutMeetsGate(selectedCards)
+    val ok = count == Balance.LOADOUT_MAX && compositionOk && weaponId.value.isNotBlank()
+    val reason = if (!compositionOk) Specials.LOADOUT_REASON else null
 
     Column(
         Modifier
@@ -70,7 +77,7 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
     ) {
         if (!tutorialMode) {
             Text("Loadout", color = Gold, fontSize = 22.sp)
-            Text("Select 5 · $count selected", color = Bone.copy(0.7f))
+            Text("3 regulars + 1 Legendary + 1 Mythic · $count selected", color = Bone.copy(0.7f))
             GlossaryText(
                 "Weight (w) = how often a skill is picked while it is still live",
                 listOf("loadout"),
@@ -79,7 +86,7 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
             )
             Spacer(Modifier.height(8.dp))
         } else {
-            Text("Select 5 · $count selected", color = Bone.copy(0.7f), fontSize = 13.sp)
+            Text("3R + L + M · $count selected", color = Bone.copy(0.7f), fontSize = 13.sp)
         }
         LazyColumn(
             modifier = if (tutorialMode) Modifier.height(260.dp).fillMaxWidth()
@@ -146,7 +153,7 @@ fun LoadoutScreen(gc: GameController, tutorialMode: Boolean = false) {
             },
             enabled = ok,
             modifier = Modifier.fillMaxWidth()
-        ) { Text(if (ok) "Confirm" else "Pick 5 skills + weapon") }
+        ) { Text(if (ok) "Confirm" else (reason ?: "Pick 5 skills + weapon")) }
     }
 }
 
@@ -155,6 +162,8 @@ private fun CardRow(card: Card, selected: Boolean, onGlossary: (String) -> Unit,
     // Brace-job keeps green when not selected (WO v0.1.19).
     val border = when {
         skillJobIsBrace(card.id) -> Moss
+        card.rarity == Rarity.MYTHIC -> GlowMythic
+        card.rarity == Rarity.LEGENDARY -> GlowLegendary
         card.rarity == Rarity.RARE -> GlowRare
         card.rarity == Rarity.UNCOMMON -> GlowUncommon
         else -> Bone.copy(0.3f)

@@ -23,6 +23,7 @@ val GlowUncommon = Color(0xFF4ADE80)
 val GlowRare = Color(0xFF38BDF8)
 val GlowEpic = Color(0xFFA78BFA)
 val GlowLegendary = Color(0xFFFBBF24)
+val GlowMythic = Color(0xFFE879F9)
 
 private val Scheme = darkColorScheme(
     primary = Accent,

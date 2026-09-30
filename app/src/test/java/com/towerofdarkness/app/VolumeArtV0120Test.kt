@@ -55,7 +55,7 @@ class VolumeArtV0120Test {
         assertFalse(VolumeArt.glyphSymbolsRestyled())
         assertEquals("glyph_hostflint", SkillGlyph.drawableName("hostflint"))
         assertEquals("glyph_vow_plate", SkillGlyph.drawableName("vow_plate"))
-        assertEquals(17, SkillGlyph.mappedSkillIds().size)
+        assertEquals(19, SkillGlyph.mappedSkillIds().size)
         assertTrue(VolumeArt.vowPlatePlateClarifyAllowed())
     }
 
