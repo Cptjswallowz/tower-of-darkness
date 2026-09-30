@@ -26,39 +26,39 @@ Status: **measured** headless sims (CoS GREENLIGHT).
 | Wins | 2000 / 2000 |
 | Hangs (round cap) | 0 |
 | Winrate | 1.0000 |
-| Sum skill beats | 8875 |
-| Mean skill beats | 4.4375 |
-| Mean final `state.round` | 4.4375 |
-| Full Wake events | 2000 |
-| Full Wake / fight (avg procs) | 1.0000 |
-| Fights with ≥1 Full Wake | 2000 / 2000 (1.0000) |
-| SPARK events | 1071 |
-| SPARK / fight | 0.5355 |
-| Fights with ≥1 SPARK | 918 / 2000 (0.4590) |
+| Sum skill beats | 8284 |
+| Mean skill beats | 4.1420 |
+| Mean final `state.round` | 4.1420 |
+| Full Wake events | 0 |
+| Full Wake / fight (avg procs) | 0.0000 |
+| Fights with ≥1 Full Wake | 0 / 2000 (0.0000) |
+| SPARK events | 983 |
+| SPARK / fight | 0.4915 |
+| Fights with ≥1 SPARK | 832 / 2000 (0.4160) |
 | Grey violations | 0 |
 
 ## Seal-Warden (`Enemy.boss()`, HP=28)
 
 | Metric | Value |
 |--------|-------|
-| Wins | 1758 / 2000 |
+| Wins | 2000 / 2000 |
 | Hangs (round cap) | 0 |
-| Winrate | 0.8790 |
-| Sum skill beats | 14654 |
-| Mean skill beats | 7.3270 |
-| Mean final `state.round` | 7.4480 |
-| Full Wake events | 3733 |
-| Full Wake / fight (avg procs) | 1.8665 |
-| Fights with ≥1 Full Wake | 2000 / 2000 (1.0000) |
-| SPARK events | 1761 |
-| SPARK / fight | 0.8805 |
-| Fights with ≥1 SPARK | 1236 / 2000 (0.6180) |
+| Winrate | 1.0000 |
+| Sum skill beats | 8777 |
+| Mean skill beats | 4.3885 |
+| Mean final `state.round` | 4.3885 |
+| Full Wake events | 0 |
+| Full Wake / fight (avg procs) | 0.0000 |
+| Fights with ≥1 Full Wake | 0 / 2000 (0.0000) |
+| SPARK events | 1041 |
+| SPARK / fight | 0.5205 |
+| Fights with ≥1 SPARK | 839 / 2000 (0.4195) |
 | Grey violations | 0 |
 
 ## SIM_REPORT_JSON
 
 ```
-SIM_REPORT_JSON={"fights":2000,"base_seed":1000,"round_cap":200,"ash_wretch":{"wins":2000,"hangs":0,"winrate":1.0000,"sum_skill_beats":8875,"mean_skill_beats":4.4375,"mean_final_round":4.4375,"full_wake_events":2000,"full_wake_per_fight":1.0000,"fights_with_full_wake":2000,"full_wake_fight_rate":1.0000,"spark_events":1071,"spark_per_fight":0.5355,"fights_with_spark":918,"spark_fight_rate":0.4590,"grey_violations":0},"seal_warden":{"wins":1758,"hangs":0,"winrate":0.8790,"sum_skill_beats":14654,"mean_skill_beats":7.3270,"mean_final_round":7.4480,"full_wake_events":3733,"full_wake_per_fight":1.8665,"fights_with_full_wake":2000,"full_wake_fight_rate":1.0000,"spark_events":1761,"spark_per_fight":0.8805,"fights_with_spark":1236,"spark_fight_rate":0.6180,"grey_violations":0},"assert_grey_zero":true,"assert_confirm_4_6_rejected":true,"assert_skip_default_5_ashbrand":true}
+SIM_REPORT_JSON={"fights":2000,"base_seed":1000,"round_cap":200,"ash_wretch":{"wins":2000,"hangs":0,"winrate":1.0000,"sum_skill_beats":8284,"mean_skill_beats":4.1420,"mean_final_round":4.1420,"full_wake_events":0,"full_wake_per_fight":0.0000,"fights_with_full_wake":0,"full_wake_fight_rate":0.0000,"spark_events":983,"spark_per_fight":0.4915,"fights_with_spark":832,"spark_fight_rate":0.4160,"grey_violations":0},"seal_warden":{"wins":2000,"hangs":0,"winrate":1.0000,"sum_skill_beats":8777,"mean_skill_beats":4.3885,"mean_final_round":4.3885,"full_wake_events":0,"full_wake_per_fight":0.0000,"fights_with_full_wake":0,"full_wake_fight_rate":0.0000,"spark_events":1041,"spark_per_fight":0.5205,"fights_with_spark":839,"spark_fight_rate":0.4195,"grey_violations":0},"assert_grey_zero":true,"assert_confirm_4_6_rejected":true,"assert_skip_default_5_ashbrand":true}
 ```
 
 ## Anomalies / engine vs design
@@ -74,8 +74,8 @@ Prior report values: Ash SPARK events = **912**, Seal-Warden SPARK events = **89
 
 | Cohort | Prior SPARK events | New SPARK events | Delta SPARK events | Prior winrate | New winrate | Delta winrate |
 |--------|-------------------:|-----------------:|-------------------:|--------------:|------------:|--------------:|
-| Ash Wretch | 912 | 1071 | 159 | 0.5070 | 1.0000 | 0.4930 |
-| Seal-Warden | 898 | 1761 | 863 | 0.0005 | 0.8790 | 0.8785 |
+| Ash Wretch | 912 | 983 | 71 | 0.5070 | 1.0000 | 0.4930 |
+| Seal-Warden | 898 | 1041 | 143 | 0.0005 | 1.0000 | 0.9995 |
 
 ## Method
 

@@ -24,7 +24,7 @@ import kotlin.random.Random
  */
 class ContinueV0161Test {
 
-    private fun fiveCards() = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
+    private fun fiveCards() = listOf("hostflint", "cinder_step", "iron_mantle", "emberbrand", "dust_veil").mapNotNull { CardCatalog.byId(it) }
 
     private fun combatSrc() =
         File("src/main/java/com/towerofdarkness/app/ui/screens/CombatScreen.kt").readText()
@@ -116,8 +116,8 @@ class ContinueV0161Test {
     @Test
     fun packaging_vc63_vnScore() {
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 64"))
-        assertTrue(g.contains("versionName = \"0.1.63-scorefade\""))
+        assertTrue(g.contains("versionCode = 65"))
+        assertTrue(g.contains("versionName = \"0.1.64-specials\""))
     }
 
     @Test

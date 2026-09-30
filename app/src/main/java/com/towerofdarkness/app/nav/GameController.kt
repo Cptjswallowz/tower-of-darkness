@@ -17,6 +17,7 @@ import com.towerofdarkness.app.data.MidRunSlot
 import com.towerofdarkness.app.domain.Balance
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.cards.CardCatalog
+import com.towerofdarkness.app.domain.specials.Specials
 import com.towerofdarkness.app.domain.climb.ClimbKept
 import com.towerofdarkness.app.domain.climb.ClimbKeptFlags
 import com.towerofdarkness.app.domain.climb.FloorRumors
@@ -174,6 +175,9 @@ class GameController(app: Application) : AndroidViewModel(app) {
     /** Combat playback rate: 1 or 2. Persists for the run (cheap). Label shows ACTIVE rate. */
     var combatSpeedX by mutableStateOf(1)
         private set
+    /** v0.1.64: Assist specials preference (MetaStore); snapshotted into CombatState at fight start. */
+    var assistSpecialsPref by mutableStateOf(true)
+        private set
     /** Mid-run slot present (Menu Continue). */
     var hasMidRunSlot by mutableStateOf(false)
         private set
@@ -245,6 +249,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             remnantsBank = meta.remnantsBank.first()
             unlockedCards = meta.unlockedCards.first()
             metaHpBonus = meta.metaHpBonus.first()
+            assistSpecialsPref = meta.assistSpecials.first()
             val slot = meta.readMidRunSlot()
             hasMidRunSlot = slot != null
             if (slot != null) {
@@ -257,7 +262,30 @@ class GameController(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { meta.remnantsBank.collect { remnantsBank = it } }
         viewModelScope.launch { meta.unlockedCards.collect { unlockedCards = it } }
         viewModelScope.launch { meta.metaHpBonus.collect { metaHpBonus = it } }
+        viewModelScope.launch { meta.assistSpecials.collect { assistSpecialsPref = it } }
     }
+
+    fun setAssistSpecials(enabled: Boolean) {
+        assistSpecialsPref = enabled
+        viewModelScope.launch { meta.setAssistSpecials(enabled) }
+    }
+
+    fun openSettings() {
+        nav = NavState.Settings
+    }
+
+    /** Grant Grave Brand + Ash Vow climb-available when L or M unlock missing. */
+    fun ensureSpecialsGranted() {
+        val next = Specials.grantClimbSpecialsIfMissing(unlockedCards)
+        if (next != unlockedCards) {
+            unlockedCards = next
+            viewModelScope.launch {
+                meta.unlockCard(Specials.ID_GRAVE_BRAND)
+                meta.unlockCard(Specials.ID_ASH_VOW)
+            }
+        }
+    }
+
 
     fun showGlossary(term: String?, bodyOverride: String? = null) {
         glossaryTerm = term
@@ -351,6 +379,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
      * Resume / [continueClimb] never enters ClimbIntro.
      */
     fun climb() {
+        ensureSpecialsGranted()
         if (hasMidRunSlot) return // UI shows confirm; use confirmNewClimb
         enterClimbIntroOrFresh()
     }
@@ -539,11 +568,13 @@ class GameController(app: Application) : AndroidViewModel(app) {
 
     // --- Loadout ---
     fun openLoadout() {
+        ensureSpecialsGranted()
         if (!loadoutLocked) nav = NavState.Loadout
     }
 
     fun confirmLoadout(selected: List<Card>, weaponId: String? = null) {
         if (selected.size != Balance.LOADOUT_MAX) return
+        if (!Specials.loadoutMeetsGate(selected)) return
         val w = weaponId?.let { WeaponCatalog.byId(it) } ?: equippedWeapon.def
         loadout = selected
         equippedWeapon = WeaponRuntime(w, level = equippedWeapon.level.coerceIn(1, 3), charge = 0)
@@ -592,7 +623,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         // Kenney UI click once per successful path-node tap (before loadout redirect or enterNode).
         // enterNode itself stays silent so confirmLoadout → enterNode does not double-fire.
         sound.play("ui")
-        if (!loadoutLocked && (loadout.size != Balance.LOADOUT_MAX)) {
+        if (!loadoutLocked && (loadout.size != Balance.LOADOUT_MAX || !Specials.loadoutMeetsGate(loadout))) {
+            ensureSpecialsGranted()
             pendingNodeId = nodeId
             nav = NavState.Loadout
             return
@@ -677,6 +709,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         val weightBoost = forgeStates.filter { (id, st) ->
             id == Forge.ID_DUST_VEIL && st.level >= 3 && st.l3 == ForgeBranch.B
         }.keys
+        // Assist specials: snapshot preference at fight start only (no mid-fight change)
+        val assistSnap = assistSpecialsPref
         combatState = engine.start(
             activeCards = cards,
             enemy = enemy,
@@ -685,7 +719,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
             playerHp = playerHp.coerceAtMost(maxHp),
             initialBrace = startBrace,
             trollToothReady = toothReady,
-            pendingWeightBoostIds = weightBoost
+            pendingWeightBoostIds = weightBoost,
+            assistSpecials = assistSnap
         )
         trollToothArmedFight = toothReady
         nav = NavState.Combat
@@ -733,12 +768,17 @@ class GameController(app: Application) : AndroidViewModel(app) {
                 if (s.phase == CombatPhase.COMBAT &&
                     (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark)
                 ) {
+                    s = awaitWakeTapIfNeeded(s)
                     val fullWake = s.pendingFullWake
                     val weaponFrom = s.log.size
-                    s = engine.resolveWeapon(s)
-                    s = engine.applyWinCheck(s)
-                    combatState = s
-                    playLogSounds(s, weaponFrom)
+                    // If tap already resolved Wake, pending flags are clear — skip
+                    if (s.pendingFullWake || s.pendingSpark || s.awaitingWeapon) {
+                        val viaAssist = s.assistSpecials
+                        s = engine.resolveWeapon(s, wakeViaAssist = viaAssist)
+                        s = engine.applyWinCheck(s)
+                        combatState = s
+                        playLogSounds(s, weaponFrom)
+                    }
                     val wHold = if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS
                     combatHold(minOf(wHold, Balance.COMBAT_END_FORCE_MS))
                 } else if (s.phase == CombatPhase.COMBAT) {
@@ -761,13 +801,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
             if (s.phase != CombatPhase.COMBAT) break
 
             // E — weapon AFTER skill, BEFORE enemy; FULL Wake hold 2300ms @1x
-            if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark) {
+            // Assist OFF: wait for Ashbrand tap when Wake full (spark-only still auto).
+            if (s.awaitingWeapon || s.pendingFullWake || s.pendingSpark || s.pendingGraveBrand) {
+                s = awaitWakeTapIfNeeded(s)
                 val fullWake = s.pendingFullWake
                 val weaponFrom = s.log.size
-                s = engine.resolveWeapon(s)
-                s = engine.applyWinCheck(s)
-                combatState = s
-                playLogSounds(s, weaponFrom)
+                if (s.pendingFullWake || s.pendingSpark || s.awaitingWeapon || s.pendingGraveBrand) {
+                    val viaAssist = s.assistSpecials
+                    s = engine.resolveWeapon(s, wakeViaAssist = viaAssist)
+                    s = engine.applyWinCheck(s)
+                    combatState = s
+                    playLogSounds(s, weaponFrom)
+                }
                 combatHold(if (fullWake) Balance.WEAPON_FULL_HOLD_MS else Balance.WEAPON_HOLD_MS)
                 s = engine.applyWinCheck(combatState ?: s)
                 combatState = s
@@ -868,6 +913,64 @@ class GameController(app: Application) : AndroidViewModel(app) {
      * Snapshots [combatSpeedX] when the hold starts so a mid-fight toggle
      * only affects the NEXT beat (current delay already committed).
      */
+
+    /** Assist OFF: wait until Ashbrand tap clears awaitingWakeTap (or fight ends). */
+    private suspend fun awaitWakeTapIfNeeded(state: CombatState): CombatState {
+        var s = state
+        if (!s.pendingFullWake || s.assistSpecials || !s.awaitingWakeTap) return s
+        combatState = s
+        while (true) {
+            val cur = combatState ?: s
+            if (cur.phase != CombatPhase.COMBAT || cur.finished) return cur
+            if (!cur.awaitingWakeTap || !cur.pendingFullWake) return cur
+            delay(50L)
+        }
+    }
+
+    /** Ashbrand plate tap — fire Wake when Assist OFF + full; else glossary. */
+    fun onAshbrandTap() {
+        val s = combatState ?: run {
+            showGlossary("ashbrand")
+            return
+        }
+        if (s.phase != CombatPhase.COMBAT || s.finished) {
+            showGlossary("ashbrand")
+            return
+        }
+        if (s.awaitingWakeTap && s.pendingFullWake && !s.assistSpecials) {
+            var next = engine.resolveWeapon(s, wakeViaAssist = false)
+            next = engine.applyWinCheck(next)
+            combatState = next
+            sound.playFrame(next.log.takeLast(3).map { it.sound })
+            return
+        }
+        // Not-full: no-op for Wake fire; glossary still OK when not firing
+        showGlossary("ashbrand")
+    }
+
+    /** Skill tile tap — Grave Brand / Ash Vow when Assist OFF (or ready). */
+    fun onSpecialSkillTap(cardId: String) {
+        val s = combatState ?: return
+        if (s.phase != CombatPhase.COMBAT || s.finished) return
+        when (cardId) {
+            Specials.ID_GRAVE_BRAND -> {
+                if (s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP && !s.assistSpecials) {
+                    var next = engine.fireGraveBrand(s, viaAssist = false)
+                    next = engine.applyWinCheck(next)
+                    combatState = next
+                    sound.playFrame(next.log.takeLast(3).map { it.sound })
+                }
+            }
+            Specials.ID_ASH_VOW -> {
+                if (!s.ashVowSpent && !s.assistSpecials) {
+                    var next = engine.fireAshVow(s, viaAssist = false)
+                    combatState = next
+                    sound.playFrame(next.log.takeLast(2).map { it.sound })
+                }
+            }
+        }
+    }
+
     private suspend fun combatHold(baseMs: Long) {
         // Fight stays paused while a glossary sheet is open (tap icon / term).
         var remaining = combatHoldMs(baseMs, combatSpeedX)

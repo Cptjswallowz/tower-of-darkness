@@ -24,8 +24,8 @@ class SkillGlyphV0119Test {
             assertNotNull(SkillGlyph.job(card.id))
         }
         assertTrue(SkillGlyph.catalogFullyMapped())
-        assertEquals(17, SkillGlyph.mappedSkillIds().size)
-        assertEquals(17, CardCatalog.all.size)
+        assertEquals(19, SkillGlyph.mappedSkillIds().size)
+        assertEquals(19, CardCatalog.all.size)
     }
 
     @Test
@@ -38,10 +38,10 @@ class SkillGlyphV0119Test {
 
     @Test
     fun braceJobs_locked() {
-        listOf("iron_mantle", "vow_plate", "dust_veil").forEach { id ->
+        listOf("iron_mantle", "vow_plate", "dust_veil", "ash_vow").forEach { id ->
             assertEquals("$id should be Brace", SkillJob.BRACE, SkillGlyph.job(id))
         }
-        assertEquals(SkillGlyph.braceIds(), setOf("iron_mantle", "vow_plate", "dust_veil"))
+        assertEquals(SkillGlyph.braceIds(), setOf("iron_mantle", "vow_plate", "dust_veil", "ash_vow"))
     }
 
     @Test
@@ -56,7 +56,7 @@ class SkillGlyphV0119Test {
         val expected = setOf(
             "hostflint", "emberbrand", "tower_pike", "ruin_seal", "shadow_latch", "cinder_step",
             "cinder_vow", "grave_nail",
-            "ember_draw", "brand_mark", "spark_tithe", "wake_echo"
+            "ember_draw", "brand_mark", "spark_tithe", "wake_echo", "grave_brand"
         )
         expected.forEach { id ->
             assertEquals("$id should be Damage", SkillJob.DAMAGE, SkillGlyph.job(id))
@@ -83,7 +83,9 @@ class SkillGlyphV0119Test {
             "ember_draw" to "glyph_ember_draw",
             "brand_mark" to "glyph_brand_mark",
             "spark_tithe" to "glyph_spark_tithe",
-            "wake_echo" to "glyph_wake_echo"
+            "wake_echo" to "glyph_wake_echo",
+            "grave_brand" to "glyph_grave_nail",
+            "ash_vow" to "glyph_vow_plate"
         )
         expected.forEach { (id, name) ->
             assertEquals(name, SkillGlyph.drawableName(id))

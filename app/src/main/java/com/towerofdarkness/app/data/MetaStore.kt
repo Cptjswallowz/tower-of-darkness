@@ -24,6 +24,8 @@ class MetaStore(private val context: Context) {
     private val KEY_MIDRUN = stringPreferencesKey("midrun_v0112")
     /** One-shot hubkeep v0.1.28 migration flag — never wipe bank/unlocks. */
     private val KEY_HUBKEEP_V0128 = booleanPreferencesKey("hubkeep_v0128_migrated")
+    /** v0.1.64-specials: Assist specials ON|OFF, default ON. */
+    private val KEY_ASSIST_SPECIALS = booleanPreferencesKey("assist_specials")
 
     val tutorialSeen: Flow<Boolean> = context.dataStore.data.map { it[KEY_TUTORIAL] ?: false }
     val remnantsBank: Flow<Int> = context.dataStore.data.map { it[KEY_REMNANTS] ?: 0 }
@@ -32,6 +34,8 @@ class MetaStore(private val context: Context) {
     }
     val metaHpBonus: Flow<Int> = context.dataStore.data.map { it[KEY_META_HP] ?: 0 }
     val midRunJson: Flow<String?> = context.dataStore.data.map { it[KEY_MIDRUN] }
+    /** Default ON per specials-v0164. */
+    val assistSpecials: Flow<Boolean> = context.dataStore.data.map { it[KEY_ASSIST_SPECIALS] ?: true }
 
     suspend fun setTutorialSeen(seen: Boolean = true) {
         context.dataStore.edit { it[KEY_TUTORIAL] = seen }
@@ -122,7 +126,12 @@ class MetaStore(private val context: Context) {
     suspend fun clearMidRunSlot() {
         context.dataStore.edit { it.remove(KEY_MIDRUN) }
     }
+
+    suspend fun setAssistSpecials(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_ASSIST_SPECIALS] = enabled }
+    }
 }
+
 
 /** Result of [MetaStore.commitSummaryBank] for BANK write log. */
 data class SummaryBankWrite(val prev: Int, val add: Int, val now: Int)

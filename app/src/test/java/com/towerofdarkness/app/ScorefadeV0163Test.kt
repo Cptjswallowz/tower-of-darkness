@@ -9,7 +9,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * v0.1.63-scorefade — once vs loop beds + dual-player crossfade (no isLooping click).
+ * v0.1.64-specials — once vs loop beds + dual-player crossfade (no isLooping click).
  * Source/assert style (like Score / Continue / Unstick).
  */
 class ScorefadeV0163Test {
@@ -38,8 +38,8 @@ class ScorefadeV0163Test {
     @Test
     fun packaging_vc64_vnScorefade() {
         val g = gradleSrc()
-        assertTrue(g.contains("versionCode = 64"))
-        assertTrue(g.contains("versionName = \"0.1.63-scorefade\""))
+        assertTrue(g.contains("versionCode = 65"))
+        assertTrue(g.contains("versionName = \"0.1.64-specials\""))
     }
 
     @Test

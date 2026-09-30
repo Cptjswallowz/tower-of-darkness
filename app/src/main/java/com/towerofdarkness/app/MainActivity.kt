@@ -26,6 +26,7 @@ import com.towerofdarkness.app.ui.screens.MetaHubScreen
 import com.towerofdarkness.app.ui.screens.PathScreen
 import com.towerofdarkness.app.ui.screens.RestScreen
 import com.towerofdarkness.app.ui.screens.RunSummaryScreen
+import com.towerofdarkness.app.ui.screens.SettingsScreen
 import com.towerofdarkness.app.ui.screens.ShopScreen
 import com.towerofdarkness.app.ui.screens.TreasureScreen
 import com.towerofdarkness.app.ui.screens.TutorialScreen
@@ -95,6 +96,7 @@ fun TowerRoot(gc: GameController) {
         NavState.FloorBreak -> FloorBreakScreen(gc)
         NavState.RunSummary -> RunSummaryScreen(gc)
         NavState.MetaHub -> MetaHubScreen(gc)
+        NavState.Settings -> SettingsScreen(gc)
     }
     GlossaryDialog(
         term = gc.glossaryTerm,

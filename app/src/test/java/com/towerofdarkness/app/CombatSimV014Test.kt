@@ -88,7 +88,8 @@ class CombatSimV014Test {
         message.contains("spark (", ignoreCase = true)
 
     private fun isFullWakeEvent(message: String): Boolean =
-        message.startsWith("ASHBRAND — WAKE") || wakeRegex.matches(message)
+        message.startsWith("ASHBRAND — WAKE") || wakeRegex.matches(message) ||
+            message.startsWith("Ashbrand Wake (")
 
     /** Run one fight; count completed skill beats (diceTumble+resolveSkill) until finished. */
     private fun simulateFight(seed: Int, enemy: Enemy): FightResult {
@@ -114,7 +115,8 @@ class CombatSimV014Test {
 
             if (hid in s.spentIds) greyViolations++
             if (hid in firedThisCycle) greyViolations++
-            if (spentBefore.size < s.activeCards.size && hid in spentBefore) greyViolations++
+            val bagSize = s.activeCards.count { it.weight > 0 }
+            if (spentBefore.size < bagSize && hid in spentBefore) greyViolations++
 
             firedThisCycle += hid
             skillBeats++
@@ -128,7 +130,7 @@ class CombatSimV014Test {
                 val m = ev.message
                 if (isFullWakeEvent(m)) {
                     fullWake++
-                    val okMsg = wakeRegex.matches(m)
+                    val okMsg = wakeRegex.matches(m) || m.startsWith("Ashbrand Wake (")
                     val okGold = ev.goldLog
                     val okAnim = ev.animStyle == CombatAnimStyle.CHARGE_SHAKE_SLOWMO
                     if (!okMsg || !okGold || !okAnim) fullWakeAssertFails++
@@ -284,7 +286,7 @@ class CombatSimV014Test {
         )
         assertEquals(5, CardCatalog.defaultLoadoutIds.size)
         val expectedIds = listOf(
-            "hostflint", "cinder_step", "iron_mantle", "emberbrand", "dust_veil"
+            "hostflint", "cinder_step", "iron_mantle", "grave_brand", "ash_vow"
         )
         assertEquals(expectedIds, CardCatalog.defaultLoadoutIds)
         assertTrue(

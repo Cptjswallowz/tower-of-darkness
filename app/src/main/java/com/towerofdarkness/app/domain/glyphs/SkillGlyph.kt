@@ -28,10 +28,11 @@ object SkillGlyph {
     private val DAMAGE_IDS = setOf(
         "hostflint", "emberbrand", "tower_pike", "ruin_seal", "shadow_latch", "cinder_step",
         "cinder_vow", "grave_nail",
-        "ember_draw", "brand_mark", "spark_tithe", "wake_echo"
+        "ember_draw", "brand_mark", "spark_tithe", "wake_echo",
+        "grave_brand"
     )
     private val BRACE_IDS = setOf(
-        "iron_mantle", "vow_plate", "dust_veil"
+        "iron_mantle", "vow_plate", "dust_veil", "ash_vow"
     )
     private val MIXED_IDS = setOf(
         "ash_press", "relic_shard"
@@ -55,7 +56,10 @@ object SkillGlyph {
         "ember_draw" to "glyph_ember_draw",
         "brand_mark" to "glyph_brand_mark",
         "spark_tithe" to "glyph_spark_tithe",
-        "wake_echo" to "glyph_wake_echo"
+        "wake_echo" to "glyph_wake_echo",
+        // v0.1.64 — reuse existing art drop-ins
+        "grave_brand" to "glyph_grave_nail",
+        "ash_vow" to "glyph_vow_plate"
     )
 
     /** All catalog skill ids that must show a glyph. */

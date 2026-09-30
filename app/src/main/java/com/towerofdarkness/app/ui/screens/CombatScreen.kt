@@ -38,6 +38,7 @@ import com.towerofdarkness.app.domain.Rarity
 import com.towerofdarkness.app.domain.cards.Card
 import com.towerofdarkness.app.domain.combat.CombatAnimStyle
 import com.towerofdarkness.app.domain.combat.CombatBeat
+import com.towerofdarkness.app.domain.specials.Specials
 import com.towerofdarkness.app.domain.combat.CombatPhase
 import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.EnemyKits
@@ -660,12 +661,17 @@ fun CombatScreen(gc: GameController) {
             state.activeCards.take(5).forEach { card ->
                 val isCurrent = card.id == state.highlightedId
                 val forgeLv = Forge.levelOf(gc.forgeStates, card.id)
+                val isSpecial = card.id in Specials.SPECIAL_IDS
+                val gbCharge = if (card.id == Specials.ID_GRAVE_BRAND) state.graveBrandCharge else null
+                val ashSpent = card.id == Specials.ID_ASH_VOW && state.ashVowSpent
                 Box(Modifier.weight(1f)) {
                     SkillSlot(
                         card = card,
-                        spent = card.id in state.spentIds,
+                        spent = (card.id in state.spentIds && !isSpecial) || ashSpent,
                         current = isCurrent,
                         forgeLevel = forgeLv,
+                        chargeLabel = gbCharge?.let { "$it/${Specials.GRAVE_BRAND_CAP}" },
+                        onTap = if (isSpecial) {{ gc.onSpecialSkillTap(card.id) }} else null,
                         onLongPressGlossary = {
                             gc.showSkillGlossary(card.title, card.effect.description)
                         },
@@ -683,7 +689,7 @@ fun CombatScreen(gc: GameController) {
         Spacer(Modifier.height(6.dp))
 
         // Weapon row (not in dice)
-        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase, onAshbrandTap = { gc.showGlossary("ashbrand") })
+        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase, onAshbrandTap = { gc.onAshbrandTap() })
 
         Spacer(Modifier.height(8.dp))
         // Combat log well UNDER Ashbrand — plate-free (GlossaryText only).
@@ -803,6 +809,8 @@ private fun SkillSlot(
     spent: Boolean,
     current: Boolean,
     forgeLevel: Int = 1,
+    chargeLabel: String? = null,
+    onTap: (() -> Unit)? = null,
     onLongPressGlossary: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -811,6 +819,8 @@ private fun SkillSlot(
         current -> Gold
         spent -> Steel.copy(0.3f)
         skillJobIsBrace(card.id) -> Moss
+        card.rarity == Rarity.MYTHIC -> com.towerofdarkness.app.ui.theme.GlowMythic
+        card.rarity == Rarity.LEGENDARY -> com.towerofdarkness.app.ui.theme.GlowLegendary
         card.rarity == Rarity.RARE -> GlowRare
         card.rarity == Rarity.UNCOMMON -> GlowUncommon
         else -> Bone.copy(0.35f)
@@ -825,10 +835,10 @@ private fun SkillSlot(
         plateOn -> SharedTilePlate.PANEL_OVER_PLATE_ALPHA
         else -> 1f
     }
-    val hold = if (onLongPressGlossary != null) {
+    val hold = if (onLongPressGlossary != null || onTap != null) {
         Modifier.combinedClickable(
-            onClick = {},
-            onLongClick = onLongPressGlossary
+            onClick = { onTap?.invoke() },
+            onLongClick = { onLongPressGlossary?.invoke() }
         )
     } else Modifier
     SharedTilePlateBox(
@@ -851,7 +861,11 @@ private fun SkillSlot(
                 // Glyph ABOVE name; spent greys at VolumeArt.DIMMED_GLYPH_ALPHA (readable, no crush).
                 SkillGlyphIcon(cardId = card.id, spent = dimmed, size = SkillGlyph.GLYPH_SIZE_DP.dp)
                 Text(card.title, color = if (dimmed) Bone.copy(0.65f) else Bone, fontSize = 9.sp, maxLines = 2)
-                Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
+                if (chargeLabel != null) {
+                    Text(chargeLabel, color = Gold, fontSize = 9.sp)
+                } else if (card.weight > 0) {
+                    Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
+                }
             }
             if (pip != null) {
                 Text(
@@ -896,7 +910,7 @@ private fun WeaponBar(
     ) {
         // Ashbrand icon — same slot size as loadout weapon plate
         if (weapon.def.id == "ashbrand") {
-            // Tap → glossary only; does not fire Wake or spend Sparks.
+            // Tap → Wake when Assist OFF + full; else glossary. Not-full = no-op fire.
             AshbrandIcon(phase = iconPhase, onClick = onAshbrandTap)
         }
         Column(Modifier.weight(1f).padding(start = 8.dp)) {

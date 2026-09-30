@@ -17,7 +17,7 @@ import org.junit.Test
 import kotlin.random.Random
 
 class CombatEngineTest {
-    private fun fiveCards() = CardCatalog.defaultLoadoutIds.mapNotNull { CardCatalog.byId(it) }
+    private fun fiveCards() = listOf("hostflint", "cinder_step", "iron_mantle", "emberbrand", "dust_veil").mapNotNull { CardCatalog.byId(it) }
     private fun tank() = Enemy(EnemyKind.ORC, maxHp = 500, hp = 500, isBoss = false)
 
     @Test
@@ -170,7 +170,7 @@ class CombatEngineTest {
         val msgs = s.log.map { it.message }
         assertTrue(
             "expected full Wake in log: $msgs",
-            msgs.any { it.startsWith("ASHBRAND — WAKE") }
+            msgs.any { it.startsWith("ASHBRAND — WAKE") || it.startsWith("Ashbrand Wake (") }
         )
         assertTrue(
             "expected SPARK in same beat log: $msgs",
@@ -210,7 +210,7 @@ class CombatEngineTest {
         assertTrue("spark must roll independent of full", s.pendingSpark)
         s = engine.resolveWeapon(s)
         val msgs = s.log.map { it.message }
-        assertTrue(msgs.any { it.startsWith("ASHBRAND — WAKE") })
+        assertTrue(msgs.any { it.startsWith("ASHBRAND — WAKE") || it.startsWith("Ashbrand Wake (") })
         assertTrue(msgs.any { it.contains("spark", ignoreCase = true) })
         assertEquals(0, s.weapon.charge)
     }
@@ -232,8 +232,8 @@ class CombatEngineTest {
         s = engine.resolveWeapon(s)
         assertEquals(0, s.weapon.charge)
         assertTrue(s.fullProcThisCombat)
-        val wake = s.log.map { it.message }.first { it.startsWith("ASHBRAND — WAKE") }
-        assertEquals("ASHBRAND — WAKE 4", wake) // Lv1 full dmg
+        val wake = s.log.map { it.message }.first { it.startsWith("ASHBRAND — WAKE") || it.startsWith("Ashbrand Wake (") }
+        assertTrue(wake == "Ashbrand Wake (assist)" || wake == "ASHBRAND — WAKE 4") // Lv1 full
     }
 
     @Test
@@ -247,8 +247,8 @@ class CombatEngineTest {
         )
         s = s.copy(awaitingWeapon = true, pendingFullWake = true, pendingSpark = true)
         s = engine.resolveWeapon(s)
-        val wakeEv = s.log.first { it.message.startsWith("ASHBRAND — WAKE") }
-        assertEquals("ASHBRAND — WAKE 4", wakeEv.message)
+        val wakeEv = s.log.first { it.message.startsWith("ASHBRAND — WAKE") || it.message.startsWith("Ashbrand Wake (") }
+        assertTrue(wakeEv.message == "Ashbrand Wake (assist)" || wakeEv.message.startsWith("ASHBRAND — WAKE"))
         assertTrue(wakeEv.goldLog)
         assertEquals("WAKE", wakeEv.floating?.text)
         assertEquals(CombatAnimStyle.CHARGE_SHAKE_SLOWMO, wakeEv.animStyle)

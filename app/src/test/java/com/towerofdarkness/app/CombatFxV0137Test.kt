@@ -207,7 +207,7 @@ class CombatFxV0137Test {
         // Force pending full wake
         s = s.copy(awaitingWeapon = true, pendingFullWake = true, pendingSpark = false)
         s = engine.resolveWeapon(s)
-        val wake = s.log.last { it.message.startsWith("ASHBRAND — WAKE") }
+        val wake = s.log.last { it.message.startsWith("ASHBRAND — WAKE") || it.message.startsWith("Ashbrand Wake (") }
         assertEquals(CombatFx.ID_ASHBRAND_WAKE, wake.fxId)
         assertTrue(wake.fxPlayer)
         assertEquals(FxTier.WAKE, CombatFx.safeSpec(wake.fxId, true, null)!!.tier)
