@@ -20,7 +20,7 @@ Rarity: `Common` | `Uncommon` | `Rare` (slice economy only; no craft).
 |---|------|--------|-------|--------|-----------------|
 | 1 | Hostflint | Common | SkillEffect | 5 | Deal **5** damage. |
 | 2 | Cinder Step | Common | MoveEffect | 3 | Deal **4** damage. Next enemy counter this round deals **−2** (min 1). |
-| 3 | Iron Mantle | Common | Equipment | 4 | Gain **Brace 3** (absorb before HP). If Brace remains at round end, clear it. |
+| 3 | Iron Mantle | Common | Equipment | 4 | Gain **Brace 3** (absorb before HP). |
 | 4 | Emberbrand | Common | SkillEffect | 5 | Deal **6** damage. |
 | 5 | Dust Veil | Common | MoveEffect | 3 | Deal **4** damage. Gain **Brace 2**. |
 | 6 | Vow Plate | Uncommon | Equipment | 3 | Gain **Brace 5**. |
@@ -79,3 +79,7 @@ Uncommon **w3**. Meta owns Hub unlocks. Combat order + glossary: `emberpool-v013
 | 15 | Brand Mark | Uncommon | SkillEffect | 3 | Deal **3**. If Sparks **≥1** before → **Soften 2**. Then +1 Spark if damaged. |
 | 16 | Spark Tithe | Uncommon | SkillEffect | 3 | Deal **6**. Tithe spend after +1 pip: net **0** if Sparks≥1 before (log Spark spent); else net **+1**. |
 | 17 | Wake Echo | Uncommon | SkillEffect | 3 | Deal **5**; if Wake already fired this fight, **+4** same log line (no second Spark). Then +1 Spark if damaged. |
+
+---
+
+**Brace expiry:** v0.1.65-fightclock — Brace/Soften last whole fight (or consumed); no round-end clear. See `fightclock-v0165.md`.

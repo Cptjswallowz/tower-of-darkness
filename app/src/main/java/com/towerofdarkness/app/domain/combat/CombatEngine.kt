@@ -115,7 +115,11 @@ data class CombatState(
     /** Assist ON: Ash Vow queued at start of cycle 2. */
     val pendingAshVow: Boolean = false,
     /** Assist OFF: combat waits for Ashbrand plate tap when Wake full. */
-    val awaitingWakeTap: Boolean = false
+    val awaitingWakeTap: Boolean = false,
+    /** v0.1.65: actions this regular-cycle (regulars + foe + specials). */
+    val cycleBeat: Int = 0,
+    /** v0.1.65: whose action last advanced the fight clock. */
+    val lastWhose: FightWhose = FightWhose.YOU
 )
 
 class CombatEngine(private val rng: Random = Random.Default) {
@@ -160,6 +164,7 @@ class CombatEngine(private val rng: Random = Random.Default) {
             s = s.copy(
                 spentIds = spent,
                 regularCycleIndex = nextCycle,
+                cycleBeat = 0,
                 log = s.log + CombatEvent("Cycle reset", sound = "")
             )
             // Ash Vow Assist ON: fire at start of cycle 2 if still unspent
@@ -201,7 +206,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
             spentIds = state.spentIds + card.id,
             highlightedId = card.id,
             lastSkillWasAttack = isAttack,
-            beat = CombatBeat.AFTER_SKILL
+            beat = CombatBeat.AFTER_SKILL,
+            cycleBeat = state.cycleBeat + 1,
+            lastWhose = FightWhose.YOU
         )
         // v0.1.58 Dust Veil L3B: first fire → weight +1 rest of fight
         if (card.id in s.pendingWeightBoostIds && card.id !in s.weightBoostedIds) {
@@ -359,7 +366,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
             pendingSpark = false,
             awaitingWakeTap = false,
             pinnedWakeLine = pinned,
-            beat = CombatBeat.AFTER_WEAPON
+            beat = CombatBeat.AFTER_WEAPON,
+            cycleBeat = if (doFull) s.cycleBeat + 1 else s.cycleBeat,
+            lastWhose = if (doFull) FightWhose.SPECIAL else s.lastWhose
         )
         // Grave Brand Assist ON: auto on next eligible (weapon) beat when charged to 3
         if (s.pendingGraveBrand && s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP &&
@@ -478,13 +487,15 @@ class CombatEngine(private val rng: Random = Random.Default) {
             log = state.log + events,
             highlightedId = null,
             beat = CombatBeat.AFTER_ENEMY,
-            round = state.round + 1
+            round = state.round + 1,
+            cycleBeat = s.cycleBeat + 1,
+            lastWhose = FightWhose.FOE
         )
     }
 
-    /** Advance to next round — clear unused Brace leftover per cards-v0. Enemy Brace persists. */
+    /** Advance to next round — Brace/Soften persist fight-long (v0.1.65). Enemy Brace persists. */
     fun readyNext(state: CombatState): CombatState =
-        state.copy(beat = CombatBeat.READY, weaponFlashed = false, brace = 0, enemyHighlightedId = null)
+        state.copy(beat = CombatBeat.READY, weaponFlashed = false, enemyHighlightedId = null)
 
     private fun finishVictory(state: CombatState): CombatState {
         val events = listOf(
@@ -839,7 +850,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
         s = s.copy(
             log = s.log + events,
             graveBrandCharge = 0,
-            pendingGraveBrand = false
+            pendingGraveBrand = false,
+            cycleBeat = s.cycleBeat + 1,
+            lastWhose = FightWhose.SPECIAL
         )
         if (s.enemy.hp <= 0) return finishVictory(s)
         return s
@@ -870,7 +883,9 @@ class CombatEngine(private val rng: Random = Random.Default) {
             ashVowSpent = true,
             ashVowBonusPending = true,
             pendingAshVow = false,
-            log = state.log + events
+            log = state.log + events,
+            cycleBeat = state.cycleBeat + 1,
+            lastWhose = FightWhose.SPECIAL
         )
     }
 

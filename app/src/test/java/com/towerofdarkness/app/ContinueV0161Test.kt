@@ -116,8 +116,8 @@ class ContinueV0161Test {
     @Test
     fun packaging_vc63_vnScore() {
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 65"))
-        assertTrue(g.contains("versionName = \"0.1.64-specials\""))
+        assertTrue(g.contains("versionCode = 66"))
+        assertTrue(g.contains("versionName = \"0.1.65-fightclock\""))
     }
 
     @Test

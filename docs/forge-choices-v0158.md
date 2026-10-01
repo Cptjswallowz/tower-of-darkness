@@ -53,23 +53,23 @@ Mechanical lock: L2A/L3A = Brace grant **+1** each; L2B = also **Soften 1**; L3B
 
 ---
 
-### Iron Mantle (base: Gain **Brace 3** (absorb before HP). If Brace remains at round end, clear it.)
+### Iron Mantle (base: Gain **Brace 3** (absorb before HP).)
 
 | Id | Choice (chip) | Glossary body |
 |----|---------------|---------------|
-| **L2A** | `Brace +1` | Gain **Brace 4** (absorb before HP). If Brace remains at round end, clear it. |
-| **L2B** | `On Brace: deal 2` | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it. |
-| **L3A** (after L2A) | `Brace +1` | Gain **Brace 5** (absorb before HP). If Brace remains at round end, clear it. |
-| **L3A** (after L2B) | `Brace +1` | Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it. |
-| **L3B** (after L2A) | `First Brace keeps weight` | Gain **Brace 4** (absorb before HP). The first Brace this fight from this skill does **not** consume this skill’s weight. If Brace remains at round end, clear it. |
-| **L3B** (after L2B) | `First Brace keeps weight` | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. The first Brace this fight from this skill does **not** consume this skill’s weight. If Brace remains at round end, clear it. |
+| **L2A** | `Brace +1` | Gain **Brace 4** (absorb before HP). |
+| **L2B** | `On Brace: deal 2` | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. |
+| **L3A** (after L2A) | `Brace +1` | Gain **Brace 5** (absorb before HP). |
+| **L3A** (after L2B) | `Brace +1` | Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. |
+| **L3B** (after L2A) | `First Brace keeps weight` | Gain **Brace 4** (absorb before HP). The first Brace this fight from this skill does **not** consume this skill’s weight. |
+| **L3B** (after L2B) | `First Brace keeps weight` | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. The first Brace this fight from this skill does **not** consume this skill’s weight. |
 
 **L3B engine gate (WO):** Prefer “first Brace pip this fight does not consume a turn-weight.” If that weight hook is **not** real in code, **do not invent** it — use **deal 2** instead (same verb as L2B). Fallback glossary when weight hook absent:
 
 | Id | Fallback glossary (no weight hook) |
 |----|-------------------------------------|
-| **L3B** (after L2A) | Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it. |
-| **L3B** (after L2B) | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it. |
+| **L3B** (after L2A) | Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. |
+| **L3B** (after L2B) | Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. |
 
 (Choice chip may stay `First Brace keeps weight` in UI only if the hook ships; if fallback, chip = `On Brace: deal 2`.)
 
@@ -152,4 +152,8 @@ Applies to **Vow Plate** (and any future Brace-only slotted skill already in cat
 - [ ] Tap-glossary shows the matching **glossary body** for L2 and L2+L3  
 - [ ] Named trees for Pike / Dust Veil / Mantle; templates for other slotted damage / Brace skills  
 - [ ] Iron Mantle L3B: weight hook or deal-2 fallback — no new engine  
-- [ ] No Relic Shard forge lines until locked  
+- [ ] No Relic Shard forge lines until locked
+
+---
+
+**Brace expiry:** round-end clear stripped — `fightclock-v0165.md`.

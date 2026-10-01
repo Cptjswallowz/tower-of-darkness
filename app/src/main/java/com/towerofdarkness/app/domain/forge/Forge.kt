@@ -58,7 +58,11 @@ object Forge {
     )
     val BRACE_TEMPLATE_IDS: Set<String> = setOf(ID_VOW_PLATE)
     val NAMED_IDS: Set<String> = setOf(ID_TOWER_PIKE, ID_DUST_VEIL, ID_IRON_MANTLE)
-    val UNMAPPED_IDS: Set<String> = setOf(ID_RELIC_SHARD)
+    val UNMAPPED_IDS: Set<String> = setOf(
+        ID_RELIC_SHARD,
+        com.towerofdarkness.app.domain.specials.Specials.ID_GRAVE_BRAND,
+        com.towerofdarkness.app.domain.specials.Specials.ID_ASH_VOW
+    )
 
     fun pipLabel(level: Int): String = when (level.coerceIn(1, 3)) {
         1 -> "I"
@@ -120,7 +124,12 @@ object Forge {
         forge: Map<String, ForgeSkillState>,
         scrapG: Int,
         scrapO: Int
-    ): List<ForgeRow> = loadout.map { card ->
+    ): List<ForgeRow> = loadout
+        .filter { card ->
+            card.id !in UNMAPPED_IDS &&
+                card.id !in com.towerofdarkness.app.domain.specials.Specials.SPECIAL_IDS
+        }
+        .map { card ->
         val st = stateOf(forge, card.id)
         val reason = greyReason(card.id, st, scrapG, scrapO)
         ForgeRow(
@@ -250,45 +259,45 @@ object Forge {
         return if (next == 2) listOf(
             ForgeChoice(
                 ForgeBranch.A, "Brace +1",
-                "Gain **Brace 4** (absorb before HP). If Brace remains at round end, clear it."
+                "Gain **Brace 4** (absorb before HP)."
             ),
             ForgeChoice(
                 ForgeBranch.B, "On Brace: deal 2",
-                "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+                "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**."
             )
         ) else listOf(
             ForgeChoice(
                 ForgeBranch.A, "Brace +1",
                 if (l2 == ForgeBranch.A)
-                    "Gain **Brace 5** (absorb before HP). If Brace remains at round end, clear it."
+                    "Gain **Brace 5** (absorb before HP)."
                 else
-                    "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+                    "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**."
             ),
             // Fallback chip — no weight hook in engine
             ForgeChoice(
                 ForgeBranch.B, "On Brace: deal 2",
                 if (l2 == ForgeBranch.A)
-                    "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+                    "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**."
                 else
-                    "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+                    "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**."
             )
         )
     }
 
     private fun mantleGlossary(l2: ForgeBranch, l3: ForgeBranch?): String = when {
         l3 == null && l2 == ForgeBranch.A ->
-            "Gain **Brace 4** (absorb before HP). If Brace remains at round end, clear it."
+            "Gain **Brace 4** (absorb before HP)."
         l3 == null && l2 == ForgeBranch.B ->
-            "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+            "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**."
         l2 == ForgeBranch.A && l3 == ForgeBranch.A ->
-            "Gain **Brace 5** (absorb before HP). If Brace remains at round end, clear it."
+            "Gain **Brace 5** (absorb before HP)."
         l2 == ForgeBranch.B && l3 == ForgeBranch.A ->
-            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**."
         // L3B fallback glossary
         l2 == ForgeBranch.A && l3 == ForgeBranch.B ->
-            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**."
         else ->
-            "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it."
+            "Gain **Brace 3** (absorb before HP). When this grants Brace, deal **2**."
     }
 
     // --- Damage template ---

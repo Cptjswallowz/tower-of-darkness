@@ -51,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.ArrayDeque
 import kotlin.random.Random
 
 data class ShopOffer(
@@ -240,6 +241,14 @@ class GameController(app: Application) : AndroidViewModel(app) {
     private val engine = CombatEngine()
     private var combatJob: Job? = null
     private val rng = Random.Default
+
+    /** v0.1.65: mid-FX special tap queue — never drop; dump after FX / before dice. */
+    private val specialTapQueue: ArrayDeque<String> = ArrayDeque()
+    @Volatile private var combatFxBusy: Boolean = false
+
+    /** UI pulse tokens for finger-down feedback (ready flash / grey). */
+    var specialTapPulse by mutableStateOf<Pair<String, Boolean>?>(null)
+        private set
 
     init {
         viewModelScope.launch {
@@ -726,6 +735,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
         nav = NavState.Combat
         sound.play("dice")
         combatJob?.cancel()
+        specialTapQueue.clear()
+        combatFxBusy = false
         combatJob = viewModelScope.launch { runCombatBeats() }
     }
 
@@ -739,6 +750,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
         var s = combatState ?: return
         // v0.1.61-continue: stop on VICTORY/DEFEAT phase (not only finished flag)
         while (s.phase == CombatPhase.COMBAT && !s.finished) {
+            // v0.1.65: dump queued specials before next dice
+            drainSpecialTapQueue()
+            s = combatState ?: s
+            if (s.phase != CombatPhase.COMBAT || s.finished) break
             // A — dice tumble
             val diceFrom = s.log.size
             s = engine.diceTumble(s)
@@ -927,61 +942,136 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Ashbrand plate tap — fire Wake when Assist OFF + full; else glossary. */
+    /** Ashbrand plate / row tap — Wake when ready; mid-FX queues (v0.1.65). */
     fun onAshbrandTap() {
-        val s = combatState ?: run {
-            showGlossary("ashbrand")
-            return
-        }
-        if (s.phase != CombatPhase.COMBAT || s.finished) {
-            showGlossary("ashbrand")
-            return
-        }
-        if (s.awaitingWakeTap && s.pendingFullWake && !s.assistSpecials) {
-            var next = engine.resolveWeapon(s, wakeViaAssist = false)
-            next = engine.applyWinCheck(next)
-            combatState = next
-            sound.playFrame(next.log.takeLast(3).map { it.sound })
-            return
-        }
-        // Not-full: no-op for Wake fire; glossary still OK when not firing
-        showGlossary("ashbrand")
+        requestSpecialTap("wake")
     }
 
-    /** Skill tile tap — Grave Brand / Ash Vow when Assist OFF (or ready). */
+    /** Skill tile tap — Grave Brand / Ash Vow when ready; mid-FX queues. */
     fun onSpecialSkillTap(cardId: String) {
-        val s = combatState ?: return
-        if (s.phase != CombatPhase.COMBAT || s.finished) return
         when (cardId) {
-            Specials.ID_GRAVE_BRAND -> {
-                if (s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP && !s.assistSpecials) {
-                    var next = engine.fireGraveBrand(s, viaAssist = false)
-                    next = engine.applyWinCheck(next)
-                    combatState = next
-                    sound.playFrame(next.log.takeLast(3).map { it.sound })
+            Specials.ID_GRAVE_BRAND -> requestSpecialTap("grave")
+            Specials.ID_ASH_VOW -> requestSpecialTap("vow")
+        }
+    }
+
+    /**
+     * Special tap router — accepted / queued / ignored.
+     * Assist OFF never auto-fires (engine); taps work whenever ready in COMBAT.
+     * Debug: `TAP_SPECIAL wake|grave|vow accepted|queued|ignored`
+     */
+    fun requestSpecialTap(kind: String): String {
+        val token = kind.lowercase()
+        val s = combatState
+        if (s == null || s.phase != CombatPhase.COMBAT || s.finished) {
+            pulseSpecial(token, ready = false)
+            logTapSpecial(token, "ignored")
+            return "ignored"
+        }
+        if (!isSpecialReady(token, s)) {
+            pulseSpecial(token, ready = false)
+            logTapSpecial(token, "ignored")
+            return "ignored"
+        }
+        pulseSpecial(token, ready = true)
+        if (combatFxBusy) {
+            specialTapQueue.addLast(token)
+            logTapSpecial(token, "queued")
+            return "queued"
+        }
+        fireSpecialTap(token)
+        logTapSpecial(token, "accepted")
+        return "accepted"
+    }
+
+    private fun isSpecialReady(token: String, s: CombatState): Boolean = when (token) {
+        "wake" -> s.pendingFullWake || s.weapon.charge >= s.weapon.threshold
+        "grave" -> s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP &&
+            s.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }
+        "vow" -> !s.ashVowSpent && s.activeCards.any { it.id == Specials.ID_ASH_VOW }
+        else -> false
+    }
+
+    private fun fireSpecialTap(token: String) {
+        var s = combatState ?: return
+        if (s.phase != CombatPhase.COMBAT || s.finished) return
+        when (token) {
+            "wake" -> {
+                if (!isSpecialReady("wake", s)) return
+                // Ensure pending flags so resolveWeapon fires full Wake
+                if (!s.pendingFullWake && s.weapon.charge >= s.weapon.threshold) {
+                    s = s.copy(
+                        pendingFullWake = true,
+                        awaitingWeapon = true,
+                        awaitingWakeTap = false
+                    )
                 }
+                var next = engine.resolveWeapon(s, wakeViaAssist = false)
+                next = engine.applyWinCheck(next)
+                combatState = next
+                sound.playFrame(next.log.takeLast(3).map { it.sound })
             }
-            Specials.ID_ASH_VOW -> {
-                if (!s.ashVowSpent && !s.assistSpecials) {
-                    var next = engine.fireAshVow(s, viaAssist = false)
-                    combatState = next
-                    sound.playFrame(next.log.takeLast(2).map { it.sound })
-                }
+            "grave" -> {
+                if (!isSpecialReady("grave", s)) return
+                var next = engine.fireGraveBrand(s, viaAssist = false)
+                next = engine.applyWinCheck(next)
+                combatState = next
+                sound.playFrame(next.log.takeLast(3).map { it.sound })
             }
+            "vow" -> {
+                if (!isSpecialReady("vow", s)) return
+                var next = engine.fireAshVow(s, viaAssist = false)
+                combatState = next
+                sound.playFrame(next.log.takeLast(2).map { it.sound })
+            }
+        }
+    }
+
+    /** Dump queued taps after FX / before next dice — never drop. */
+    fun drainSpecialTapQueue() {
+        while (specialTapQueue.isNotEmpty()) {
+            val token = specialTapQueue.removeFirst()
+            val s = combatState ?: break
+            if (s.phase != CombatPhase.COMBAT || s.finished) break
+            if (!isSpecialReady(token, s)) {
+                logTapSpecial(token, "ignored")
+                continue
+            }
+            fireSpecialTap(token)
+            logTapSpecial(token, "accepted")
+        }
+    }
+
+    private fun logTapSpecial(token: String, result: String) {
+        Log.d("TAP_SPECIAL", "TAP_SPECIAL $token $result")
+    }
+
+    private fun pulseSpecial(token: String, ready: Boolean) {
+        specialTapPulse = token to ready
+        viewModelScope.launch {
+            delay(if (ready) 80L else 80L)
+            if (specialTapPulse?.first == token) specialTapPulse = null
         }
     }
 
     private suspend fun combatHold(baseMs: Long) {
         // Fight stays paused while a glossary sheet is open (tap icon / term).
-        var remaining = combatHoldMs(baseMs, combatSpeedX)
-        while (remaining > 0L) {
-            if (glossaryTerm != null) {
-                delay(50L)
-                continue
+        // Mid-FX window: queue special taps; dump after hold.
+        combatFxBusy = true
+        try {
+            var remaining = combatHoldMs(baseMs, combatSpeedX)
+            while (remaining > 0L) {
+                if (glossaryTerm != null) {
+                    delay(50L)
+                    continue
+                }
+                val step = minOf(50L, remaining)
+                delay(step)
+                remaining -= step
             }
-            val step = minOf(50L, remaining)
-            delay(step)
-            remaining -= step
+        } finally {
+            combatFxBusy = false
+            drainSpecialTapQueue()
         }
     }
 
