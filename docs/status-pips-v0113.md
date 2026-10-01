@@ -72,3 +72,7 @@ Under each fighter’s HP bar, show compact **status pips** for combat values th
 ---
 
 **Superseded (Soften target when kits live):** v0.1.32-enemykit — Soften reduces next damaging **enemy kit skill** (not Hide/Rust Guard/Cinder Hide); Nip ignores Soften. See `enemykit-v0132.md`.
+
+---
+
+**Superseded (Brace expiry):** v0.1.65-fightclock — Brace no longer clears at round end; lasts whole fight or until consumed. See `fightclock-v0165.md`.

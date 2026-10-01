@@ -46,7 +46,14 @@ class StatusPipsV0113Test {
     fun glossary_hasBraceAndSoften() {
         assertNotNull(Glossary.definition("brace"))
         assertNotNull(Glossary.definition("soften"))
-        assertTrue(Glossary.definition("soften")!!.contains("damaging", ignoreCase = true))
+        assertEquals(
+            "Extra damage taken. Lasts the whole fight.",
+            Glossary.definition("soften")
+        )
+        assertEquals(
+            "Absorb damage before HP. Lasts the whole fight or until consumed.",
+            Glossary.definition("brace")
+        )
     }
 
     @Test
@@ -74,8 +81,9 @@ class StatusPipsV0113Test {
     }
 
     @Test
-    fun brace_afterHitSpending2_pipIsNMinus2_thenGoneAtRoundEnd() {
+    fun brace_afterHitSpending2_pipIsNMinus2_persistsPastRoundEnd() {
         // Soften 5 + force Cleave (8) → dmg 3 after Soften; Brace 5 → remaining 2.
+        // v0.1.65: Brace lasts whole fight — readyNext must NOT clear leftover.
         val n = 5
         val engine = CombatEngine(Random(0))
         var s = engine.start(
@@ -98,8 +106,8 @@ class StatusPipsV0113Test {
         assertEquals(0, s.counterPenalty)
         assertTrue(StatusPips.forEnemy(s).none { it.term == "soften" })
         s = engine.readyNext(s)
-        assertEquals(0, s.brace)
-        assertTrue(StatusPips.forPlayer(s).isEmpty())
+        assertEquals(n - 3, s.brace)
+        assertEquals(n - 3, StatusPips.forPlayer(s).single().count)
     }
 
     @Test

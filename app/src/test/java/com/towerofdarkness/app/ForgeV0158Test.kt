@@ -153,7 +153,7 @@ class ForgeV0158Test {
         // Fallback chip — no weight hook
         assertEquals(listOf("Brace +1", "On Brace: deal 2"), mL3.map { it.chip })
         assertEquals(
-            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**. If Brace remains at round end, clear it.",
+            "Gain **Brace 4** (absorb before HP). When this grants Brace, deal **2**.",
             mL3[1].glossaryBody
         )
     }

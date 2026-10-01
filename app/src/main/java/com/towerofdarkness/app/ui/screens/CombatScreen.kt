@@ -42,6 +42,7 @@ import com.towerofdarkness.app.domain.specials.Specials
 import com.towerofdarkness.app.domain.combat.CombatPhase
 import com.towerofdarkness.app.domain.combat.CombatFx
 import com.towerofdarkness.app.domain.combat.EnemyKits
+import com.towerofdarkness.app.domain.combat.FightClock
 import com.towerofdarkness.app.domain.combat.EnemySkill
 import com.towerofdarkness.app.domain.combat.EnemySkillKind
 import com.towerofdarkness.app.domain.combat.FxRecipient
@@ -482,6 +483,31 @@ fun CombatScreen(gc: GameController) {
             }
         }
         Text("Round ${state.round}", color = Bone.copy(0.6f), fontSize = 12.sp)
+        // v0.1.65 fight clock — under Round N, left, always visible
+        Text(
+            FightClock.line(state),
+            color = Bone.copy(0.55f),
+            fontSize = 11.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Wake ${FightClock.wakeDots(state)}", color = Ember.copy(0.85f), fontSize = 10.sp)
+            if (state.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }) {
+                Text("Brand ${FightClock.graveLabel(state)}", color = Gold.copy(0.85f), fontSize = 10.sp)
+            }
+            if (state.activeCards.any { it.id == Specials.ID_ASH_VOW }) {
+                val vow = FightClock.vowLabel(state)
+                Text(
+                    "Vow $vow",
+                    color = if (vow == "spent") Steel.copy(0.7f) else Gold.copy(0.85f),
+                    fontSize = 10.sp
+                )
+            }
+        }
         Spacer(Modifier.height(6.dp))
 
         Box(Modifier.fillMaxWidth()) {
@@ -664,17 +690,32 @@ fun CombatScreen(gc: GameController) {
                 val isSpecial = card.id in Specials.SPECIAL_IDS
                 val gbCharge = if (card.id == Specials.ID_GRAVE_BRAND) state.graveBrandCharge else null
                 val ashSpent = card.id == Specials.ID_ASH_VOW && state.ashVowSpent
-                Box(Modifier.weight(1f)) {
+                val chargeLabel = when (card.id) {
+                    Specials.ID_GRAVE_BRAND -> FightClock.graveLabel(state)
+                    Specials.ID_ASH_VOW -> FightClock.vowLabel(state)
+                    else -> null
+                }
+                val pulse = gc.specialTapPulse
+                val pulseKind = when (card.id) {
+                    Specials.ID_GRAVE_BRAND -> "grave"
+                    Specials.ID_ASH_VOW -> "vow"
+                    else -> null
+                }
+                val pulseReady = pulse != null && pulse.first == pulseKind && pulse.second
+                val pulseGrey = pulse != null && pulse.first == pulseKind && !pulse.second
+                Box(Modifier.weight(1f).padding(4.dp)) { // tile + 8dp hitbox (4dp each side)
                     SkillSlot(
                         card = card,
                         spent = (card.id in state.spentIds && !isSpecial) || ashSpent,
                         current = isCurrent,
                         forgeLevel = forgeLv,
-                        chargeLabel = gbCharge?.let { "$it/${Specials.GRAVE_BRAND_CAP}" },
+                        chargeLabel = chargeLabel,
                         onTap = if (isSpecial) {{ gc.onSpecialSkillTap(card.id) }} else null,
                         onLongPressGlossary = {
                             gc.showSkillGlossary(card.title, card.effect.description)
                         },
+                        tapPulseReady = pulseReady,
+                        tapPulseGrey = pulseGrey,
                         modifier = Modifier.fillMaxWidth()
                     )
                     // Fired tile flash — this skill tile only (not whole combat row)
@@ -689,7 +730,14 @@ fun CombatScreen(gc: GameController) {
         Spacer(Modifier.height(6.dp))
 
         // Weapon row (not in dice)
-        WeaponBar(state.weapon, flashed = state.weaponFlashed, iconPhase = wakeIconPhase, onAshbrandTap = { gc.onAshbrandTap() })
+        WeaponBar(
+            state.weapon,
+            flashed = state.weaponFlashed,
+            iconPhase = wakeIconPhase,
+            onAshbrandTap = { gc.onAshbrandTap() },
+            tapPulseReady = gc.specialTapPulse?.let { it.first == "wake" && it.second } == true,
+            tapPulseGrey = gc.specialTapPulse?.let { it.first == "wake" && !it.second } == true
+        )
 
         Spacer(Modifier.height(8.dp))
         // Combat log well UNDER Ashbrand — plate-free (GlossaryText only).
@@ -812,10 +860,14 @@ private fun SkillSlot(
     chargeLabel: String? = null,
     onTap: (() -> Unit)? = null,
     onLongPressGlossary: (() -> Unit)? = null,
+    tapPulseReady: Boolean = false,
+    tapPulseGrey: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Brace-job skills keep Moss/green outline (WO v0.1.19); current still Gold.
     val border = when {
+        tapPulseReady -> Gold
+        tapPulseGrey -> Steel.copy(0.85f)
         current -> Gold
         spent -> Steel.copy(0.3f)
         skillJobIsBrace(card.id) -> Moss
@@ -825,6 +877,7 @@ private fun SkillSlot(
         card.rarity == Rarity.UNCOMMON -> GlowUncommon
         else -> Bone.copy(0.35f)
     }
+    val scale = if (tapPulseReady) 1.06f else 1f
     val dimmed = spent && !current
     // v0.1.59: gold roman pip TOP-RIGHT inside border (not on glyph). Lv1 none.
     val pip = Forge.combatPipLabel(forgeLevel)
@@ -842,7 +895,9 @@ private fun SkillSlot(
         )
     } else Modifier
     SharedTilePlateBox(
-        modifier = modifier.height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp),
+        modifier = modifier
+            .height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale },
         cornerRadius = 6.dp
     ) {
         Box(
@@ -850,7 +905,11 @@ private fun SkillSlot(
                 .fillMaxSize()
                 .then(hold)
                 .background(Panel.copy(alpha = panelAlpha), RoundedCornerShape(6.dp))
-                .border(if (current) 2.dp else 1.dp, border, RoundedCornerShape(6.dp))
+                .border(
+                    if (current || tapPulseReady || tapPulseGrey) 2.dp else 1.dp,
+                    border,
+                    RoundedCornerShape(6.dp)
+                )
                 .padding(horizontal = 2.dp, vertical = 3.dp)
         ) {
             Column(
@@ -862,7 +921,12 @@ private fun SkillSlot(
                 SkillGlyphIcon(cardId = card.id, spent = dimmed, size = SkillGlyph.GLYPH_SIZE_DP.dp)
                 Text(card.title, color = if (dimmed) Bone.copy(0.65f) else Bone, fontSize = 9.sp, maxLines = 2)
                 if (chargeLabel != null) {
-                    Text(chargeLabel, color = Gold, fontSize = 9.sp)
+                    val spentVow = card.id == Specials.ID_ASH_VOW && chargeLabel == "spent"
+                    Text(
+                        chargeLabel,
+                        color = if (spentVow) Steel.copy(0.7f) else Gold,
+                        fontSize = 9.sp
+                    )
                 } else if (card.weight > 0) {
                     Text("w${card.weight}", color = Bone.copy(if (dimmed) 0.4f else 0.5f), fontSize = 8.sp)
                 }
@@ -887,7 +951,9 @@ private fun WeaponBar(
     weapon: com.towerofdarkness.app.domain.combat.WeaponRuntime,
     flashed: Boolean,
     iconPhase: WakeIconPhase = WakeIconPhase.IDLE,
-    onAshbrandTap: () -> Unit = {}
+    onAshbrandTap: () -> Unit = {},
+    tapPulseReady: Boolean = false,
+    tapPulseGrey: Boolean = false
 ) {
     val tagColor = when (weapon.def.statusTag) {
         WeaponTag.Ember -> Ember
@@ -895,22 +961,35 @@ private fun WeaponBar(
         WeaponTag.Guard -> Moss
     }
     val plateOn = sharedTilePlateAvailable()
+    val borderColor = when {
+        tapPulseReady || flashed -> Gold
+        tapPulseGrey -> Steel.copy(0.85f)
+        else -> tagColor
+    }
+    val scale = if (tapPulseReady) 1.06f else 1f
     SharedTilePlateBox(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale },
         cornerRadius = 8.dp
     ) {
+    // Full Ashbrand row = hitbox (v0.1.65)
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(onClick = onAshbrandTap)
             .background(Panel.copy(alpha = if (plateOn) SharedTilePlate.PANEL_OVER_PLATE_ALPHA else 1f), RoundedCornerShape(8.dp))
-            .border(if (flashed) 2.dp else 1.dp, if (flashed) Gold else tagColor, RoundedCornerShape(8.dp))
+            .border(
+                if (flashed || tapPulseReady || tapPulseGrey) 2.dp else 1.dp,
+                borderColor,
+                RoundedCornerShape(8.dp)
+            )
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // Ashbrand icon — same slot size as loadout weapon plate
         if (weapon.def.id == "ashbrand") {
-            // Tap → Wake when Assist OFF + full; else glossary. Not-full = no-op fire.
             AshbrandIcon(phase = iconPhase, onClick = onAshbrandTap)
         }
         Column(Modifier.weight(1f).padding(start = 8.dp)) {

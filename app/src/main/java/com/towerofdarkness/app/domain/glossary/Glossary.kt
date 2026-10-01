@@ -2,7 +2,7 @@ package com.towerofdarkness.app.domain.glossary
 
 object Glossary {
     private const val BRACE_DEF =
-        "Absorb damage before it reaches HP. Clears at round end if unused leftover."
+        "Absorb damage before HP. Lasts the whole fight or until consumed."
 
     /** Exact Ashbrand body — v0.1.33 WO (preserve line breaks). */
     const val ASHBRAND_BODY =
@@ -19,7 +19,7 @@ object Glossary {
         "stun" to "Stunned foes skip their next counterattack.",
         "freeze" to "Frozen foes skip their next counterattack.",
         "brace" to BRACE_DEF,
-        "soften" to "Reduces the enemy’s next damaging skill. Does not apply to Hide, Rust Guard, or Cinder Hide. Nip ignores Soften. Remaining reduce shows on the Soften pip; clears when a damaging skill resolves.",
+        "soften" to "Extra damage taken. Lasts the whole fight.",
         "remnants" to "Echoes of fallen climbers — spend them in the Hub.",
         "rumor" to "Vague hints about a path node — never exact stats.",
         "loadout" to "Your active bar of 5–6 cards; dice pick which fires each round.",
