@@ -40,8 +40,8 @@ class SpecialsV0164Test {
     @Test
     fun packaging_vc65_vnSpecials() {
         val g = gradleSrc()
-        assertTrue(g.contains("versionCode = 66"))
-        assertTrue(g.contains("versionName = \"0.1.65-fightclock\""))
+        assertTrue(g.contains("versionCode = 67"))
+        assertTrue(g.contains("versionName = \"0.1.66-waketap\""))
     }
 
     @Test

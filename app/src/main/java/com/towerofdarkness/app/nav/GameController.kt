@@ -306,6 +306,39 @@ class GameController(app: Application) : AndroidViewModel(app) {
         showGlossary(cardTitle, bodyOverride = upgradedBody.replace("**", ""))
     }
 
+    /**
+     * v0.1.66: Ashbrand LONG-PRESS 350ms → glossary only.
+     * Combat keeps running; close does not spend Wake. Never used for short tap.
+     */
+    fun onAshbrandLongGlossary() {
+        Log.d("LONG_GLOSSARY", "LONG_GLOSSARY ashbrand")
+        showGlossary("ashbrand")
+    }
+
+    /**
+     * v0.1.66: Grave Brand / Ash Vow LONG-PRESS 350ms → glossary; no spend.
+     */
+    fun onSpecialLongGlossary(cardId: String) {
+        when (cardId) {
+            Specials.ID_GRAVE_BRAND -> {
+                Log.d("LONG_GLOSSARY", "LONG_GLOSSARY grave")
+                val card = combatState?.activeCards?.find { it.id == cardId }
+                if (card != null) showSkillGlossary(card.title, card.effect.description)
+                else showGlossary("grave brand")
+            }
+            Specials.ID_ASH_VOW -> {
+                Log.d("LONG_GLOSSARY", "LONG_GLOSSARY vow")
+                val card = combatState?.activeCards?.find { it.id == cardId }
+                if (card != null) showSkillGlossary(card.title, card.effect.description)
+                else showGlossary("ash vow")
+            }
+            else -> {
+                val card = combatState?.activeCards?.find { it.id == cardId }
+                if (card != null) showSkillGlossary(card.title, card.effect.description)
+            }
+        }
+    }
+
     /** Toggle combat pace 1x ↔ 2x. Applies to the NEXT hold beat (current delay already committed). */
     fun toggleCombatSpeed() {
         combatSpeedX = if (combatSpeedX == 1) 2 else 1
@@ -879,6 +912,8 @@ class GameController(app: Application) : AndroidViewModel(app) {
             "COMBAT",
             "COMBAT_END $outcome foe=${s.enemy.hp} you=${s.playerHp} phase=${s.phase.name}"
         )
+        // Brace/Soften are fight-long; expire only when the fight ends.
+        Log.d("BRACE_EXPIRE", "BRACE_EXPIRE fight")
         // Wait for Continue — do not auto-nav
     }
 
@@ -942,12 +977,15 @@ class GameController(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Ashbrand plate / row tap — Wake when ready; mid-FX queues (v0.1.65). */
+    /**
+     * Ashbrand SHORT TAP — dump Wake if ready (queue mid-stroke); NEVER open glossary.
+     * Not ready → grey flash only (via requestSpecialTap ignored).
+     */
     fun onAshbrandTap() {
         requestSpecialTap("wake")
     }
 
-    /** Skill tile tap — Grave Brand / Ash Vow when ready; mid-FX queues. */
+    /** Skill tile SHORT TAP — Grave Brand / Ash Vow when ready; mid-FX queues. NEVER glossary. */
     fun onSpecialSkillTap(cardId: String) {
         when (cardId) {
             Specials.ID_GRAVE_BRAND -> requestSpecialTap("grave")
@@ -956,9 +994,10 @@ class GameController(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Special tap router — accepted / queued / ignored.
+     * Special short-tap router — accepted / queued / ignored.
      * Assist OFF never auto-fires (engine); taps work whenever ready in COMBAT.
      * Debug: `TAP_SPECIAL wake|grave|vow accepted|queued|ignored`
+     * NEVER opens glossary (long-press only).
      */
     fun requestSpecialTap(kind: String): String {
         val token = kind.lowercase()
@@ -969,6 +1008,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
             return "ignored"
         }
         if (!isSpecialReady(token, s)) {
+            // Not ready: flash only — no glossary, no spend
             pulseSpecial(token, ready = false)
             logTapSpecial(token, "ignored")
             return "ignored"
@@ -984,7 +1024,7 @@ class GameController(app: Application) : AndroidViewModel(app) {
         return "accepted"
     }
 
-    private fun isSpecialReady(token: String, s: CombatState): Boolean = when (token) {
+    fun isSpecialReady(token: String, s: CombatState): Boolean = when (token) {
         "wake" -> s.pendingFullWake || s.weapon.charge >= s.weapon.threshold
         "grave" -> s.graveBrandCharge >= Specials.GRAVE_BRAND_CAP &&
             s.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }
@@ -998,14 +1038,14 @@ class GameController(app: Application) : AndroidViewModel(app) {
         when (token) {
             "wake" -> {
                 if (!isSpecialReady("wake", s)) return
-                // Ensure pending flags so resolveWeapon fires full Wake
-                if (!s.pendingFullWake && s.weapon.charge >= s.weapon.threshold) {
-                    s = s.copy(
-                        pendingFullWake = true,
-                        awaitingWeapon = true,
-                        awaitingWakeTap = false
-                    )
-                }
+                // Publish clear of awaitingWakeTap BEFORE resolve so combat loop unblocks,
+                // then dump full Wake at 3/3 (or pendingFullWake).
+                s = s.copy(
+                    pendingFullWake = true,
+                    awaitingWeapon = true,
+                    awaitingWakeTap = false
+                )
+                combatState = s
                 var next = engine.resolveWeapon(s, wakeViaAssist = false)
                 next = engine.applyWinCheck(next)
                 combatState = next
@@ -1049,22 +1089,18 @@ class GameController(app: Application) : AndroidViewModel(app) {
     private fun pulseSpecial(token: String, ready: Boolean) {
         specialTapPulse = token to ready
         viewModelScope.launch {
-            delay(if (ready) 80L else 80L)
+            delay(80L)
             if (specialTapPulse?.first == token) specialTapPulse = null
         }
     }
 
     private suspend fun combatHold(baseMs: Long) {
-        // Fight stays paused while a glossary sheet is open (tap icon / term).
+        // v0.1.66: long-press glossary does NOT pause combat (combat keeps running).
         // Mid-FX window: queue special taps; dump after hold.
         combatFxBusy = true
         try {
             var remaining = combatHoldMs(baseMs, combatSpeedX)
             while (remaining > 0L) {
-                if (glossaryTerm != null) {
-                    delay(50L)
-                    continue
-                }
                 val step = minOf(50L, remaining)
                 delay(step)
                 remaining -= step

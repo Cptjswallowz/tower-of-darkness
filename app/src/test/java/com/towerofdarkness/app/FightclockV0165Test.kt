@@ -21,7 +21,7 @@ import java.io.File
 import kotlin.random.Random
 
 /**
- * v0.1.65-fightclock P1 — taps, Assist OFF, Brace/Soften fight-long,
+ * v0.1.66-waketap P1 — taps, Assist OFF, Brace/Soften fight-long,
  * clock Cycle/Beat/Whose, L/M not forge II/III, vc66.
  */
 class FightclockV0165Test {
@@ -44,8 +44,8 @@ class FightclockV0165Test {
     @Test
     fun packaging_vc66_vnFightclock() {
         val g = gradleSrc()
-        assertTrue(g.contains("versionCode = 66"))
-        assertTrue(g.contains("versionName = \"0.1.65-fightclock\""))
+        assertTrue(g.contains("versionCode = 67"))
+        assertTrue(g.contains("versionName = \"0.1.66-waketap\""))
     }
 
     @Test

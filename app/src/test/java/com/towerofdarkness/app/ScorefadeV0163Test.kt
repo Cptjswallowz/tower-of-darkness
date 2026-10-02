@@ -38,8 +38,8 @@ class ScorefadeV0163Test {
     @Test
     fun packaging_vc64_vnScorefade() {
         val g = gradleSrc()
-        assertTrue(g.contains("versionCode = 66"))
-        assertTrue(g.contains("versionName = \"0.1.65-fightclock\""))
+        assertTrue(g.contains("versionCode = 67"))
+        assertTrue(g.contains("versionName = \"0.1.66-waketap\""))
     }
 
     @Test

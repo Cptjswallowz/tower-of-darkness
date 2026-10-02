@@ -31,7 +31,8 @@ import com.towerofdarkness.app.ui.theme.Gold
  * v0.1.20: Art-baked volume on blade icon; Compose chrome no-op (not Wake VFX / spark).
  * Same size on loadout weapon plate and combat weapon row.
  * SPARK: [R.drawable.ashbrand_spark] ember overlay only (no crescent).
- * Tap ([onClick]) opens glossary only — never fires Wake / spends Sparks.
+ * Combat: parent owns short-tap dump / long-press glossary (pass onClick=null).
+ * Loadout: [onClick] may open glossary. Never spends Sparks by itself.
  */
 @Composable
 fun AshbrandIcon(

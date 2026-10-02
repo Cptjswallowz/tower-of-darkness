@@ -12,8 +12,8 @@ android {
         applicationId = "com.towerofdarkness.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 66
-        versionName = "0.1.65-fightclock"
+        versionCode = 67
+        versionName = "0.1.66-waketap"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
