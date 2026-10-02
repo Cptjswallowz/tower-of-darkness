@@ -66,7 +66,7 @@ class TilepolishV0159Test {
         assertTrue(combat.contains("Forge.combatPipLabel"))
         assertTrue(combat.contains("onLongPressGlossary"))
         assertTrue(combat.contains("showSkillGlossary"))
-        assertTrue(combat.contains("combinedClickable"))
+        assertTrue(combat.contains("specialTapSplit") || combat.contains("combinedClickable"))
         assertTrue(combat.contains("SharedTilePlateBox"))
         assertTrue(combat.contains("Alignment.TopEnd"))
         assertTrue(combat.contains("fontSize = 12.sp"))

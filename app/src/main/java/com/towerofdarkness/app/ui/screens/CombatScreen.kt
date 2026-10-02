@@ -65,8 +65,11 @@ import com.towerofdarkness.app.domain.art.SharedTilePlate
 import com.towerofdarkness.app.domain.forge.Forge
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import com.towerofdarkness.app.ui.components.AshbrandIcon
+import com.towerofdarkness.app.ui.gestures.WithSpecialLongPressTimeout
+import com.towerofdarkness.app.ui.gestures.specialTapSplit
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.towerofdarkness.app.ui.components.CombatBracePipsOverlay
 import com.towerofdarkness.app.ui.components.CombatHitFlashOverlay
 import com.towerofdarkness.app.ui.components.CombatStrokeOverlay
@@ -483,29 +486,36 @@ fun CombatScreen(gc: GameController) {
             }
         }
         Text("Round ${state.round}", color = Bone.copy(0.6f), fontSize = 12.sp)
-        // v0.1.65 fight clock — under Round N, left, always visible
-        Text(
-            FightClock.line(state),
-            color = Bone.copy(0.55f),
-            fontSize = 11.sp,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            Modifier.fillMaxWidth().padding(top = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // v0.1.66 fight clock — under Round N, left, always visible (no phase gate / zero-size)
+        val clockLine = FightClock.line(state)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "fight_clock $clockLine" }
         ) {
-            Text("Wake ${FightClock.wakeDots(state)}", color = Ember.copy(0.85f), fontSize = 10.sp)
-            if (state.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }) {
-                Text("Brand ${FightClock.graveLabel(state)}", color = Gold.copy(0.85f), fontSize = 10.sp)
-            }
-            if (state.activeCards.any { it.id == Specials.ID_ASH_VOW }) {
-                val vow = FightClock.vowLabel(state)
-                Text(
-                    "Vow $vow",
-                    color = if (vow == "spent") Steel.copy(0.7f) else Gold.copy(0.85f),
-                    fontSize = 10.sp
-                )
+            Text(
+                clockLine,
+                color = Bone.copy(0.8f),
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Wake ${FightClock.wakeDots(state)}", color = Ember.copy(0.9f), fontSize = 11.sp)
+                if (state.activeCards.any { it.id == Specials.ID_GRAVE_BRAND }) {
+                    Text("Brand ${FightClock.graveLabel(state)}", color = Gold.copy(0.9f), fontSize = 11.sp)
+                }
+                if (state.activeCards.any { it.id == Specials.ID_ASH_VOW }) {
+                    val vow = FightClock.vowLabel(state)
+                    Text(
+                        "Vow $vow",
+                        color = if (vow == "spent") Steel.copy(0.7f) else Gold.copy(0.9f),
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -712,7 +722,8 @@ fun CombatScreen(gc: GameController) {
                         chargeLabel = chargeLabel,
                         onTap = if (isSpecial) {{ gc.onSpecialSkillTap(card.id) }} else null,
                         onLongPressGlossary = {
-                            gc.showSkillGlossary(card.title, card.effect.description)
+                            if (isSpecial) gc.onSpecialLongGlossary(card.id)
+                            else gc.showSkillGlossary(card.title, card.effect.description)
                         },
                         tapPulseReady = pulseReady,
                         tapPulseGrey = pulseGrey,
@@ -735,6 +746,7 @@ fun CombatScreen(gc: GameController) {
             flashed = state.weaponFlashed,
             iconPhase = wakeIconPhase,
             onAshbrandTap = { gc.onAshbrandTap() },
+            onAshbrandLongGlossary = { gc.onAshbrandLongGlossary() },
             tapPulseReady = gc.specialTapPulse?.let { it.first == "wake" && it.second } == true,
             tapPulseGrey = gc.specialTapPulse?.let { it.first == "wake" && !it.second } == true
         )
@@ -888,18 +900,19 @@ private fun SkillSlot(
         plateOn -> SharedTilePlate.PANEL_OVER_PLATE_ALPHA
         else -> 1f
     }
-    val hold = if (onLongPressGlossary != null || onTap != null) {
-        Modifier.combinedClickable(
-            onClick = { onTap?.invoke() },
-            onLongClick = { onLongPressGlossary?.invoke() }
-        )
-    } else Modifier
     SharedTilePlateBox(
         modifier = modifier
             .height(SkillGlyph.SKILL_SLOT_HEIGHT_DP.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale },
         cornerRadius = 6.dp
     ) {
+        WithSpecialLongPressTimeout {
+        val hold = if (onLongPressGlossary != null || onTap != null) {
+            Modifier.specialTapSplit(
+                onShortTap = { onTap?.invoke() },
+                onLongGlossary = { onLongPressGlossary?.invoke() }
+            )
+        } else Modifier
         Box(
             Modifier
                 .fillMaxSize()
@@ -943,6 +956,7 @@ private fun SkillSlot(
                 )
             }
         }
+        } // WithSpecialLongPressTimeout
     }
 }
 
@@ -952,6 +966,7 @@ private fun WeaponBar(
     flashed: Boolean,
     iconPhase: WakeIconPhase = WakeIconPhase.IDLE,
     onAshbrandTap: () -> Unit = {},
+    onAshbrandLongGlossary: () -> Unit = {},
     tapPulseReady: Boolean = false,
     tapPulseGrey: Boolean = false
 ) {
@@ -973,11 +988,16 @@ private fun WeaponBar(
             .graphicsLayer { scaleX = scale; scaleY = scale },
         cornerRadius = 8.dp
     ) {
-    // Full Ashbrand row = hitbox (v0.1.65)
+    // Full Ashbrand row = hitbox (v0.1.66): short-tap dump; long-press 350ms glossary.
+    // No nested AshbrandIcon clickable (0.65 phone FAIL: short tap → glossary).
+    WithSpecialLongPressTimeout {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onAshbrandTap)
+            .specialTapSplit(
+                onShortTap = onAshbrandTap,
+                onLongGlossary = onAshbrandLongGlossary
+            )
             .background(Panel.copy(alpha = if (plateOn) SharedTilePlate.PANEL_OVER_PLATE_ALPHA else 1f), RoundedCornerShape(8.dp))
             .border(
                 if (flashed || tapPulseReady || tapPulseGrey) 2.dp else 1.dp,
@@ -988,9 +1008,9 @@ private fun WeaponBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Ashbrand icon — same slot size as loadout weapon plate
+        // Icon display only — gestures live on the full row
         if (weapon.def.id == "ashbrand") {
-            AshbrandIcon(phase = iconPhase, onClick = onAshbrandTap)
+            AshbrandIcon(phase = iconPhase, onClick = null)
         }
         Column(Modifier.weight(1f).padding(start = 8.dp)) {
             Text("${weapon.def.title}  Lv${weapon.level}", color = Bone, fontSize = 13.sp)
@@ -1009,6 +1029,7 @@ private fun WeaponBar(
             }
         }
     }
+    } // WithSpecialLongPressTimeout
     } // SharedTilePlateBox
 }
 

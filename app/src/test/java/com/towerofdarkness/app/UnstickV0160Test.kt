@@ -118,7 +118,7 @@ class UnstickV0160Test {
             ?: File("build.gradle.kts")
         // test cwd is app/
         val g = File("build.gradle.kts").readText()
-        assertTrue(g.contains("versionCode = 66"))
-        assertTrue(g.contains("versionName = \"0.1.65-fightclock\""))
+        assertTrue(g.contains("versionCode = 67"))
+        assertTrue(g.contains("versionName = \"0.1.66-waketap\""))
     }
 }
